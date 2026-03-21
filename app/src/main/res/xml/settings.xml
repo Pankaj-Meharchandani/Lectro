@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <android.support.v7.preference.SwitchPreferenceCompat
+    <androidx.preference.SwitchPreferenceCompat
         android:defaultValue="false"
         android:key="sevendays"
         android:icon="@drawable/baseline_view_week_24"
         android:title="@string/seven_days_of_the_week"
         android:summary="@string/sevendays_setting" />
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         android:key="schoolwebsite"
         android:selectAllOnFocus="true"
         android:icon="@drawable/baseline_open_in_browser_24"
@@ -15,9 +15,10 @@
         android:title="@string/school_website_setting"
         android:summary="@string/school_website_setting_summary"/>
 
-    <Preference
+    <androidx.preference.Preference
         android:key="resetdata"
         android:icon="@drawable/baseline_delete_forever_24"
         android:title="@string/reset_data"
         android:summary="@string/reset_data_summary"/>
 </PreferenceScreen>
+

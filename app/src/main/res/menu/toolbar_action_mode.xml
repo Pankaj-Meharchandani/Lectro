@@ -10,3 +10,4 @@
         android:title="@string/delete"
         app:showAsAction="always" />
 </menu>
+

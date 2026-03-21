@@ -58,7 +58,7 @@
     <string name="date_error">Date field can not be empty!</string>
     <string name="edit_homework">Edit homework</string>
     <string name="add_homework">Add homework</string>
-    <string name="deadline_snackbar">"Deadline field can not be empty!</string>
+    <string name="deadline_snackbar">Deadline field can not be empty!</string>
     <string name="date">Date</string>
 
     <!-- Notes Activity strings -->
@@ -108,9 +108,12 @@
     <string name="subheading">Subheading</string>
     <string name="divider">Divider</string>
     <string name="image">Image</string>
+    <string name="color_picker_default_title">Choose Color</string>
 
     <!-- Notification -->
     <string name="notification_title">Today\'s lessons</string>
     <string name="do_not_have_lessons">You do not have lessons!</string>
 
 </resources>
+
+
