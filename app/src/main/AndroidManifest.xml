@@ -31,7 +31,8 @@
             android:name=".activities.HomeworksActivity"
             android:exported="false"
             android:label="@string/homeworks"
-            android:parentActivityName=".activities.MainActivity" />
+            android:parentActivityName=".activities.MainActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
 
         <meta-data
             android:name="android.support.PARENT_ACTIVITY"
@@ -41,12 +42,14 @@
             android:name=".activities.NotesActivity"
             android:exported="false"
             android:label="Notes"
-            android:parentActivityName=".activities.MainActivity" />
+            android:parentActivityName=".activities.MainActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".activities.NoteInfoActivity"
             android:exported="false"
             android:label="Notes"
-            android:parentActivityName=".activities.NotesActivity" />
+            android:parentActivityName=".activities.NotesActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".activities.SubjectDetailActivity"
             android:exported="false"
@@ -57,12 +60,14 @@
             android:name=".activities.TeachersActivity"
             android:exported="false"
             android:label="Teachers"
-            android:parentActivityName=".activities.MainActivity" />
+            android:parentActivityName=".activities.MainActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".activities.SettingsActivity"
             android:exported="false"
             android:label="Settings"
-            android:parentActivityName=".activities.MainActivity">
+            android:parentActivityName=".activities.MainActivity"
+            android:theme="@style/AppTheme.NoActionBar">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="com.example.timetable.activities.MainActivity" />
@@ -71,7 +76,8 @@
             android:name=".activities.ExamsActivity"
             android:exported="false"
             android:label="Exams"
-            android:parentActivityName=".activities.MainActivity" />
+            android:parentActivityName=".activities.MainActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
 
         <receiver
             android:name=".utils.DailyReceiver"

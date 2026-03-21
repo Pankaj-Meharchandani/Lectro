@@ -3,6 +3,7 @@ package com.example.timetable.activities;
 import android.content.Context;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import android.os.Bundle;
 import android.util.SparseBooleanArray;
 import android.view.ActionMode;
@@ -38,6 +39,11 @@ public class TeachersActivity extends AppCompatActivity {
     }
 
     private void initAll() {
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
         setupAdapter();
         setupListViewMultiSelect();
         setupCustomDialog();
