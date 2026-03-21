@@ -11,10 +11,12 @@ import android.os.Build;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import android.text.Editable;
 import android.text.Html;
 import android.text.Layout;
 import android.text.Spannable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.text.style.AlignmentSpan;
 import android.text.style.ImageSpan;
 import android.text.style.RelativeSizeSpan;
@@ -53,6 +55,47 @@ public class NoteInfoActivity extends AppCompatActivity {
         setupIntent();
         setupToolbar();
         setupCheckboxLogic();
+        setupAutoContinuation();
+    }
+
+    private void setupAutoContinuation() {
+        text.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (count == 1 && s.charAt(start) == '\n') {
+                    String content = s.toString();
+                    int lastNewLine = content.lastIndexOf('\n', start - 1);
+                    int lineStart = (lastNewLine == -1) ? 0 : lastNewLine + 1;
+                    String lastLine = content.substring(lineStart, start);
+
+                    if (lastLine.startsWith("• ")) {
+                        if (lastLine.length() > 2) {
+                            text.post(() -> text.getText().insert(text.getSelectionStart(), "• "));
+                        } else {
+                            text.post(() -> text.getText().delete(lineStart, start + 1));
+                        }
+                    } else if (lastLine.startsWith("☐ ")) {
+                        if (lastLine.length() > 2) {
+                            text.post(() -> text.getText().insert(text.getSelectionStart(), "☐ "));
+                        } else {
+                            text.post(() -> text.getText().delete(lineStart, start + 1));
+                        }
+                    } else if (lastLine.startsWith("☑ ")) {
+                        if (lastLine.length() > 2) {
+                            text.post(() -> text.getText().insert(text.getSelectionStart(), "☐ "));
+                        } else {
+                            text.post(() -> text.getText().delete(lineStart, start + 1));
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
     }
 
     private void setupIntent() {
@@ -106,15 +149,35 @@ public class NoteInfoActivity extends AppCompatActivity {
 
     private void setupToolbar() {
         findViewById(R.id.btn_bold).setOnClickListener(v -> toggleSpan(new StyleSpan(android.graphics.Typeface.BOLD)));
-        findViewById(R.id.btn_bullet).setOnClickListener(v -> insertTextAtCursor("\n• "));
+        findViewById(R.id.btn_bullet).setOnClickListener(v -> insertPrefix("• "));
         findViewById(R.id.btn_heading).setOnClickListener(v -> applySpanToLine(new RelativeSizeSpan(1.5f)));
         findViewById(R.id.btn_subheading).setOnClickListener(v -> applySpanToLine(new RelativeSizeSpan(1.2f)));
         findViewById(R.id.btn_divider).setOnClickListener(v -> insertTextAtCursor("\n--------------------------------\n"));
         findViewById(R.id.btn_align_left).setOnClickListener(v -> applySpanToLine(new AlignmentSpan.Standard(Layout.Alignment.ALIGN_NORMAL)));
         findViewById(R.id.btn_align_center).setOnClickListener(v -> applySpanToLine(new AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER)));
         findViewById(R.id.btn_align_right).setOnClickListener(v -> applySpanToLine(new AlignmentSpan.Standard(Layout.Alignment.ALIGN_OPPOSITE)));
-        findViewById(R.id.btn_todo).setOnClickListener(v -> insertTextAtCursor("\n☐ "));
+        findViewById(R.id.btn_todo).setOnClickListener(v -> insertPrefix("☐ "));
         findViewById(R.id.btn_image).setOnClickListener(v -> pickImage());
+    }
+
+    private void insertPrefix(String prefix) {
+        int start = text.getSelectionStart();
+        String content = text.getText().toString();
+        int lineStart = content.lastIndexOf("\n", start - 1) + 1;
+        
+        if (start >= lineStart + prefix.length()) {
+            String sub = content.substring(lineStart, lineStart + prefix.length());
+            if (sub.equals(prefix)) {
+                text.getText().delete(lineStart, lineStart + prefix.length());
+                return;
+            }
+        }
+
+        if (start == lineStart) {
+            text.getText().insert(start, prefix);
+        } else {
+            text.getText().insert(start, "\n" + prefix);
+        }
     }
 
     private void setupCheckboxLogic() {
