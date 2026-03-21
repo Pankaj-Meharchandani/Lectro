@@ -13,6 +13,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.text.Html;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
+import android.text.TextUtils;
 import android.text.style.BulletSpan;
 import android.text.style.ImageSpan;
 import android.text.style.RelativeSizeSpan;
@@ -35,6 +36,7 @@ public class NoteInfoActivity extends AppCompatActivity {
     private static final int PICK_IMAGE_REQUEST = 2;
     private DbHelper db;
     private Note note;
+    private EditText titleEdit;
     private EditText text;
 
     @Override
@@ -48,22 +50,27 @@ public class NoteInfoActivity extends AppCompatActivity {
     private void setupIntent() {
         db = new DbHelper(NoteInfoActivity.this);
         note = (Note) getIntent().getSerializableExtra(NotesActivity.KEY_NOTE);
+        titleEdit = findViewById(R.id.edittextNoteTitle);
         text = findViewById(R.id.edittextNote);
-        if(note.getText() != null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                text.setText(Html.fromHtml(note.getText(), Html.FROM_HTML_MODE_COMPACT, new Html.ImageGetter() {
-                    @Override
-                    public Drawable getDrawable(String source) {
-                        return getDrawableFromUri(source);
-                    }
-                }, null));
-            } else {
-                text.setText(Html.fromHtml(note.getText(), new Html.ImageGetter() {
-                    @Override
-                    public Drawable getDrawable(String source) {
-                        return getDrawableFromUri(source);
-                    }
-                }, null));
+
+        if (note != null) {
+            titleEdit.setText(note.getTitle());
+            if(!TextUtils.isEmpty(note.getText())) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    text.setText(Html.fromHtml(note.getText(), Html.FROM_HTML_MODE_COMPACT, new Html.ImageGetter() {
+                        @Override
+                        public Drawable getDrawable(String source) {
+                            return getDrawableFromUri(source);
+                        }
+                    }, null));
+                } else {
+                    text.setText(Html.fromHtml(note.getText(), new Html.ImageGetter() {
+                        @Override
+                        public Drawable getDrawable(String source) {
+                            return getDrawableFromUri(source);
+                        }
+                    }, null));
+                }
             }
         }
     }
@@ -74,7 +81,11 @@ public class NoteInfoActivity extends AppCompatActivity {
             InputStream inputStream = getContentResolver().openInputStream(uri);
             Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
             Drawable drawable = new BitmapDrawable(getResources(), bitmap);
-            drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
+            int width = text.getWidth() - text.getPaddingLeft() - text.getPaddingRight();
+            if (width <= 0) width = 500;
+            float aspectRatio = (float) bitmap.getHeight() / (float) bitmap.getWidth();
+            int height = (int) (width * aspectRatio);
+            drawable.setBounds(0, 0, width, height);
             return drawable;
         } catch (Exception e) {
             return null;
@@ -92,7 +103,7 @@ public class NoteInfoActivity extends AppCompatActivity {
         btnBold.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                applySpan(new StyleSpan(android.graphics.Typeface.BOLD));
+                toggleSpan(new StyleSpan(android.graphics.Typeface.BOLD));
             }
         });
 
@@ -120,7 +131,7 @@ public class NoteInfoActivity extends AppCompatActivity {
         btnDivider.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                text.append("\n\n--------------------------------\n\n");
+                text.getText().insert(text.getSelectionStart(), "\n\n--------------------------------\n\n");
             }
         });
 
@@ -145,6 +156,7 @@ public class NoteInfoActivity extends AppCompatActivity {
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == Activity.RESULT_OK && data != null) {
             Uri uri = data.getData();
             if (uri != null) {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 insertImage(uri);
             }
         }
@@ -155,27 +167,38 @@ public class NoteInfoActivity extends AppCompatActivity {
             InputStream inputStream = getContentResolver().openInputStream(uri);
             Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
             Drawable drawable = new BitmapDrawable(getResources(), bitmap);
-            drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
+            int width = text.getWidth() - text.getPaddingLeft() - text.getPaddingRight();
+            if (width <= 0) width = 500;
+            float aspectRatio = (float) bitmap.getHeight() / (float) bitmap.getWidth();
+            int height = (int) (width * aspectRatio);
+            drawable.setBounds(0, 0, width, height);
 
             int start = text.getSelectionStart();
-            SpannableStringBuilder ssb = new SpannableStringBuilder(text.getText());
-            ssb.insert(start, "\n");
-            ssb.setSpan(new ImageSpan(drawable, uri.toString()), start, start + 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            text.setText(ssb);
-            text.setSelection(start + 1);
-        } catch (FileNotFoundException e) {
+            text.getText().insert(start, "\n ");
+            text.getText().setSpan(new ImageSpan(drawable, uri.toString()), start + 1, start + 2, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            text.getText().insert(start + 2, "\n");
+        } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void toggleSpan(Object span) {
+        int start = text.getSelectionStart();
+        int end = text.getSelectionEnd();
+        if (start != end) {
+            text.getText().setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
     }
 
     private void applySpan(Object span) {
         int start = text.getSelectionStart();
         int end = text.getSelectionEnd();
-        if (start != end) {
-            SpannableStringBuilder ssb = new SpannableStringBuilder(text.getText());
-            ssb.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            text.setText(ssb);
-            text.setSelection(end);
+        if (start == end) {
+            // Apply to the current line or just insert at start of line
+            int lineStart = text.getText().toString().lastIndexOf("\n", start - 1) + 1;
+            text.getText().setSpan(span, lineStart, start, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+        } else {
+            text.getText().setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
     }
 
@@ -186,6 +209,7 @@ public class NoteInfoActivity extends AppCompatActivity {
         } else {
             htmlText = Html.toHtml(text.getText());
         }
+        note.setTitle(titleEdit.getText().toString());
         note.setText(htmlText);
         db.updateNote(note);
     }

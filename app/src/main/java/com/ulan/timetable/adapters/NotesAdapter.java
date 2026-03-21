@@ -21,6 +21,7 @@ import com.ulan.timetable.utils.AlertDialogsHelper;
 import com.ulan.timetable.utils.DbHelper;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Objects;
 
 
@@ -29,7 +30,6 @@ public class NotesAdapter extends ArrayAdapter<Note> {
     private Activity mActivity;
     private int mResource;
     private ArrayList<Note> notelist;
-    private Note note;
     private ListView mListView;
 
     private static class ViewHolder {
@@ -49,11 +49,7 @@ public class NotesAdapter extends ArrayAdapter<Note> {
     @NonNull
     @Override
     public View getView(final int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-        String title = Objects.requireNonNull(getItem(position)).getTitle();
-        String text = Objects.requireNonNull(getItem(position)).getText();
-        int color = Objects.requireNonNull(getItem(position)).getColor();
-
-        note = new Note(title, text, color);
+        final Note note = getItem(position);
         final ViewHolder holder;
 
         if(convertView == null) {
@@ -67,59 +63,76 @@ public class NotesAdapter extends ArrayAdapter<Note> {
         } else {
             holder = (ViewHolder) convertView.getTag();
         }
-        holder.title.setText(note.getTitle());
-        holder.cardView.setCardBackgroundColor(note.getColor());
-        holder.popup.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final PopupMenu popup = new PopupMenu(mActivity, holder.popup);
-                final DbHelper db = new DbHelper(mActivity);
-                popup.getMenuInflater().inflate(R.menu.popup_menu, popup.getMenu());
-                popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                    public boolean onMenuItemClick(MenuItem item) {
-                        switch (item.getItemId()) {
-                            case R.id.delete_popup:
-                                db.deleteNoteById(getItem(position));
-                                db.updateNote(getItem(position));
+
+        if (note != null) {
+            holder.title.setText(note.getTitle());
+            holder.cardView.setCardBackgroundColor(note.getColor());
+            holder.popup.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    final PopupMenu popup = new PopupMenu(mActivity, holder.popup);
+                    final DbHelper db = new DbHelper(mActivity);
+                    popup.getMenuInflater().inflate(R.menu.popup_menu, popup.getMenu());
+
+                    popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                        public boolean onMenuItemClick(MenuItem item) {
+                            int id = item.getItemId();
+                            if (id == R.id.delete_popup) {
+                                db.deleteNoteById(note.getId());
                                 notelist.remove(position);
                                 notifyDataSetChanged();
                                 return true;
-
-                            case R.id.edit_popup:
+                            } else if (id == R.id.edit_popup) {
                                 final View alertLayout = mActivity.getLayoutInflater().inflate(R.layout.dialog_add_note, null);
                                 AlertDialogsHelper.getEditNoteDialog(mActivity, alertLayout, notelist, mListView, position);
-                                notifyDataSetChanged();
                                 return true;
-                            default:
-                                return onMenuItemClick(item);
+                            } else if (id == R.id.move_up_popup) {
+                                if (position > 0) {
+                                    swapNotes(position, position - 1, db);
+                                }
+                                return true;
+                            } else if (id == R.id.move_down_popup) {
+                                if (position < notelist.size() - 1) {
+                                    swapNotes(position, position + 1, db);
+                                }
+                                return true;
+                            }
+                            return false;
                         }
-                    }
-                });
-                popup.show();
-            }
-        });
+                    });
+                    popup.show();
+                }
+            });
+        }
 
         hidePopUpMenu(holder);
 
         return convertView;
     }
 
-    @Override
-    public long getItemId(int position) {
-        return super.getItemId(position);
+    private void swapNotes(int pos1, int pos2, DbHelper db) {
+        Note n1 = notelist.get(pos1);
+        Note n2 = notelist.get(pos2);
+        
+        // Simple swap in list
+        Collections.swap(notelist, pos1, pos2);
+        
+        // Update sort order in DB
+        // We'll just assign their positions as sort order for simplicity
+        for (int i = 0; i < notelist.size(); i++) {
+            db.updateNoteSortOrder(notelist.get(i).getId(), i);
+        }
+        
+        notifyDataSetChanged();
     }
 
     public ArrayList<Note> getNoteList() {
         return notelist;
     }
 
-    public Note getNote() {
-        return note;
-    }
-
      private void hidePopUpMenu(ViewHolder holder) {
         SparseBooleanArray checkedItems = mListView.getCheckedItemPositions();
-        if (checkedItems.size() > 0) {
+        if (checkedItems != null && checkedItems.size() > 0) {
             for (int i = 0; i < checkedItems.size(); i++) {
                 int key = checkedItems.keyAt(i);
                 if (checkedItems.get(key)) {

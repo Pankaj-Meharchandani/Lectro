@@ -66,6 +66,22 @@
             </LinearLayout>
         </HorizontalScrollView>
 
+        <EditText
+            android:id="@+id/edittextNoteTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/title"
+            android:padding="16dp"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:background="@null"
+            android:inputType="textCapSentences" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#e0e0e0" />
+
         <com.ulan.timetable.utils.LinedEditText
             android:id="@+id/edittextNote"
             android:layout_width="match_parent"

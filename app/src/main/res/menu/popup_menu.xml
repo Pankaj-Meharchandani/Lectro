@@ -6,4 +6,10 @@
     <item
         android:id="@+id/edit_popup"
         android:title="Edit" />
+    <item
+        android:id="@+id/move_up_popup"
+        android:title="Move Up" />
+    <item
+        android:id="@+id/move_down_popup"
+        android:title="Move Down" />
 </menu>
