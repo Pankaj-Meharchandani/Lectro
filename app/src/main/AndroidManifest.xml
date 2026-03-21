@@ -46,6 +46,11 @@
             android:label="Notes"
             android:parentActivityName="com.ulan.timetable.activities.NotesActivity" />
         <activity
+            android:name="com.ulan.timetable.activities.SubjectDetailActivity"
+            android:label="Subject Detail"
+            android:parentActivityName="com.ulan.timetable.activities.NotesActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
             android:name="com.ulan.timetable.activities.TeachersActivity"
             android:label="Teachers"
             android:parentActivityName="com.ulan.timetable.activities.MainActivity" />

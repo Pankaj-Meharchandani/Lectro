@@ -94,6 +94,21 @@
     <string name="school_website_setting">Change College website</string>
     <string name="school_website_setting_summary">Change URL of your College website</string>
 
+    <string name="reset_data">Reset App Data</string>
+    <string name="reset_data_summary">Wipe all timetable, homeworks, notes, etc.</string>
+    <string name="reset_warning">Are you sure you want to reset all data? This action cannot be undone.</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="subjects">Subjects</string>
+    <string name="materials">Materials</string>
+    <string name="add_material">Add Material</string>
+    <string name="pick_file">Pick File</string>
+    <string name="bullet_points">Bullet Points</string>
+    <string name="heading">Heading</string>
+    <string name="subheading">Subheading</string>
+    <string name="divider">Divider</string>
+    <string name="image">Image</string>
+
     <!-- Notification -->
     <string name="notification_title">Today\'s lessons</string>
     <string name="do_not_have_lessons">You do not have lessons!</string>

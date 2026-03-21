@@ -14,8 +14,8 @@ import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ListView;
 
-import com.ulan.timetable.adapters.NotesAdapter;
-import com.ulan.timetable.model.Note;
+import com.ulan.timetable.adapters.SubjectsAdapter;
+import com.ulan.timetable.model.Subject;
 import com.ulan.timetable.R;
 import com.ulan.timetable.utils.AlertDialogsHelper;
 import com.ulan.timetable.utils.DbHelper;
@@ -24,16 +24,20 @@ import java.util.ArrayList;
 
 public class NotesActivity extends AppCompatActivity {
 
+    public static String KEY_SUBJECT = "subject";
     public static String KEY_NOTE = "note";
     private Context context = this;
     private ListView listView;
     private DbHelper db;
-    private NotesAdapter adapter;
+    private SubjectsAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_notes);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setTitle(R.string.subjects);
+        }
         initAll();
     }
 
@@ -46,13 +50,13 @@ public class NotesActivity extends AppCompatActivity {
     private void setupAdapter() {
         db = new DbHelper(context);
         listView = findViewById(R.id.notelist);
-        adapter = new NotesAdapter(NotesActivity.this, listView, R.layout.listview_notes_adapter, db.getNote());
+        adapter = new SubjectsAdapter(NotesActivity.this, R.layout.listview_subjects_adapter, db.getAllSubjects());
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                Intent intent = new Intent(context, NoteInfoActivity.class);
-                intent.putExtra(KEY_NOTE, adapter.getNoteList().get(position));
+                Intent intent = new Intent(context, SubjectDetailActivity.class);
+                intent.putExtra(KEY_SUBJECT, adapter.getItem(position));
                 startActivity(intent);
             }
         });
@@ -84,18 +88,14 @@ public class NotesActivity extends AppCompatActivity {
             public boolean onActionItemClicked(final ActionMode mode, MenuItem item) {
                 switch (item.getItemId()) {
                     case R.id.action_delete:
-                        ArrayList<Note> removelist = new ArrayList<>();
                         SparseBooleanArray checkedItems = listView.getCheckedItemPositions();
                         for (int i = 0; i < checkedItems.size(); i++) {
                             int key = checkedItems.keyAt(i);
                             if (checkedItems.get(key)) {
-                                db.deleteNoteById(adapter.getItem(key));
-                                removelist.add(adapter.getNoteList().get(key));
+                                db.deleteSubjectById(adapter.getItem(key).getId());
                             }
                         }
-                        adapter.getNoteList().removeAll(removelist);
-                        db.updateNote(adapter.getNote());
-                        adapter.notifyDataSetChanged();
+                        refreshList();
                         mode.finish();
                         return true;
 
@@ -109,15 +109,24 @@ public class NotesActivity extends AppCompatActivity {
     }
 
     private void setupCustomDialog() {
-        final View alertLayout = getLayoutInflater().inflate(R.layout.dialog_add_note, null);
-        AlertDialogsHelper.getAddNoteDialog(NotesActivity.this, alertLayout, adapter);
+        final View alertLayout = getLayoutInflater().inflate(R.layout.dialog_create_subject, null);
+        AlertDialogsHelper.getCreateSubjectDialog(NotesActivity.this, alertLayout, new Runnable() {
+            @Override
+            public void run() {
+                refreshList();
+            }
+        });
+    }
+
+    private void refreshList() {
+        adapter.clear();
+        adapter.addAll(db.getAllSubjects());
+        adapter.notifyDataSetChanged();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        adapter.clear();
-        adapter.addAll(db.getNote());
-        adapter.notifyDataSetChanged();
+        refreshList();
     }
 }

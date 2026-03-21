@@ -6,11 +6,73 @@
     android:layout_height="match_parent"
     tools:context=".activities.NoteInfoActivity">
 
-    <com.ulan.timetable.utils.LinedEditText
-        android:id="@+id/edittextNote"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:inputType="none"
-        android:background="@null"
-        />
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#f0f0f0"
+            android:padding="4dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btn_bold"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/baseline_edit_24"
+                    android:contentDescription="@string/bullet_points" />
+
+                <ImageButton
+                    android:id="@+id/btn_bullet"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/baseline_list_24"
+                    android:contentDescription="@string/bullet_points" />
+
+                <ImageButton
+                    android:id="@+id/btn_heading"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/baseline_book_24"
+                    android:contentDescription="@string/heading" />
+
+                <ImageButton
+                    android:id="@+id/btn_subheading"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/baseline_subject_24"
+                    android:contentDescription="@string/subheading" />
+
+                <ImageButton
+                    android:id="@+id/btn_divider"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/baseline_expand_more_24"
+                    android:contentDescription="@string/divider" />
+
+                <ImageButton
+                    android:id="@+id/btn_image"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/ic_menu_gallery"
+                    android:contentDescription="@string/image" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <com.ulan.timetable.utils.LinedEditText
+            android:id="@+id/edittextNote"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@null"
+            android:gravity="top"
+            android:inputType="textMultiLine|textLongMessage"
+            android:padding="16dp" />
+    </LinearLayout>
 </android.support.design.widget.CoordinatorLayout>

@@ -204,7 +204,113 @@ public class AlertDialogsHelper {
         });
     }
 
-    public static void getAddSubjectDialog(final Activity activity, final View alertLayout, final FragmentsTabAdapter adapter, final ViewPager viewPager) {
+    public static void getCreateSubjectDialog(final Activity activity, final View alertLayout, final Runnable onSaveCallback) {
+        final DbHelper dbHelper = new DbHelper(activity);
+        final HashMap<Integer, EditText> editTextHashs = new HashMap<>();
+        final AutoCompleteTextView subject = alertLayout.findViewById(R.id.subject_dialog);
+        editTextHashs.put(R.string.subject, subject);
+        final AutoCompleteTextView teacher = alertLayout.findViewById(R.id.teacher_dialog);
+        editTextHashs.put(R.string.teacher, teacher);
+
+        final ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getSubjectsList());
+        subject.setAdapter(subjectAdapter);
+        subject.setThreshold(1);
+
+        final ArrayAdapter<String> teacherAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getTeachersList());
+        teacher.setAdapter(teacherAdapter);
+        teacher.setThreshold(1);
+
+        final EditText room = alertLayout.findViewById(R.id.room_dialog);
+        editTextHashs.put(R.string.room, room);
+        final Button select_color = alertLayout.findViewById(R.id.select_color);
+
+        subject.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedSubject = (String) parent.getItemAtPosition(position);
+                Week details = dbHelper.getSubjectDetails(selectedSubject);
+                if (details != null) {
+                    teacher.setText(details.getTeacher());
+                    room.setText(details.getRoom());
+                    select_color.setBackgroundColor(details.getColor());
+                }
+            }
+        });
+
+        select_color.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                int mSelectedColor = ContextCompat.getColor(activity, R.color.white);
+                select_color.setBackgroundColor(mSelectedColor);
+                int[] mColors = activity.getResources().getIntArray(R.array.default_colors);
+                ColorPickerDialog dialog = ColorPickerDialog.newInstance(R.string.color_picker_default_title,
+                        mColors,
+                        mSelectedColor,
+                        5,
+                        ColorPickerDialog.SIZE_SMALL,
+                        true
+                );
+
+                dialog.setOnColorSelectedListener(new ColorPickerSwatch.OnColorSelectedListener() {
+                    @Override
+                    public void onColorSelected(int color) {
+                        select_color.setBackgroundColor(color);
+                    }
+                });
+                dialog.show(activity.getFragmentManager(), "color_dialog");
+            }
+        });
+
+        final AlertDialog.Builder alert = new AlertDialog.Builder(activity);
+        alert.setTitle(R.string.add_subject);
+        alert.setCancelable(false);
+        Button cancel = alertLayout.findViewById(R.id.cancel);
+        Button save = alertLayout.findViewById(R.id.save);
+        alert.setView(alertLayout);
+        final AlertDialog dialog = alert.create();
+        FloatingActionButton fab = activity.findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                dialog.show();
+            }
+        });
+
+        cancel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+
+        save.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(TextUtils.isEmpty(subject.getText()) || TextUtils.isEmpty(teacher.getText()) || TextUtils.isEmpty(room.getText())) {
+                    for (Map.Entry<Integer, EditText> entry : editTextHashs.entrySet()) {
+                        if(TextUtils.isEmpty(entry.getValue().getText())) {
+                            entry.getValue().setError(activity.getResources().getString(entry.getKey()) + " " + activity.getResources().getString(R.string.field_error));
+                            entry.getValue().requestFocus();
+                        }
+                    }
+                } else {
+                    ColorDrawable buttonColor = (ColorDrawable) select_color.getBackground();
+                    dbHelper.insertSubject(subject.getText().toString(), buttonColor.getColor(), teacher.getText().toString(), room.getText().toString());
+                    if (onSaveCallback != null) {
+                        onSaveCallback.run();
+                    }
+                    subject.getText().clear();
+                    teacher.getText().clear();
+                    room.getText().clear();
+                    select_color.setBackgroundColor(Color.WHITE);
+                    subject.requestFocus();
+                    dialog.dismiss();
+                }
+            }
+        });
+    }
+
+    public static void getAddSubjectDialog(final Activity activity, final View alertLayout, final FragmentsTabAdapter adapter, final ViewPager viewPager, final Runnable onSaveCallback) {
         final DbHelper dbHelper = new DbHelper(activity);
         final HashMap<Integer, EditText> editTextHashs = new HashMap<>();
         final AutoCompleteTextView subject = alertLayout.findViewById(R.id.subject_dialog);
@@ -339,18 +445,25 @@ public class AlertDialogsHelper {
                 } else if(!from_time.getText().toString().matches(".*\\d+.*") || !to_time.getText().toString().matches(".*\\d+.*")) {
                     Snackbar.make(alertLayout, R.string.time_error, Snackbar.LENGTH_LONG).show();
                 } else {
-                    String fragmentName = adapter.getItem(viewPager.getCurrentItem()).getClass().getSimpleName();
-                    if (fragmentName.endsWith("Fragment")) {
-                        fragmentName = fragmentName.substring(0, fragmentName.length() - "Fragment".length());
-                    }
                     ColorDrawable buttonColor = (ColorDrawable) select_color.getBackground();
-                    week.setSubject(subject.getText().toString());
-                    week.setFragment(fragmentName);
-                    week.setTeacher(teacher.getText().toString());
-                    week.setRoom(room.getText().toString());
-                    week.setColor(buttonColor.getColor());
-                    dbHelper.insertWeek(week);
-                    adapter.notifyDataSetChanged();
+                    if (adapter != null && viewPager != null) {
+                        String fragmentName = adapter.getItem(viewPager.getCurrentItem()).getClass().getSimpleName();
+                        if (fragmentName.endsWith("Fragment")) {
+                            fragmentName = fragmentName.substring(0, fragmentName.length() - "Fragment".length());
+                        }
+                        week.setSubject(subject.getText().toString());
+                        week.setFragment(fragmentName);
+                        week.setTeacher(teacher.getText().toString());
+                        week.setRoom(room.getText().toString());
+                        week.setColor(buttonColor.getColor());
+                        dbHelper.insertWeek(week);
+                        adapter.notifyDataSetChanged();
+                    } else {
+                        dbHelper.insertSubject(subject.getText().toString(), buttonColor.getColor(), teacher.getText().toString(), room.getText().toString());
+                    }
+                    if (onSaveCallback != null) {
+                        onSaveCallback.run();
+                    }
                     subject.getText().clear();
                     teacher.getText().clear();
                     room.getText().clear();

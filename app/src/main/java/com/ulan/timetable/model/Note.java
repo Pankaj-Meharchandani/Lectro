@@ -6,6 +6,7 @@ import java.io.Serializable;
 public class Note implements Serializable {
     private String title, text = "";
     private int id, color;
+    private int subjectId = -1;
 
     public Note() {}
 
@@ -13,6 +14,21 @@ public class Note implements Serializable {
         this.title = title;
         this.text = text;
         this.color = color;
+    }
+
+    public Note(String title, String text, int color, int subjectId) {
+        this.title = title;
+        this.text = text;
+        this.color = color;
+        this.subjectId = subjectId;
+    }
+
+    public int getSubjectId() {
+        return subjectId;
+    }
+
+    public void setSubjectId(int subjectId) {
+        this.subjectId = subjectId;
     }
 
     public String getTitle() {

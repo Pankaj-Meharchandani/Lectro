@@ -111,7 +111,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     
     private void setupCustomDialog() {
         final View alertLayout = getLayoutInflater().inflate(R.layout.dialog_add_subject, null);
-        AlertDialogsHelper.getAddSubjectDialog(MainActivity.this, alertLayout, adapter, viewPager);
+        AlertDialogsHelper.getAddSubjectDialog(MainActivity.this, alertLayout, adapter, viewPager, null);
     }
 
     private void setupSevenDaysPref() {

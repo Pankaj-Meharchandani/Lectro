@@ -8,7 +8,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import com.ulan.timetable.model.Exam;
 import com.ulan.timetable.model.Homework;
+import com.ulan.timetable.model.Material;
 import com.ulan.timetable.model.Note;
+import com.ulan.timetable.model.Subject;
 import com.ulan.timetable.model.Teacher;
 import com.ulan.timetable.model.Week;
 
@@ -16,7 +18,7 @@ import java.util.ArrayList;
 
 public class DbHelper extends SQLiteOpenHelper {
 
-    private static final int DB_VERSION = 7;
+    private static final int DB_VERSION = 8;
     private static final String DB_NAME = "timetabledb";
 
     private static final String TIMETABLE = "timetable";
@@ -29,12 +31,12 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String WEEK_TO_TIME = "totime";
     private static final String WEEK_COLOR = "color";
 
-    private static final String SUBJECTS = "subjects";
-    private static final String SUBJECTS_ID = "id";
-    private static final String SUBJECTS_NAME = "name";
-    private static final String SUBJECTS_COLOR = "color";
-    private static final String SUBJECTS_TEACHER = "teacher";
-    private static final String SUBJECTS_ROOM = "room";
+    public static final String SUBJECTS = "subjects";
+    public static final String SUBJECTS_ID = "id";
+    public static final String SUBJECTS_NAME = "name";
+    public static final String SUBJECTS_COLOR = "color";
+    public static final String SUBJECTS_TEACHER = "teacher";
+    public static final String SUBJECTS_ROOM = "room";
 
     private static final String HOMEWORKS = "homeworks";
     private static final String HOMEWORKS_ID = "id";
@@ -48,6 +50,7 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String NOTES_TITLE = "title";
     private static final String NOTES_TEXT = "text";
     private static final String NOTES_COLOR = "color";
+    private static final String NOTES_SUBJECT_ID = "subject_id";
 
     private static final String TEACHERS = "teachers";
     private static final String TEACHERS_ID = "id";
@@ -65,6 +68,13 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String EXAMS_DATE = "date";
     private static final String EXAMS_TIME = "time";
     private static final String EXAMS_COLOR = "color";
+
+    private static final String MATERIALS = "materials";
+    private static final String MATERIALS_ID = "id";
+    private static final String MATERIALS_SUBJECT_ID = "subject_id";
+    private static final String MATERIALS_PATH = "path";
+    private static final String MATERIALS_TYPE = "type";
+    private static final String MATERIALS_NAME = "name";
 
     public DbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
@@ -93,7 +103,8 @@ public class DbHelper extends SQLiteOpenHelper {
                 + NOTES_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + NOTES_TITLE + " TEXT,"
                 + NOTES_TEXT + " TEXT,"
-                + NOTES_COLOR + " INTEGER" + ")";
+                + NOTES_COLOR + " INTEGER,"
+                + NOTES_SUBJECT_ID + " INTEGER DEFAULT -1" + ")";
 
         String CREATE_TEACHERS = "CREATE TABLE " + TEACHERS + "("
                 + TEACHERS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -119,12 +130,20 @@ public class DbHelper extends SQLiteOpenHelper {
                 + SUBJECTS_TEACHER + " TEXT,"
                 + SUBJECTS_ROOM + " TEXT" + ")";
 
+        String CREATE_MATERIALS = "CREATE TABLE " + MATERIALS + "("
+                + MATERIALS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + MATERIALS_SUBJECT_ID + " INTEGER,"
+                + MATERIALS_PATH + " TEXT,"
+                + MATERIALS_TYPE + " TEXT,"
+                + MATERIALS_NAME + " TEXT" + ")";
+
         db.execSQL(CREATE_TIMETABLE);
         db.execSQL(CREATE_HOMEWORKS);
         db.execSQL(CREATE_NOTES);
         db.execSQL(CREATE_TEACHERS);
         db.execSQL(CREATE_EXAMS);
         db.execSQL(CREATE_SUBJECTS);
+        db.execSQL(CREATE_MATERIALS);
     }
 
     @Override
@@ -144,7 +163,29 @@ public class DbHelper extends SQLiteOpenHelper {
                     + SUBJECTS_TEACHER + " TEXT,"
                     + SUBJECTS_ROOM + " TEXT" + ")";
             db.execSQL(CREATE_SUBJECTS);
+            onUpgrade(db, 7, newVersion);
+        } else if (oldVersion == 7) {
+            db.execSQL("ALTER TABLE " + NOTES + " ADD COLUMN " + NOTES_SUBJECT_ID + " INTEGER DEFAULT -1");
+            String CREATE_MATERIALS = "CREATE TABLE " + MATERIALS + "("
+                    + MATERIALS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + MATERIALS_SUBJECT_ID + " INTEGER,"
+                    + MATERIALS_PATH + " TEXT,"
+                    + MATERIALS_TYPE + " TEXT,"
+                    + MATERIALS_NAME + " TEXT" + ")";
+            db.execSQL(CREATE_MATERIALS);
         }
+    }
+
+    public void resetAllData() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("DELETE FROM " + TIMETABLE);
+        db.execSQL("DELETE FROM " + HOMEWORKS);
+        db.execSQL("DELETE FROM " + NOTES);
+        db.execSQL("DELETE FROM " + TEACHERS);
+        db.execSQL("DELETE FROM " + EXAMS);
+        db.execSQL("DELETE FROM " + SUBJECTS);
+        db.execSQL("DELETE FROM " + MATERIALS);
+        db.close();
     }
 
     /**
@@ -269,14 +310,16 @@ public class DbHelper extends SQLiteOpenHelper {
     /**
      * Methods for Notes activity
      **/
-    public void insertNote(Note note) {
+    public long insertNote(Note note) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
         contentValues.put(NOTES_TITLE, note.getTitle());
         contentValues.put(NOTES_TEXT, note.getText());
         contentValues.put(NOTES_COLOR, note.getColor());
-        db.insert(NOTES, null, contentValues);
+        contentValues.put(NOTES_SUBJECT_ID, note.getSubjectId());
+        long id = db.insert(NOTES, null, contentValues);
         db.close();
+        return id;
     }
 
     public void updateNote(Note note) {
@@ -299,6 +342,23 @@ public class DbHelper extends SQLiteOpenHelper {
         ArrayList<Note> notelist = new ArrayList<>();
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery("SELECT * FROM " + NOTES, null);
+        while (cursor.moveToNext()) {
+            Note note = new Note();
+            note.setId(cursor.getInt(cursor.getColumnIndex(NOTES_ID)));
+            note.setTitle(cursor.getString(cursor.getColumnIndex(NOTES_TITLE)));
+            note.setText(cursor.getString(cursor.getColumnIndex(NOTES_TEXT)));
+            note.setColor(cursor.getInt(cursor.getColumnIndex(NOTES_COLOR)));
+            notelist.add(note);
+        }
+        cursor.close();
+        db.close();
+        return notelist;
+    }
+
+    public ArrayList<Note> getNotesBySubject(int subjectId) {
+        ArrayList<Note> notelist = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(NOTES, null, NOTES_SUBJECT_ID + "=?", new String[]{String.valueOf(subjectId)}, null, null, null);
         while (cursor.moveToNext()) {
             Note note = new Note();
             note.setId(cursor.getInt(cursor.getColumnIndex(NOTES_ID)));
@@ -413,12 +473,36 @@ public class DbHelper extends SQLiteOpenHelper {
         return exists;
     }
 
+    public void deleteSubjectById(int id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(SUBJECTS, SUBJECTS_ID + " = ?", new String[]{String.valueOf(id)});
+        db.close();
+    }
+
     public ArrayList<String> getSubjectsList() {
         ArrayList<String> subjects = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(SUBJECTS, new String[]{SUBJECTS_NAME}, null, null, null, null, SUBJECTS_NAME + " ASC");
         while (cursor.moveToNext()) {
             subjects.add(cursor.getString(0));
+        }
+        cursor.close();
+        db.close();
+        return subjects;
+    }
+
+    public ArrayList<Subject> getAllSubjects() {
+        ArrayList<Subject> subjects = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(SUBJECTS, null, null, null, null, null, SUBJECTS_NAME + " ASC");
+        while (cursor.moveToNext()) {
+            Subject subject = new Subject();
+            subject.setId(cursor.getInt(cursor.getColumnIndex(SUBJECTS_ID)));
+            subject.setName(cursor.getString(cursor.getColumnIndex(SUBJECTS_NAME)));
+            subject.setColor(cursor.getInt(cursor.getColumnIndex(SUBJECTS_COLOR)));
+            subject.setTeacher(cursor.getString(cursor.getColumnIndex(SUBJECTS_TEACHER)));
+            subject.setRoom(cursor.getString(cursor.getColumnIndex(SUBJECTS_ROOM)));
+            subjects.add(subject);
         }
         cursor.close();
         db.close();
@@ -512,5 +596,43 @@ public class DbHelper extends SQLiteOpenHelper {
         cursor.close();
         db.close();
         return examlist;
+    }
+
+    /**
+     * Methods for Materials
+     **/
+    public void insertMaterial(Material material) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MATERIALS_SUBJECT_ID, material.getSubjectId());
+        contentValues.put(MATERIALS_PATH, material.getPath());
+        contentValues.put(MATERIALS_TYPE, material.getType());
+        contentValues.put(MATERIALS_NAME, material.getName());
+        db.insert(MATERIALS, null, contentValues);
+        db.close();
+    }
+
+    public void deleteMaterialById(int materialId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(MATERIALS, MATERIALS_ID + " = ?", new String[]{String.valueOf(materialId)});
+        db.close();
+    }
+
+    public ArrayList<Material> getMaterialsBySubject(int subjectId) {
+        ArrayList<Material> materials = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(MATERIALS, null, MATERIALS_SUBJECT_ID + "=?", new String[]{String.valueOf(subjectId)}, null, null, null);
+        while (cursor.moveToNext()) {
+            Material material = new Material();
+            material.setId(cursor.getInt(cursor.getColumnIndex(MATERIALS_ID)));
+            material.setSubjectId(cursor.getInt(cursor.getColumnIndex(MATERIALS_SUBJECT_ID)));
+            material.setPath(cursor.getString(cursor.getColumnIndex(MATERIALS_PATH)));
+            material.setType(cursor.getString(cursor.getColumnIndex(MATERIALS_TYPE)));
+            material.setName(cursor.getString(cursor.getColumnIndex(MATERIALS_NAME)));
+            materials.add(material);
+        }
+        cursor.close();
+        db.close();
+        return materials;
     }
 }
