@@ -9,8 +9,12 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import com.github.dhaval2404.colorpicker.MaterialColorPickerDialog;
+import com.github.dhaval2404.colorpicker.listener.ColorListener;
+import com.github.dhaval2404.colorpicker.model.ColorShape;
 import android.text.Editable;
 import android.text.Html;
 import android.text.Layout;
@@ -153,11 +157,42 @@ public class NoteInfoActivity extends AppCompatActivity {
         findViewById(R.id.btn_heading).setOnClickListener(v -> applySpanToLine(new RelativeSizeSpan(1.5f)));
         findViewById(R.id.btn_subheading).setOnClickListener(v -> applySpanToLine(new RelativeSizeSpan(1.2f)));
         findViewById(R.id.btn_divider).setOnClickListener(v -> insertTextAtCursor("\n--------------------------------\n"));
-        findViewById(R.id.btn_align_left).setOnClickListener(v -> applySpanToLine(new AlignmentSpan.Standard(Layout.Alignment.ALIGN_NORMAL)));
-        findViewById(R.id.btn_align_center).setOnClickListener(v -> applySpanToLine(new AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER)));
-        findViewById(R.id.btn_align_right).setOnClickListener(v -> applySpanToLine(new AlignmentSpan.Standard(Layout.Alignment.ALIGN_OPPOSITE)));
         findViewById(R.id.btn_todo).setOnClickListener(v -> insertPrefix("☐ "));
         findViewById(R.id.btn_image).setOnClickListener(v -> pickImage());
+        findViewById(R.id.btn_color).setOnClickListener(v -> showColorPicker());
+        findViewById(R.id.btn_share).setOnClickListener(v -> shareNote());
+        findViewById(R.id.btn_delete).setOnClickListener(v -> deleteNote());
+    }
+
+    private void showColorPicker() {
+        new MaterialColorPickerDialog.Builder(this)
+                .setTitle(getString(R.string.pick_note_color))
+                .setColorShape(ColorShape.CIRCLE)
+                .setDefaultColor(note.getColor())
+                .setColorListener((color, colorHex) -> {
+                    note.setColor(color);
+                })
+                .show();
+    }
+
+    private void shareNote() {
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("text/plain");
+        intent.putExtra(Intent.EXTRA_SUBJECT, titleEdit.getText().toString());
+        intent.putExtra(Intent.EXTRA_TEXT, text.getText().toString());
+        startActivity(Intent.createChooser(intent, getString(R.string.share)));
+    }
+
+    private void deleteNote() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.delete_note_title)
+                .setMessage(R.string.delete_note_confirm)
+                .setPositiveButton(R.string.delete, (dialog, which) -> {
+                    db.deleteNoteById(note.getId());
+                    finish();
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
     }
 
     private void insertPrefix(String prefix) {

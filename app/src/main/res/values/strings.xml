@@ -113,6 +113,11 @@
     <!-- Notification -->
     <string name="notification_title">Today\'s lessons</string>
     <string name="do_not_have_lessons">You do not have lessons!</string>
+    <string name="app_subtitle">Student Schedule Manager</string>
+    <string name="pick_note_color">Pick Note Color</string>
+    <string name="share">Share</string>
+    <string name="delete_note_confirm">Are you sure you want to delete this note?</string>
+    <string name="delete_note_title">Delete Note</string>
 
 </resources>
 

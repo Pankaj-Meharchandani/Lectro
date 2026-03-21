@@ -75,25 +75,25 @@
                     android:contentDescription="@string/divider" />
 
                 <ImageButton
-                    android:id="@+id/btn_align_left"
+                    android:id="@+id/btn_color"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:src="@drawable/baseline_list_24"
-                    android:contentDescription="Align Left" />
+                    android:src="@drawable/baseline_note_24"
+                    android:contentDescription="@string/pick_note_color" />
 
                 <ImageButton
-                    android:id="@+id/btn_align_center"
+                    android:id="@+id/btn_share"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:src="@drawable/baseline_list_24"
-                    android:contentDescription="Align Center" />
+                    android:src="@drawable/ic_menu_share"
+                    android:contentDescription="@string/share" />
 
                 <ImageButton
-                    android:id="@+id/btn_align_right"
+                    android:id="@+id/btn_delete"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:src="@drawable/baseline_list_24"
-                    android:contentDescription="Align Right" />
+                    android:src="@drawable/baseline_delete_forever_24"
+                    android:contentDescription="@string/delete" />
 
                 <ImageButton
                     android:id="@+id/btn_todo"
