@@ -11,14 +11,15 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Html;
+import android.text.Layout;
 import android.text.Spannable;
-import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
-import android.text.style.BulletSpan;
+import android.text.style.AlignmentSpan;
 import android.text.style.ImageSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -28,7 +29,6 @@ import com.ulan.timetable.model.Note;
 import com.ulan.timetable.R;
 import com.ulan.timetable.utils.DbHelper;
 
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 
 public class NoteInfoActivity extends AppCompatActivity {
@@ -45,6 +45,7 @@ public class NoteInfoActivity extends AppCompatActivity {
         setContentView(R.layout.activity_note_info);
         setupIntent();
         setupToolbar();
+        setupCheckboxLogic();
     }
 
     private void setupIntent() {
@@ -81,8 +82,12 @@ public class NoteInfoActivity extends AppCompatActivity {
             InputStream inputStream = getContentResolver().openInputStream(uri);
             Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
             Drawable drawable = new BitmapDrawable(getResources(), bitmap);
-            int width = text.getWidth() - text.getPaddingLeft() - text.getPaddingRight();
+            
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int padding = (int) (64 * getResources().getDisplayMetrics().density); 
+            int width = screenWidth - padding;
             if (width <= 0) width = 500;
+            
             float aspectRatio = (float) bitmap.getHeight() / (float) bitmap.getWidth();
             int height = (int) (width * aspectRatio);
             drawable.setBounds(0, 0, width, height);
@@ -93,54 +98,43 @@ public class NoteInfoActivity extends AppCompatActivity {
     }
 
     private void setupToolbar() {
-        ImageButton btnBold = findViewById(R.id.btn_bold);
-        ImageButton btnBullet = findViewById(R.id.btn_bullet);
-        ImageButton btnHeading = findViewById(R.id.btn_heading);
-        ImageButton btnSubheading = findViewById(R.id.btn_subheading);
-        ImageButton btnDivider = findViewById(R.id.btn_divider);
-        ImageButton btnImage = findViewById(R.id.btn_image);
+        findViewById(R.id.btn_bold).setOnClickListener(v -> toggleSpan(new StyleSpan(android.graphics.Typeface.BOLD)));
+        findViewById(R.id.btn_bullet).setOnClickListener(v -> insertTextAtCursor("\n• "));
+        findViewById(R.id.btn_heading).setOnClickListener(v -> applySpanToLine(new RelativeSizeSpan(1.5f)));
+        findViewById(R.id.btn_subheading).setOnClickListener(v -> applySpanToLine(new RelativeSizeSpan(1.2f)));
+        findViewById(R.id.btn_divider).setOnClickListener(v -> insertTextAtCursor("\n--------------------------------\n"));
+        findViewById(R.id.btn_align_left).setOnClickListener(v -> applySpanToLine(new AlignmentSpan.Standard(Layout.Alignment.ALIGN_NORMAL)));
+        findViewById(R.id.btn_align_center).setOnClickListener(v -> applySpanToLine(new AlignmentSpan.Standard(Layout.Alignment.ALIGN_CENTER)));
+        findViewById(R.id.btn_align_right).setOnClickListener(v -> applySpanToLine(new AlignmentSpan.Standard(Layout.Alignment.ALIGN_OPPOSITE)));
+        findViewById(R.id.btn_todo).setOnClickListener(v -> insertTextAtCursor("\n☐ "));
+        findViewById(R.id.btn_image).setOnClickListener(v -> pickImage());
+    }
 
-        btnBold.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleSpan(new StyleSpan(android.graphics.Typeface.BOLD));
+    private void setupCheckboxLogic() {
+        text.setOnTouchListener((v, event) -> {
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                int offset = text.getOffsetForPosition(event.getX(), event.getY());
+                if (offset != -1) {
+                    String content = text.getText().toString();
+                    if (offset < content.length()) {
+                        if (content.charAt(offset) == '☐') {
+                            text.getText().replace(offset, offset + 1, "☑");
+                            return true;
+                        } else if (content.charAt(offset) == '☑') {
+                            text.getText().replace(offset, offset + 1, "☐");
+                            return true;
+                        }
+                    }
+                }
             }
+            return false;
         });
+    }
 
-        btnBullet.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                applySpan(new BulletSpan(20));
-            }
-        });
-
-        btnHeading.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                applySpan(new RelativeSizeSpan(1.5f));
-            }
-        });
-
-        btnSubheading.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                applySpan(new RelativeSizeSpan(1.2f));
-            }
-        });
-
-        btnDivider.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                text.getText().insert(text.getSelectionStart(), "\n\n--------------------------------\n\n");
-            }
-        });
-
-        btnImage.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                pickImage();
-            }
-        });
+    private void insertTextAtCursor(String textToInsert) {
+        int start = text.getSelectionStart();
+        if (start < 0) start = 0;
+        text.getText().insert(start, textToInsert);
     }
 
     private void pickImage() {
@@ -167,16 +161,21 @@ public class NoteInfoActivity extends AppCompatActivity {
             InputStream inputStream = getContentResolver().openInputStream(uri);
             Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
             Drawable drawable = new BitmapDrawable(getResources(), bitmap);
-            int width = text.getWidth() - text.getPaddingLeft() - text.getPaddingRight();
+            
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int padding = (int) (64 * getResources().getDisplayMetrics().density);
+            int width = screenWidth - padding;
             if (width <= 0) width = 500;
+            
             float aspectRatio = (float) bitmap.getHeight() / (float) bitmap.getWidth();
             int height = (int) (width * aspectRatio);
             drawable.setBounds(0, 0, width, height);
 
             int start = text.getSelectionStart();
-            text.getText().insert(start, "\n ");
+            if (start < 0) start = 0;
+            text.getText().insert(start, "\n \n");
             text.getText().setSpan(new ImageSpan(drawable, uri.toString()), start + 1, start + 2, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            text.getText().insert(start + 2, "\n");
+            text.setSelection(start + 3);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -190,19 +189,19 @@ public class NoteInfoActivity extends AppCompatActivity {
         }
     }
 
-    private void applySpan(Object span) {
+    private void applySpanToLine(Object span) {
         int start = text.getSelectionStart();
         int end = text.getSelectionEnd();
-        if (start == end) {
-            // Apply to the current line or just insert at start of line
-            int lineStart = text.getText().toString().lastIndexOf("\n", start - 1) + 1;
-            text.getText().setSpan(span, lineStart, start, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        } else {
-            text.getText().setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
+        String content = text.getText().toString();
+        int lineStart = content.lastIndexOf("\n", start - 1) + 1;
+        int lineEnd = content.indexOf("\n", end);
+        if (lineEnd == -1) lineEnd = content.length();
+        
+        text.getText().setSpan(span, lineStart, lineEnd, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
     }
 
     private void saveNote() {
+        if (note == null) return;
         String htmlText;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             htmlText = Html.toHtml(text.getText(), Html.TO_HTML_PARAGRAPH_LINES_CONSECUTIVE);
@@ -223,14 +222,12 @@ public class NoteInfoActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case android.R.id.home:
-                saveNote();
-                Toast.makeText(NoteInfoActivity.this, getResources().getString(R.string.saved), Toast.LENGTH_SHORT).show();
-                super.onBackPressed();
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+        if (item.getItemId() == android.R.id.home) {
+            saveNote();
+            Toast.makeText(NoteInfoActivity.this, getResources().getString(R.string.saved), Toast.LENGTH_SHORT).show();
+            super.onBackPressed();
+            return true;
         }
+        return super.onOptionsItemSelected(item);
     }
 }

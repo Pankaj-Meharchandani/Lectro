@@ -44,8 +44,11 @@ public class SubjectNotesFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_subject_notes, container, false);
         db = new DbHelper(getContext());
         listView = view.findViewById(R.id.subject_notes_list);
-        adapter = new NotesAdapter(getActivity(), listView, R.layout.listview_notes_adapter, db.getNotesBySubject(subject.getId()));
-        listView.setAdapter(adapter);
+        
+        if (subject != null) {
+            adapter = new NotesAdapter(getActivity(), listView, R.layout.listview_notes_adapter, db.getNotesBySubject(subject.getId()));
+            listView.setAdapter(adapter);
+        }
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -66,7 +69,7 @@ public class SubjectNotesFragment extends Fragment {
     }
 
     public void refresh() {
-        if (adapter != null) {
+        if (adapter != null && subject != null) {
             adapter.clear();
             adapter.addAll(db.getNotesBySubject(subject.getId()));
             adapter.notifyDataSetChanged();

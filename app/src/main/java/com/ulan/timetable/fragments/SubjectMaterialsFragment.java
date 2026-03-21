@@ -45,8 +45,11 @@ public class SubjectMaterialsFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_subject_materials, container, false);
         db = new DbHelper(getContext());
         listView = view.findViewById(R.id.subject_materials_list);
-        adapter = new MaterialsAdapter(getActivity(), R.layout.listview_materials_adapter, db.getMaterialsBySubject(subject.getId()));
-        listView.setAdapter(adapter);
+        
+        if (subject != null) {
+            adapter = new MaterialsAdapter(getActivity(), R.layout.listview_materials_adapter, db.getMaterialsBySubject(subject.getId()));
+            listView.setAdapter(adapter);
+        }
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -74,7 +77,7 @@ public class SubjectMaterialsFragment extends Fragment {
     }
 
     public void refresh() {
-        if (adapter != null) {
+        if (adapter != null && subject != null) {
             adapter.clear();
             adapter.addAll(db.getMaterialsBySubject(subject.getId()));
             adapter.notifyDataSetChanged();

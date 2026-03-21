@@ -58,6 +58,34 @@
                     android:contentDescription="@string/divider" />
 
                 <ImageButton
+                    android:id="@+id/btn_align_left"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/baseline_list_24"
+                    android:contentDescription="Align Left" />
+
+                <ImageButton
+                    android:id="@+id/btn_align_center"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/baseline_list_24"
+                    android:contentDescription="Align Center" />
+
+                <ImageButton
+                    android:id="@+id/btn_align_right"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/baseline_list_24"
+                    android:contentDescription="Align Right" />
+
+                <ImageButton
+                    android:id="@+id/btn_todo"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:src="@drawable/baseline_event_note_24"
+                    android:contentDescription="TODO" />
+
+                <ImageButton
                     android:id="@+id/btn_image"
                     android:layout_width="40dp"
                     android:layout_height="40dp"
@@ -82,7 +110,7 @@
             android:layout_height="1dp"
             android:background="#e0e0e0" />
 
-        <com.ulan.timetable.utils.LinedEditText
+        <android.support.v7.widget.AppCompatEditText
             android:id="@+id/edittextNote"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

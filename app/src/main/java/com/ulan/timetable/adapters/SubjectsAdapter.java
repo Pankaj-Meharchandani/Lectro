@@ -1,7 +1,9 @@
 package com.ulan.timetable.adapters;
 
 import android.app.Activity;
+import android.content.DialogInterface;
 import android.support.annotation.NonNull;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.PopupMenu;
 import android.view.LayoutInflater;
@@ -9,6 +11,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -64,6 +67,9 @@ public class SubjectsAdapter extends ArrayAdapter<Subject> {
                                 subjects.remove(position);
                                 notifyDataSetChanged();
                                 return true;
+                            } else if (id == R.id.edit_popup) {
+                                showRenameDialog(subject, db);
+                                return true;
                             } else if (id == R.id.move_up_popup) {
                                 if (position > 0) {
                                     swapSubjects(position, position - 1, db);
@@ -84,6 +90,25 @@ public class SubjectsAdapter extends ArrayAdapter<Subject> {
         }
 
         return convertView;
+    }
+
+    private void showRenameDialog(final Subject subject, final DbHelper db) {
+        final EditText editText = new EditText(mActivity);
+        editText.setText(subject.getName());
+        new AlertDialog.Builder(mActivity)
+                .setTitle("Rename Subject")
+                .setView(editText)
+                .setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String newName = editText.getText().toString();
+                        db.updateSubjectName(subject.getId(), newName);
+                        subject.setName(newName);
+                        notifyDataSetChanged();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private void swapSubjects(int pos1, int pos2, DbHelper db) {

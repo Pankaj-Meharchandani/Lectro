@@ -546,6 +546,14 @@ public class DbHelper extends SQLiteOpenHelper {
         db.close();
     }
 
+    public void updateSubjectName(int id, String newName) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(SUBJECTS_NAME, newName);
+        db.update(SUBJECTS, values, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)});
+        db.close();
+    }
+
     public Week getSubjectDetails(String name) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(SUBJECTS, new String[]{SUBJECTS_COLOR, SUBJECTS_TEACHER, SUBJECTS_ROOM}, SUBJECTS_NAME + "=?", new String[]{name}, null, null, null);
