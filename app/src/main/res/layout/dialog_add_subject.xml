@@ -20,7 +20,7 @@
             android:textColor="@android:color/black"
             android:textSize="14sp" />
 
-        <EditText
+        <AutoCompleteTextView
             android:id="@+id/subject_dialog"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -45,7 +45,7 @@
             android:textColor="@android:color/black"
             android:textSize="14sp" />
 
-        <EditText
+        <AutoCompleteTextView
             android:id="@+id/teacher_dialog"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

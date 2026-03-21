@@ -18,7 +18,7 @@
             android:text="@string/subject_dialog"
             android:textColor="@android:color/black" />
 
-        <EditText
+        <AutoCompleteTextView
             android:id="@+id/subjecthomework"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

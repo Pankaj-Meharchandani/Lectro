@@ -18,7 +18,7 @@
             android:text="@string/subject_dialog"
             android:textColor="@android:color/black" />
 
-        <EditText
+        <AutoCompleteTextView
             android:id="@+id/subjectexam_dialog"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -41,7 +41,7 @@
             android:text="@string/teacher_dialog"
             android:textColor="@android:color/black" />
 
-        <EditText
+        <AutoCompleteTextView
             android:id="@+id/teacherexam_dialog"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

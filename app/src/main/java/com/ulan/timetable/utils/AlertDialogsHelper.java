@@ -12,6 +12,9 @@ import android.support.v4.view.ViewPager;
 import android.support.v7.app.AlertDialog;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
@@ -47,11 +50,21 @@ import java.util.regex.Pattern;
 public class AlertDialogsHelper {
 
     public static void getEditSubjectDialog(final Activity activity, final View alertLayout, final ArrayList<Week> adapter, final ListView listView, int position) {
+        final DbHelper dbHelper = new DbHelper(activity);
         final HashMap<Integer, EditText> editTextHashs = new HashMap<>();
-        final EditText subject = alertLayout.findViewById(R.id.subject_dialog);
+        final AutoCompleteTextView subject = alertLayout.findViewById(R.id.subject_dialog);
         editTextHashs.put(R.string.subject, subject);
-        final EditText teacher = alertLayout.findViewById(R.id.teacher_dialog);
+        final AutoCompleteTextView teacher = alertLayout.findViewById(R.id.teacher_dialog);
         editTextHashs.put(R.string.teacher, teacher);
+
+        final ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getSubjectsList());
+        subject.setAdapter(subjectAdapter);
+        subject.setThreshold(1);
+
+        final ArrayAdapter<String> teacherAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getTeachersList());
+        teacher.setAdapter(teacherAdapter);
+        teacher.setThreshold(1);
+
         final EditText room = alertLayout.findViewById(R.id.room_dialog);
         editTextHashs.put(R.string.room, room);
         final TextView from_time = alertLayout.findViewById(R.id.from_time);
@@ -65,6 +78,19 @@ public class AlertDialogsHelper {
         from_time.setText(week.getFromTime());
         to_time.setText(week.getToTime());
         select_color.setBackgroundColor(week.getColor() != 0 ? week.getColor() : Color.WHITE);
+
+        subject.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedSubject = (String) parent.getItemAtPosition(position);
+                Week details = dbHelper.getSubjectDetails(selectedSubject);
+                if (details != null) {
+                    teacher.setText(details.getTeacher());
+                    room.setText(details.getRoom());
+                    select_color.setBackgroundColor(details.getColor());
+                }
+            }
+        });
 
         from_time.setOnClickListener(new View.OnClickListener() {
 
@@ -179,17 +205,40 @@ public class AlertDialogsHelper {
     }
 
     public static void getAddSubjectDialog(final Activity activity, final View alertLayout, final FragmentsTabAdapter adapter, final ViewPager viewPager) {
+        final DbHelper dbHelper = new DbHelper(activity);
         final HashMap<Integer, EditText> editTextHashs = new HashMap<>();
-        final EditText subject = alertLayout.findViewById(R.id.subject_dialog);
+        final AutoCompleteTextView subject = alertLayout.findViewById(R.id.subject_dialog);
         editTextHashs.put(R.string.subject, subject);
-        final EditText teacher = alertLayout.findViewById(R.id.teacher_dialog);
+        final AutoCompleteTextView teacher = alertLayout.findViewById(R.id.teacher_dialog);
         editTextHashs.put(R.string.teacher, teacher);
+
+        final ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getSubjectsList());
+        subject.setAdapter(subjectAdapter);
+        subject.setThreshold(1);
+
+        final ArrayAdapter<String> teacherAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getTeachersList());
+        teacher.setAdapter(teacherAdapter);
+        teacher.setThreshold(1);
+
         final EditText room = alertLayout.findViewById(R.id.room_dialog);
         editTextHashs.put(R.string.room, room);
         final TextView from_time = alertLayout.findViewById(R.id.from_time);
         final TextView to_time = alertLayout.findViewById(R.id.to_time);
         final Button select_color = alertLayout.findViewById(R.id.select_color);
         final Week week = new Week();
+
+        subject.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedSubject = (String) parent.getItemAtPosition(position);
+                Week details = dbHelper.getSubjectDetails(selectedSubject);
+                if (details != null) {
+                    teacher.setText(details.getTeacher());
+                    room.setText(details.getRoom());
+                    select_color.setBackgroundColor(details.getColor());
+                }
+            }
+        });
 
         from_time.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -290,11 +339,13 @@ public class AlertDialogsHelper {
                 } else if(!from_time.getText().toString().matches(".*\\d+.*") || !to_time.getText().toString().matches(".*\\d+.*")) {
                     Snackbar.make(alertLayout, R.string.time_error, Snackbar.LENGTH_LONG).show();
                 } else {
-                    DbHelper dbHelper = new DbHelper(activity);
-                    Matcher fragment = Pattern.compile("(.*Fragment)").matcher(adapter.getItem(viewPager.getCurrentItem()).toString());
+                    String fragmentName = adapter.getItem(viewPager.getCurrentItem()).getClass().getSimpleName();
+                    if (fragmentName.endsWith("Fragment")) {
+                        fragmentName = fragmentName.substring(0, fragmentName.length() - "Fragment".length());
+                    }
                     ColorDrawable buttonColor = (ColorDrawable) select_color.getBackground();
                     week.setSubject(subject.getText().toString());
-                    week.setFragment(fragment.find() ? fragment.group() : null);
+                    week.setFragment(fragmentName);
                     week.setTeacher(teacher.getText().toString());
                     week.setRoom(room.getText().toString());
                     week.setColor(buttonColor.getColor());
@@ -307,6 +358,15 @@ public class AlertDialogsHelper {
                     to_time.setText(R.string.select_time);
                     select_color.setBackgroundColor(Color.WHITE);
                     subject.requestFocus();
+
+                    // Update autocomplete adapters
+                    subjectAdapter.clear();
+                    subjectAdapter.addAll(dbHelper.getSubjectsList());
+                    subjectAdapter.notifyDataSetChanged();
+                    teacherAdapter.clear();
+                    teacherAdapter.addAll(dbHelper.getTeachersList());
+                    teacherAdapter.notifyDataSetChanged();
+
                     dialog.dismiss();
                 }
             }
@@ -314,8 +374,9 @@ public class AlertDialogsHelper {
     }
 
     public static void getEditHomeworkDialog(final Activity activity, final View alertLayout, final ArrayList<Homework> adapter, final ListView listView, int listposition) {
+        final DbHelper dbHelper = new DbHelper(activity);
         final HashMap<Integer, EditText> editTextHashs = new HashMap<>();
-        final EditText subject = alertLayout.findViewById(R.id.subjecthomework);
+        final AutoCompleteTextView subject = alertLayout.findViewById(R.id.subjecthomework);
         editTextHashs.put(R.string.subject, subject);
         final EditText description = alertLayout.findViewById(R.id.descriptionhomework);
         editTextHashs.put(R.string.desctiption, description);
@@ -323,10 +384,25 @@ public class AlertDialogsHelper {
         final Button select_color = alertLayout.findViewById(R.id.select_color);
         final Homework homework = adapter.get(listposition);
 
+        final ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getSubjectsList());
+        subject.setAdapter(subjectAdapter);
+        subject.setThreshold(1);
+
         subject.setText(homework.getSubject());
         description.setText(homework.getDescription());
         date.setText(homework.getDate());
         select_color.setBackgroundColor(homework.getColor() != 0 ? homework.getColor() : Color.WHITE);
+
+        subject.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedSubject = (String) parent.getItemAtPosition(position);
+                Week details = dbHelper.getSubjectDetails(selectedSubject);
+                if (details != null) {
+                    select_color.setBackgroundColor(details.getColor());
+                }
+            }
+        });
 
         date.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -415,14 +491,31 @@ public class AlertDialogsHelper {
     }
 
     public static void getAddHomeworkDialog(final Activity activity, final View alertLayout, final HomeworksAdapter adapter) {
+        final DbHelper dbHelper = new DbHelper(activity);
         final HashMap<Integer, EditText> editTextHashs = new HashMap<>();
-        final EditText subject = alertLayout.findViewById(R.id.subjecthomework);
+        final AutoCompleteTextView subject = alertLayout.findViewById(R.id.subjecthomework);
         editTextHashs.put(R.string.subject, subject);
         final EditText description = alertLayout.findViewById(R.id.descriptionhomework);
         editTextHashs.put(R.string.desctiption, description);
         final TextView date = alertLayout.findViewById(R.id.datehomework);
         final Button select_color = alertLayout.findViewById(R.id.select_color);
         final Homework homework = new Homework();
+
+        final ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getSubjectsList());
+        subject.setAdapter(subjectAdapter);
+        subject.setThreshold(1);
+        subject.setThreshold(1);
+
+        subject.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedSubject = (String) parent.getItemAtPosition(position);
+                Week details = dbHelper.getSubjectDetails(selectedSubject);
+                if (details != null) {
+                    select_color.setBackgroundColor(details.getColor());
+                }
+            }
+        });
 
         date.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -850,11 +943,21 @@ public class AlertDialogsHelper {
     }
 
     public static void getEditExamDialog(final Activity activity, final View alertLayout, final ArrayList<Exam> adapter, final ListView listView, int listposition) {
+        final DbHelper dbHelper = new DbHelper(activity);
         final HashMap<Integer, EditText> editTextHashs = new HashMap<>();
-        final EditText subject = alertLayout.findViewById(R.id.subjectexam_dialog);
+        final AutoCompleteTextView subject = alertLayout.findViewById(R.id.subjectexam_dialog);
         editTextHashs.put(R.string.subject, subject);
-        final EditText teacher = alertLayout.findViewById(R.id.teacherexam_dialog);
+        final AutoCompleteTextView teacher = alertLayout.findViewById(R.id.teacherexam_dialog);
         editTextHashs.put(R.string.teacher, teacher);
+
+        final ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getSubjectsList());
+        subject.setAdapter(subjectAdapter);
+        subject.setThreshold(1);
+
+        final ArrayAdapter<String> teacherAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getTeachersList());
+        teacher.setAdapter(teacherAdapter);
+        teacher.setThreshold(1);
+
         final EditText room = alertLayout.findViewById(R.id.roomexam_dialog);
         editTextHashs.put(R.string.room, room);
         final TextView date = alertLayout.findViewById(R.id.dateexam_dialog);
@@ -867,7 +970,20 @@ public class AlertDialogsHelper {
         room.setText(exam.getRoom());
         date.setText(exam.getDate());
         time.setText(exam.getTime());
-        select_color.setBackgroundColor(exam.getColor());
+        select_color.setBackgroundColor(exam.getColor() != 0 ? exam.getColor() : Color.WHITE);
+
+        subject.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedSubject = (String) parent.getItemAtPosition(position);
+                Week details = dbHelper.getSubjectDetails(selectedSubject);
+                if (details != null) {
+                    teacher.setText(details.getTeacher());
+                    room.setText(details.getRoom());
+                    select_color.setBackgroundColor(details.getColor());
+                }
+            }
+        });
 
         date.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -984,17 +1100,40 @@ public class AlertDialogsHelper {
     }
 
     public static void getAddExamDialog(final Activity activity, final View alertLayout, final ExamsAdapter adapter) {
+        final DbHelper dbHelper = new DbHelper(activity);
         final HashMap<Integer, EditText> editTextHashs = new HashMap<>();
-        final EditText subject = alertLayout.findViewById(R.id.subjectexam_dialog);
+        final AutoCompleteTextView subject = alertLayout.findViewById(R.id.subjectexam_dialog);
         editTextHashs.put(R.string.subject, subject);
-        final EditText teacher = alertLayout.findViewById(R.id.teacherexam_dialog);
+        final AutoCompleteTextView teacher = alertLayout.findViewById(R.id.teacherexam_dialog);
         editTextHashs.put(R.string.teacher, teacher);
+
+        final ArrayAdapter<String> subjectAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getSubjectsList());
+        subject.setAdapter(subjectAdapter);
+        subject.setThreshold(1);
+
+        final ArrayAdapter<String> teacherAdapter = new ArrayAdapter<>(activity, android.R.layout.simple_list_item_1, dbHelper.getTeachersList());
+        teacher.setAdapter(teacherAdapter);
+        teacher.setThreshold(1);
+
         final EditText room = alertLayout.findViewById(R.id.roomexam_dialog);
         editTextHashs.put(R.string.room, room);
         final TextView date = alertLayout.findViewById(R.id.dateexam_dialog);
         final TextView time = alertLayout.findViewById(R.id.timeexam_dialog);
         final Button select_color = alertLayout.findViewById(R.id.select_color);
         final Exam exam = new Exam();
+
+        subject.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String selectedSubject = (String) parent.getItemAtPosition(position);
+                Week details = dbHelper.getSubjectDetails(selectedSubject);
+                if (details != null) {
+                    teacher.setText(details.getTeacher());
+                    room.setText(details.getRoom());
+                    select_color.setBackgroundColor(details.getColor());
+                }
+            }
+        });
 
         date.setOnClickListener(new View.OnClickListener() {
             @Override
