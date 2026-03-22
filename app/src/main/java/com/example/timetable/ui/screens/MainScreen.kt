@@ -2,6 +2,7 @@ package com.example.timetable.ui.screens
 
 import android.content.SharedPreferences
 import android.text.TextUtils
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,6 +35,7 @@ import com.example.timetable.ui.components.AddSubjectDialog
 import com.example.timetable.ui.components.SubjectItem
 import com.example.timetable.ui.viewmodel.MainViewModel
 import com.example.timetable.utils.BrowserUtil
+import com.example.timetable.utils.PdfExportUtil
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -200,6 +202,8 @@ fun MainScreen(
                         val url = sharedPref.getString(SettingsActivity.KEY_SCHOOL_WEBSITE_SETTING, null)
                         if (!TextUtils.isEmpty(url)) {
                             BrowserUtil.openUrlInChromeCustomTab(context, url)
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.school_website_snackbar), Toast.LENGTH_SHORT).show()
                         }
                     },
                     onItemClick = {
@@ -219,6 +223,13 @@ fun MainScreen(
                                 scope.launch { drawerState.open() }
                             }) {
                                 Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = {
+                                PdfExportUtil.exportScheduleToPdf(context, days, viewModel.weekData)
+                            }) {
+                                Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF")
                             }
                         }
                     )
