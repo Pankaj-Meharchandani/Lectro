@@ -7,7 +7,7 @@
  #time-table-in-android-java-for-students
 timetable & management app for students created in android <br><br>
 
-i upgraded the timetable app created by [@ulan](https://github.com/ulan17/) to a more stable & colorful application <br><br>
+i upgraded the timetable app created by [@pankaj](https://github.com/pankaj17/) to a more stable & colorful application <br><br>
 you can not only add timetable for your lectures but can also add examination schedule, teachers details, home works with submission dates, you can also store notes   
 You can also add your school/college website for easy access 
 

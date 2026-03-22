@@ -1,7 +1,7 @@
 package com.example.timetable.fragments;
 
 import androidx.fragment.app.Fragment;
-import android.os.Bundle;;
+import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,7 +14,7 @@ import com.example.timetable.utils.FragmentHelper;
 
 
 /**
- * Created by Ulan on 06.09.2018.
+ * Created by Pankaj on 06.09.2018.
  */
 public class SundayFragment extends Fragment {
 
