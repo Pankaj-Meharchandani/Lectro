@@ -1,5 +1,6 @@
 package com.example.timetable.ui.screens
 
+import android.content.SharedPreferences
 import android.text.TextUtils
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,6 +21,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
 import coil.compose.AsyncImage
@@ -50,11 +54,28 @@ fun MainScreen(
     val context = LocalContext.current
     
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val switchSevenDays = remember { 
-        sharedPref.getBoolean(SettingsActivity.KEY_SEVEN_DAYS_SETTING, false) 
+    var switchSevenDays by remember { 
+        mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_SEVEN_DAYS_SETTING, false)) 
     }
-    val personalDetailsEnabled = remember {
-        sharedPref.getBoolean(SettingsActivity.KEY_PERSONAL_DETAILS_SETTING, true)
+    var personalDetailsEnabled by remember {
+        mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_PERSONAL_DETAILS_SETTING, true))
+    }
+
+    DisposableEffect(sharedPref) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            when (key) {
+                SettingsActivity.KEY_SEVEN_DAYS_SETTING -> {
+                    switchSevenDays = prefs.getBoolean(key, false)
+                }
+                SettingsActivity.KEY_PERSONAL_DETAILS_SETTING -> {
+                    personalDetailsEnabled = prefs.getBoolean(key, true)
+                }
+            }
+        }
+        sharedPref.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            sharedPref.unregisterOnSharedPreferenceChangeListener(listener)
+        }
     }
     
     val dayNames = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -65,6 +86,19 @@ fun MainScreen(
     val pagerState = rememberPagerState(pageCount = { days.size })
     var showAddDialog by remember { mutableStateOf(false) }
     var weekToEdit by remember { mutableStateOf<Week?>(null) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadSuggestions()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(days) {
         days.forEach { viewModel.loadWeekData(it) }
@@ -107,51 +141,53 @@ fun MainScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                val userDetail = viewModel.userDetail
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (!userDetail.photoPath.isNullOrBlank()) {
-                        AsyncImage(
-                            model = userDetail.photoPath,
-                            contentDescription = "Profile Photo",
-                            modifier = Modifier
-                                .size(80.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.AccountCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(80.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = userDetail.name?.ifBlank { "User Name" } ?: "User Name",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    if (!userDetail.email.isNullOrBlank()) {
+                if (personalDetailsEnabled) {
+                    val userDetail = viewModel.userDetail
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (!userDetail.photoPath.isNullOrBlank()) {
+                            AsyncImage(
+                                model = userDetail.photoPath,
+                                contentDescription = "Profile Photo",
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(80.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
                         Text(
-                            text = userDetail.email ?: "",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = userDetail.name?.ifBlank { "User Name" } ?: "User Name",
+                            style = MaterialTheme.typography.titleLarge
                         )
+                        if (!userDetail.email.isNullOrBlank()) {
+                            Text(
+                                text = userDetail.email ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (!userDetail.rollNumber.isNullOrBlank()) {
+                            Text(
+                                text = "Roll: ${userDetail.rollNumber ?: ""}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                    if (!userDetail.rollNumber.isNullOrBlank()) {
-                        Text(
-                            text = "Roll: ${userDetail.rollNumber ?: ""}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    HorizontalDivider()
                 }
-                HorizontalDivider()
                 NavigationDrawerContent(
                     onExamsClick = onNavigateToExams,
                     onTeachersClick = onNavigateToTeachers,

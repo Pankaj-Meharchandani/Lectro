@@ -7,8 +7,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -38,26 +36,52 @@ class PersonalDetailsViewModel(application: Application) : AndroidViewModel(appl
     var userDetail by mutableStateOf(UserDetail())
     var userFiles = mutableStateListOf<UserFile>()
 
+    var name by mutableStateOf("")
+    var email by mutableStateOf("")
+    var roll by mutableStateOf("")
+    var other by mutableStateOf("")
+    var photoPath by mutableStateOf<String?>(null)
+
     init {
         loadData()
     }
 
     fun loadData() {
         userDetail = db.getUserDetail()
+        name = userDetail.name ?: ""
+        email = userDetail.email ?: ""
+        roll = userDetail.rollNumber ?: ""
+        other = userDetail.other ?: ""
+        photoPath = userDetail.photoPath
+        
         userFiles.clear()
         userFiles.addAll(db.getAllUserFiles())
     }
 
-    fun saveDetails(name: String, email: String, roll: String, other: String, photo: String?) {
+    fun updateField(
+        newName: String = name,
+        newEmail: String = email,
+        newRoll: String = roll,
+        newOther: String = other,
+        newPhoto: String? = photoPath
+    ) {
+        name = newName
+        email = newEmail
+        roll = newRoll
+        other = newOther
+        photoPath = newPhoto
+        saveDetails()
+    }
+
+    private fun saveDetails() {
         userDetail.apply {
-            this.name = name
-            this.email = email
-            this.rollNumber = roll
-            this.other = other
-            this.photoPath = photo
+            this.name = this@PersonalDetailsViewModel.name
+            this.email = this@PersonalDetailsViewModel.email
+            this.rollNumber = this@PersonalDetailsViewModel.roll
+            this.other = this@PersonalDetailsViewModel.other
+            this.photoPath = this@PersonalDetailsViewModel.photoPath
         }
         db.saveUserDetail(userDetail)
-        loadData()
     }
 
     fun addFile(title: String, path: String) {
@@ -77,13 +101,6 @@ class PersonalDetailsViewModel(application: Application) : AndroidViewModel(appl
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewModel = viewModel()) {
-    val userDetail = viewModel.userDetail
-    var name by remember(userDetail) { mutableStateOf(userDetail.name ?: "") }
-    var email by remember(userDetail) { mutableStateOf(userDetail.email ?: "") }
-    var roll by remember(userDetail) { mutableStateOf(userDetail.rollNumber ?: "") }
-    var other by remember(userDetail) { mutableStateOf(userDetail.other ?: "") }
-    var photoUri by remember(userDetail) { mutableStateOf(userDetail.photoPath?.let { Uri.parse(it) }) }
-
     var tempFileUri by remember { mutableStateOf<Uri?>(null) }
     var showAddFileDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -92,9 +109,10 @@ fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewMode
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
             uri?.let {
-                context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                photoUri = it
-                viewModel.saveDetails(name, email, roll, other, it.toString())
+                try {
+                    context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                } catch (e: Exception) {}
+                viewModel.updateField(newPhoto = it.toString())
             }
         }
     )
@@ -121,13 +139,6 @@ fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewMode
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
-                actions = {
-                    IconButton(onClick = {
-                        viewModel.saveDetails(name, email, roll, other, photoUri?.toString())
-                    }) {
-                        Icon(Icons.Default.Save, contentDescription = "Save")
-                    }
                 }
             )
         }
@@ -150,9 +161,9 @@ fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewMode
                     .clickable { photoPickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                if (photoUri != null) {
+                if (viewModel.photoPath != null) {
                     AsyncImage(
-                        model = photoUri,
+                        model = viewModel.photoPath,
                         contentDescription = "Profile Photo",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -163,10 +174,30 @@ fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewMode
             }
 
             // Details
-            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.name_label)) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text(stringResource(R.string.email_label)) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = roll, onValueChange = { roll = it }, label = { Text(stringResource(R.string.roll_number_label)) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = other, onValueChange = { other = it }, label = { Text(stringResource(R.string.other_label)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = viewModel.name, 
+                onValueChange = { viewModel.updateField(newName = it) }, 
+                label = { Text(stringResource(R.string.name_label)) }, 
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = viewModel.email, 
+                onValueChange = { viewModel.updateField(newEmail = it) }, 
+                label = { Text(stringResource(R.string.email_label)) }, 
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = viewModel.roll, 
+                onValueChange = { viewModel.updateField(newRoll = it) }, 
+                label = { Text(stringResource(R.string.roll_number_label)) }, 
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = viewModel.other, 
+                onValueChange = { viewModel.updateField(newOther = it) }, 
+                label = { Text(stringResource(R.string.other_label)) }, 
+                modifier = Modifier.fillMaxWidth()
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
