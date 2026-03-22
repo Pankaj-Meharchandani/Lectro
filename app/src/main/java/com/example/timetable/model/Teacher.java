@@ -1,15 +1,16 @@
 package com.example.timetable.model;
 public class Teacher {
-    private String name, post, phonenumber, email;
+    private String name, post, phonenumber, email, cabinNumber;
     private int id, color;
 
     public Teacher() {
     }
-    public Teacher(String name, String post, String phonenumber, String email, int color) {
+    public Teacher(String name, String post, String phonenumber, String email, String cabinNumber, int color) {
         this.name = name;
         this.post = post;
         this.phonenumber = phonenumber;
         this.email = email;
+        this.cabinNumber = cabinNumber;
         this.color = color;
     }
 
@@ -43,6 +44,14 @@ public class Teacher {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getCabinNumber() {
+        return cabinNumber;
+    }
+
+    public void setCabinNumber(String cabinNumber) {
+        this.cabinNumber = cabinNumber;
     }
 
     public int getId() {

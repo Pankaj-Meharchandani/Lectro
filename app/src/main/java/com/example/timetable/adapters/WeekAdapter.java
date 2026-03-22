@@ -54,14 +54,7 @@ public class WeekAdapter extends ArrayAdapter<Week> {
     @NonNull
     @Override
     public View getView(final int position, View convertView, @NonNull ViewGroup parent) {
-        String subject = Objects.requireNonNull(getItem(position)).getSubject();
-        String teacher = Objects.requireNonNull(getItem(position)).getTeacher();
-        String time_from = Objects.requireNonNull(getItem(position)).getFromTime();
-        String time_to = Objects.requireNonNull(getItem(position)).getToTime();
-        String room = Objects.requireNonNull(getItem(position)).getRoom();
-        int color = getItem(position).getColor();
-
-        week = new Week(subject, teacher, room, time_from, time_to, color);
+        week = Objects.requireNonNull(getItem(position));
         final ViewHolder holder;
 
         if(convertView == null){

@@ -1,15 +1,18 @@
 package com.example.timetable.model;
 public class Homework {
-    private String subject, description, date;
+    private String subject, title, description, date;
     private int id, color;
+    private int completed; // 0 for false, 1 for true
 
     public Homework() {}
 
-    public Homework(String subject, String description, String date, int color) {
+    public Homework(String subject, String title, String description, String date, int color, int completed) {
         this.subject = subject;
+        this.title = title;
         this.description = description;
         this.date = date;
         this.color = color;
+        this.completed = completed;
     }
     public String getSubject() {
         return subject;
@@ -17,6 +20,14 @@ public class Homework {
 
     public void setSubject(String subject) {
         this.subject = subject;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getDescription() {
@@ -50,6 +61,12 @@ public class Homework {
     public void setColor(int color) {
         this.color = color;
     }
+
+    public int getCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(int completed) {
+        this.completed = completed;
+    }
 }
-
-

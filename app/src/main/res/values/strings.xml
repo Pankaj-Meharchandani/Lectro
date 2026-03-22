@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TimeTable</string>
+    <string name="app_name">Lectro</string>
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title">Android Studio</string>
@@ -47,19 +47,19 @@
     <string name="choose_date">Choose date</string>
     <string name="choose_color">Choose color</string>
 
-    <!-- Homeworks Activity strings -->
-    <string name="title_activity_homeworks">HomeworksActivity</string>
-    <string name="homeworks">Homeworks</string>
-    <string name="select_date">Select date</string>
+    <!-- Assignments Activity strings -->
+    <string name="title_activity_homeworks">AssignmentsActivity</string>
+    <string name="homeworks">Assignments</string>
+    <string name="select_date">Select deadline</string>
     <string name="deadline_dialog">Deadline:</string>
     <string name="deadline">Deadline</string>
     <string name="description_dialog">Description:</string>
-    <string name="desctiption">Desctiption</string>
+    <string name="desctiption">Description</string>
     <string name="date_error">Date field can not be empty!</string>
-    <string name="edit_homework">Edit homework</string>
-    <string name="add_homework">Add homework</string>
+    <string name="edit_homework">Edit assignment</string>
+    <string name="add_homework">Add assignment</string>
     <string name="deadline_snackbar">Deadline field can not be empty!</string>
-    <string name="date">Date</string>
+    <string name="date">Deadline</string>
 
     <!-- Notes Activity strings -->
     <string name="notes">Notes</string>
@@ -78,10 +78,12 @@
     <string name="post_dialog">Post:</string>
     <string name="phonenumber_dialog">Phone:</string>
     <string name="email_dialog">Email:</string>
+    <string name="cabinnumber_dialog">Cabin No:</string>
     <string name="name">Name</string>
     <string name="phone_number">Phone number</string>
     <string name="post">Post</string>
     <string name="email">Email</string>
+    <string name="cabin_number">Cabin No</string>
 
     <!-- Exams Activity strings -->
     <string name="exams">Exams</string>
