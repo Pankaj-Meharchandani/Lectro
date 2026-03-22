@@ -140,7 +140,7 @@ fun MainScreen(
                                 TabRowDefaults.SecondaryIndicator(
                                     modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
                                     height = 4.dp,
-                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                             }
                         }
@@ -156,7 +156,7 @@ fun MainScreen(
                                     ) 
                                 },
                                 selectedContentColor = MaterialTheme.colorScheme.onPrimary,
-                                unselectedContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
+                                unselectedContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
                             )
                         }
                     }

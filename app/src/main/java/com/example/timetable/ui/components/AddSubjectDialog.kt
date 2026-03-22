@@ -100,43 +100,7 @@ fun AddSubjectDialog(
                     }
                 }
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Start Time", style = MaterialTheme.typography.labelSmall)
-                        Button(
-                            onClick = {
-                                val c = Calendar.getInstance()
-                                TimePickerDialog(context, { _, h, m ->
-                                    fromTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
-                                }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(horizontal = 4.dp)
-                        ) {
-                            Text(if (fromTime.isEmpty()) stringResource(R.string.select_time) else fromTime)
-                        }
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("End Time", style = MaterialTheme.typography.labelSmall)
-                        Button(
-                            onClick = {
-                                val c = Calendar.getInstance()
-                                TimePickerDialog(context, { _, h, m ->
-                                    toTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
-                                }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(horizontal = 4.dp)
-                        ) {
-                            Text(if (toTime.isEmpty()) stringResource(R.string.select_time) else toTime)
-                        }
-                    }
-                }
-
-                HorizontalDivider()
-                Text("Optional Details", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-
-                // Teacher Autocomplete (Secondary)
+                // Teacher Autocomplete
                 ExposedDropdownMenuBox(
                     expanded = teacherExpanded,
                     onExpandedChange = { teacherExpanded = it }
@@ -179,6 +143,33 @@ fun AddSubjectDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            val c = Calendar.getInstance()
+                            TimePickerDialog(context, { _, h, m ->
+                                fromTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
+                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
+                        },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text(if (fromTime.isEmpty()) "Start Time" else fromTime)
+                    }
+                    Button(
+                        onClick = {
+                            val c = Calendar.getInstance()
+                            TimePickerDialog(context, { _, h, m ->
+                                toTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
+                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
+                        },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        Text(if (toTime.isEmpty()) "End Time" else toTime)
+                    }
+                }
 
                 Text(stringResource(R.string.select_color))
                 ColorPickerRow(selectedColor = color, onColorSelected = { color = it })
