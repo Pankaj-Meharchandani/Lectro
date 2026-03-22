@@ -3,7 +3,11 @@ package com.example.timetable.ui.viewmodel
 import android.app.Application
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import com.example.timetable.model.UserDetail
 import com.example.timetable.model.Week
 import com.example.timetable.utils.DbHelper
 
@@ -13,12 +17,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val weekData = mutableStateMapOf<String, List<Week>>()
     var subjects = mutableStateListOf<String>()
     var teachers = mutableStateListOf<String>()
+    var userDetail by mutableStateOf(UserDetail())
 
     fun loadWeekData(day: String) {
         weekData[day] = db.getWeek(day)
     }
 
     fun loadSuggestions() {
+        userDetail = db.getUserDetail()
         subjects.clear()
         subjects.addAll(db.getSubjectsList())
         teachers.clear()

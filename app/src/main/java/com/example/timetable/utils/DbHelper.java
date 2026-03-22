@@ -12,13 +12,15 @@ import com.example.timetable.model.Material;
 import com.example.timetable.model.Note;
 import com.example.timetable.model.Subject;
 import com.example.timetable.model.Teacher;
+import com.example.timetable.model.UserDetail;
+import com.example.timetable.model.UserFile;
 import com.example.timetable.model.Week;
 
 import java.util.ArrayList;
 
 public class DbHelper extends SQLiteOpenHelper {
 
-    private static final int DB_VERSION = 12;
+    private static final int DB_VERSION = 13;
     private static final String DB_NAME = "timetabledb";
 
     private static final String TIMETABLE = "timetable";
@@ -82,6 +84,19 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String MATERIALS_TYPE = "type";
     private static final String MATERIALS_NAME = "name";
     private static final String MATERIALS_SORT_ORDER = "sort_order";
+
+    private static final String USER_DETAILS = "user_details";
+    private static final String USER_DETAILS_ID = "id";
+    private static final String USER_DETAILS_NAME = "name";
+    private static final String USER_DETAILS_EMAIL = "email";
+    private static final String USER_DETAILS_ROLL = "roll_number";
+    private static final String USER_DETAILS_PHOTO = "photo_path";
+    private static final String USER_DETAILS_OTHER = "other";
+
+    private static final String USER_FILES = "user_files";
+    private static final String USER_FILES_ID = "id";
+    private static final String USER_FILES_TITLE = "title";
+    private static final String USER_FILES_PATH = "path";
 
     public DbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
@@ -151,6 +166,19 @@ public class DbHelper extends SQLiteOpenHelper {
                 + MATERIALS_NAME + " TEXT,"
                 + MATERIALS_SORT_ORDER + " INTEGER DEFAULT 0" + ")";
 
+        String CREATE_USER_DETAILS = "CREATE TABLE " + USER_DETAILS + "("
+                + USER_DETAILS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + USER_DETAILS_NAME + " TEXT,"
+                + USER_DETAILS_EMAIL + " TEXT,"
+                + USER_DETAILS_ROLL + " TEXT,"
+                + USER_DETAILS_PHOTO + " TEXT,"
+                + USER_DETAILS_OTHER + " TEXT" + ")";
+
+        String CREATE_USER_FILES = "CREATE TABLE " + USER_FILES + "("
+                + USER_FILES_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + USER_FILES_TITLE + " TEXT,"
+                + USER_FILES_PATH + " TEXT" + ")";
+
         db.execSQL(CREATE_TIMETABLE);
         db.execSQL(CREATE_HOMEWORKS);
         db.execSQL(CREATE_NOTES);
@@ -158,6 +186,8 @@ public class DbHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_EXAMS);
         db.execSQL(CREATE_SUBJECTS);
         db.execSQL(CREATE_MATERIALS);
+        db.execSQL(CREATE_USER_DETAILS);
+        db.execSQL(CREATE_USER_FILES);
     }
 
     @Override
@@ -200,6 +230,19 @@ public class DbHelper extends SQLiteOpenHelper {
             onUpgrade(db, 11, newVersion);
         } else if (oldVersion == 11) {
             db.execSQL("ALTER TABLE " + TEACHERS + " ADD COLUMN " + TEACHERS_CABIN_NUMBER + " TEXT");
+            onUpgrade(db, 12, newVersion);
+        } else if (oldVersion == 12) {
+            db.execSQL("CREATE TABLE " + USER_DETAILS + "("
+                    + USER_DETAILS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + USER_DETAILS_NAME + " TEXT,"
+                    + USER_DETAILS_EMAIL + " TEXT,"
+                    + USER_DETAILS_ROLL + " TEXT,"
+                    + USER_DETAILS_PHOTO + " TEXT,"
+                    + USER_DETAILS_OTHER + " TEXT)");
+            db.execSQL("CREATE TABLE " + USER_FILES + "("
+                    + USER_FILES_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + USER_FILES_TITLE + " TEXT,"
+                    + USER_FILES_PATH + " TEXT)");
         }
     }
 
@@ -733,6 +776,79 @@ public class DbHelper extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
         values.put(MATERIALS_SORT_ORDER, newOrder);
         db.update(MATERIALS, values, MATERIALS_ID + "=?", new String[]{String.valueOf(materialId)});
+        db.close();
+    }
+
+    /**
+     * Methods for User Personal Details
+     **/
+    public UserDetail getUserDetail() {
+        UserDetail userDetail = new UserDetail();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM " + USER_DETAILS + " LIMIT 1", null);
+        if (cursor.moveToFirst()) {
+            userDetail.setId(getIntChecked(cursor, USER_DETAILS_ID));
+            userDetail.setName(getStringChecked(cursor, USER_DETAILS_NAME));
+            userDetail.setEmail(getStringChecked(cursor, USER_DETAILS_EMAIL));
+            userDetail.setRollNumber(getStringChecked(cursor, USER_DETAILS_ROLL));
+            userDetail.setPhotoPath(getStringChecked(cursor, USER_DETAILS_PHOTO));
+            userDetail.setOther(getStringChecked(cursor, USER_DETAILS_OTHER));
+        }
+        cursor.close();
+        db.close();
+        return userDetail;
+    }
+
+    public void saveUserDetail(UserDetail detail) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(USER_DETAILS_NAME, detail.getName());
+        values.put(USER_DETAILS_EMAIL, detail.getEmail());
+        values.put(USER_DETAILS_ROLL, detail.getRollNumber());
+        values.put(USER_DETAILS_PHOTO, detail.getPhotoPath());
+        values.put(USER_DETAILS_OTHER, detail.getOther());
+
+        Cursor cursor = db.rawQuery("SELECT * FROM " + USER_DETAILS, null);
+        if (cursor.getCount() > 0) {
+            db.update(USER_DETAILS, values, null, null);
+        } else {
+            db.insert(USER_DETAILS, null, values);
+        }
+        cursor.close();
+        db.close();
+    }
+
+    /**
+     * Methods for User Files
+     **/
+    public void insertUserFile(UserFile file) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(USER_FILES_TITLE, file.getTitle());
+        values.put(USER_FILES_PATH, file.getPath());
+        db.insert(USER_FILES, null, values);
+        db.close();
+    }
+
+    public ArrayList<UserFile> getAllUserFiles() {
+        ArrayList<UserFile> list = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM " + USER_FILES, null);
+        while (cursor.moveToNext()) {
+            UserFile file = new UserFile();
+            file.setId(getIntChecked(cursor, USER_FILES_ID));
+            file.setTitle(getStringChecked(cursor, USER_FILES_TITLE));
+            file.setPath(getStringChecked(cursor, USER_FILES_PATH));
+            list.add(file);
+        }
+        cursor.close();
+        db.close();
+        return list;
+    }
+
+    public void deleteUserFile(int id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(USER_FILES, USER_FILES_ID + "=?", new String[]{String.valueOf(id)});
         db.close();
     }
 }

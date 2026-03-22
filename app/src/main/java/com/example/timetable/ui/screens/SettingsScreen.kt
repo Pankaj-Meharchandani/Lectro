@@ -24,11 +24,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val sharedPref = PreferenceManager.getDefaultSharedPreferences(application)
 
     var sevenDaysEnabled by mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_SEVEN_DAYS_SETTING, false))
+    var personalDetailsEnabled by mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_PERSONAL_DETAILS_SETTING, true))
     var schoolWebsite by mutableStateOf(sharedPref.getString(SettingsActivity.KEY_SCHOOL_WEBSITE_SETTING, "") ?: "")
 
     fun updateSevenDays(enabled: Boolean) {
         sharedPref.edit().putBoolean(SettingsActivity.KEY_SEVEN_DAYS_SETTING, enabled).apply()
         sevenDaysEnabled = enabled
+    }
+
+    fun updatePersonalDetails(enabled: Boolean) {
+        sharedPref.edit().putBoolean(SettingsActivity.KEY_PERSONAL_DETAILS_SETTING, enabled).apply()
+        personalDetailsEnabled = enabled
     }
 
     fun updateSchoolWebsite(url: String) {
@@ -72,6 +78,15 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                         Switch(
                             checked = viewModel.sevenDaysEnabled,
                             onCheckedChange = { viewModel.updateSevenDays(it) }
+                        )
+                    }
+                )
+                SettingsItem(
+                    title = stringResource(R.string.enable_personal_details),
+                    control = {
+                        Switch(
+                            checked = viewModel.personalDetailsEnabled,
+                            onCheckedChange = { viewModel.updatePersonalDetails(it) }
                         )
                     }
                 )

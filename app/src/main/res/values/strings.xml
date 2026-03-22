@@ -121,6 +121,14 @@
     <string name="delete_note_confirm">Are you sure you want to delete this note?</string>
     <string name="delete_note_title">Delete Note</string>
 
+    <string name="personal_details_files">Personal Details &amp; Files</string>
+    <string name="enable_personal_details">Enable Personal Details &amp; Files</string>
+    <string name="name_label">Name</string>
+    <string name="email_label">Email</string>
+    <string name="roll_number_label">Roll Number</string>
+    <string name="other_label">Other (e.g. Course)</string>
+    <string name="my_files">My Files</string>
+    <string name="upload_file">Upload File</string>
 </resources>
 
 
