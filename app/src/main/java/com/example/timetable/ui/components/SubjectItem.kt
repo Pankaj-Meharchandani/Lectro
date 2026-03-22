@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.timetable.model.Week
 import com.example.timetable.ui.theme.themedContainerColor
+import com.example.timetable.utils.TimeUtils
 
 @Composable
 fun SubjectItem(
@@ -103,7 +104,7 @@ fun SubjectItem(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${subject.fromTime} - ${subject.toTime}",
+                        text = "${TimeUtils.formatTo12Hour(subject.fromTime)} - ${TimeUtils.formatTo12Hour(subject.toTime)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = contentColor
                     )

@@ -19,6 +19,7 @@ import com.example.timetable.R;
 import com.example.timetable.model.Week;
 import com.example.timetable.utils.AlertDialogsHelper;
 import com.example.timetable.utils.DbHelper;
+import com.example.timetable.utils.TimeUtils;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -76,7 +77,7 @@ public class WeekAdapter extends ArrayAdapter<Week> {
         holder.subject.setText(week.getSubject());
         holder.teacher.setText(week.getTeacher());
         holder.room.setText(week.getRoom());
-        holder.time.setText(week.getFromTime() + " - " + week.getToTime());
+        holder.time.setText(TimeUtils.formatTo12Hour(week.getFromTime()) + " - " + TimeUtils.formatTo12Hour(week.getToTime()));
         holder.cardView.setCardBackgroundColor(week.getColor());
         holder.popup.setOnClickListener(new View.OnClickListener() {
             @Override

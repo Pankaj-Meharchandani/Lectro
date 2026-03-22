@@ -194,6 +194,7 @@ object PdfExportUtil {
     private fun minutesToTime(minutes: Int): String {
         val h = minutes / 60
         val m = minutes % 60
-        return String.format(Locale.getDefault(), "%02d:%02d", h, m)
+        val time24 = String.format(Locale.getDefault(), "%02d:%02d", h, m)
+        return TimeUtils.formatTo12Hour(time24)
     }
 }

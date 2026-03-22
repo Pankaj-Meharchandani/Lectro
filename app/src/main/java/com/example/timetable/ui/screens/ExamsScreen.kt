@@ -26,6 +26,7 @@ import com.example.timetable.R
 import com.example.timetable.model.Exam
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.TimeUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -250,10 +251,10 @@ fun AddExamDialog(
                 Button(onClick = {
                     val c = Calendar.getInstance()
                     TimePickerDialog(context, { _, h, m ->
-                        time = String.format(Locale.getDefault(), "%02d:%02d", h, m)
-                    }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
+                        time = TimeUtils.get24HourString(h, m)
+                    }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show()
                 }) {
-                    Text(if (time.isEmpty()) stringResource(R.string.select_time) else time)
+                    Text(if (time.isEmpty()) stringResource(R.string.select_time) else TimeUtils.formatTo12Hour(time))
                 }
             }
         },
@@ -304,7 +305,7 @@ fun ExamItem(exam: Exam, onDelete: () -> Unit) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = exam.subject, style = MaterialTheme.typography.titleLarge)
-                Text(text = "${exam.date} at ${exam.time}", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "${exam.date} at ${TimeUtils.formatTo12Hour(exam.time)}", style = MaterialTheme.typography.bodyMedium)
                 Text(text = "Room: ${exam.room}", style = MaterialTheme.typography.bodySmall)
                 Text(text = "Teacher: ${exam.teacher}", style = MaterialTheme.typography.bodySmall)
             }

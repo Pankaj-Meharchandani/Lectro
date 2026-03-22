@@ -34,6 +34,7 @@ import com.example.timetable.model.Note;
 import com.example.timetable.model.Teacher;
 import com.example.timetable.model.Week;
 import com.example.timetable.R;
+import com.example.timetable.utils.TimeUtils;
 
 import com.github.dhaval2404.colorpicker.MaterialColorPickerDialog;
 import com.github.dhaval2404.colorpicker.listener.ColorListener;
@@ -76,8 +77,8 @@ public class AlertDialogsHelper {
         subject.setText(week.getSubject());
         teacher.setText(week.getTeacher());
         room.setText(week.getRoom());
-        from_time.setText(week.getFromTime());
-        to_time.setText(week.getToTime());
+        from_time.setText(TimeUtils.formatTo12Hour(week.getFromTime()));
+        to_time.setText(TimeUtils.formatTo12Hour(week.getToTime()));
         select_color.setBackgroundColor(week.getColor() != 0 ? week.getColor() : Color.WHITE);
 
         subject.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -106,10 +107,11 @@ public class AlertDialogsHelper {
                             @Override
                             public void onTimeSet(TimePicker view, int hourOfDay,
                                                   int minute) {
-                                from_time.setText(String.format("%02d:%02d", hourOfDay, minute));
-                                week.setFromTime(String.format("%02d:%02d", hourOfDay, minute));
+                                String time24 = TimeUtils.get24HourString(hourOfDay, minute);
+                                from_time.setText(TimeUtils.formatTo12Hour(time24));
+                                week.setFromTime(time24);
                             }
-                        }, mHour, mMinute, true);
+                        }, mHour, mMinute, false);
                 timePickerDialog.setTitle(R.string.choose_time);
                 timePickerDialog.show();
             }
@@ -128,10 +130,11 @@ public class AlertDialogsHelper {
                             @Override
                             public void onTimeSet(TimePicker view, int hourOfDay,
                                                   int minute) {
-                                to_time.setText(String.format("%02d:%02d", hourOfDay, minute));
-                                week.setToTime(String.format("%02d:%02d", hourOfDay, minute));
+                                String time24 = TimeUtils.get24HourString(hourOfDay, minute);
+                                to_time.setText(TimeUtils.formatTo12Hour(time24));
+                                week.setToTime(time24);
                             }
-                        }, hour, minute, true);
+                        }, hour, minute, false);
                 timePickerDialog.setTitle(R.string.choose_time);
                 timePickerDialog.show();
             }
@@ -339,10 +342,11 @@ public class AlertDialogsHelper {
                             @Override
                             public void onTimeSet(TimePicker view, int hourOfDay,
                                                   int minute) {
-                                from_time.setText(String.format("%02d:%02d", hourOfDay, minute));
-                                week.setFromTime(String.format("%02d:%02d", hourOfDay, minute));
+                                String time24 = TimeUtils.get24HourString(hourOfDay, minute);
+                                from_time.setText(TimeUtils.formatTo12Hour(time24));
+                                week.setFromTime(time24);
                             }
-                        }, mHour, mMinute, true);
+                        }, mHour, mMinute, false);
                 timePickerDialog.setTitle(R.string.choose_time);
                 timePickerDialog.show(); }});
 
@@ -358,10 +362,11 @@ public class AlertDialogsHelper {
                             @Override
                             public void onTimeSet(TimePicker view, int hourOfDay,
                                                   int minute) {
-                                to_time.setText(String.format("%02d:%02d", hourOfDay, minute));
-                                week.setToTime(String.format("%02d:%02d", hourOfDay, minute));
+                                String time24 = TimeUtils.get24HourString(hourOfDay, minute);
+                                to_time.setText(TimeUtils.formatTo12Hour(time24));
+                                week.setToTime(time24);
                             }
-                        }, hour, minute, true);
+                        }, hour, minute, false);
                 timePickerDialog.setTitle(R.string.choose_time);
                 timePickerDialog.show();
             }
@@ -1001,7 +1006,7 @@ public class AlertDialogsHelper {
         teacher.setText(exam.getTeacher());
         room.setText(exam.getRoom());
         date.setText(exam.getDate());
-        time.setText(exam.getTime());
+        time.setText(TimeUtils.formatTo12Hour(exam.getTime()));
         select_color.setBackgroundColor(exam.getColor() != 0 ? exam.getColor() : Color.WHITE);
 
         subject.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -1048,10 +1053,11 @@ public class AlertDialogsHelper {
                             @Override
                             public void onTimeSet(TimePicker view, int hourOfDay,
                                                   int minute) {
-                                time.setText(String.format("%02d:%02d", hourOfDay, minute));
-                                exam.setTime(String.format("%02d:%02d", hourOfDay, minute));
+                                String time24 = TimeUtils.get24HourString(hourOfDay, minute);
+                                time.setText(TimeUtils.formatTo12Hour(time24));
+                                exam.setTime(time24);
                             }
-                        }, mHour, mMinute, true);
+                        }, mHour, mMinute, false);
                 timePickerDialog.setTitle(R.string.choose_time);
                 timePickerDialog.show();
             }
@@ -1188,10 +1194,11 @@ public class AlertDialogsHelper {
                             @Override
                             public void onTimeSet(TimePicker view, int hourOfDay,
                                                   int minute) {
-                                time.setText(String.format("%02d:%02d", hourOfDay, minute));
-                                exam.setTime(String.format("%02d:%02d", hourOfDay, minute));
+                                String time24 = TimeUtils.get24HourString(hourOfDay, minute);
+                                time.setText(TimeUtils.formatTo12Hour(time24));
+                                exam.setTime(time24);
                             }
-                        }, mHour, mMinute, true);
+                        }, mHour, mMinute, false);
                 timePickerDialog.setTitle(R.string.choose_time);
                 timePickerDialog.show();
             }

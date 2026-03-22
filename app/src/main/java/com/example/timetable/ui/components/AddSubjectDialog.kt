@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.timetable.R
 import com.example.timetable.model.Week
+import com.example.timetable.utils.TimeUtils
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -149,25 +150,25 @@ fun AddSubjectDialog(
                         onClick = {
                             val c = Calendar.getInstance()
                             TimePickerDialog(context, { _, h, m ->
-                                fromTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
-                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
+                                fromTime = TimeUtils.get24HourString(h, m)
+                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show()
                         },
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
-                        Text(if (fromTime.isEmpty()) "Start Time" else fromTime)
+                        Text(if (fromTime.isEmpty()) "Start Time" else TimeUtils.formatTo12Hour(fromTime))
                     }
                     Button(
                         onClick = {
                             val c = Calendar.getInstance()
                             TimePickerDialog(context, { _, h, m ->
-                                toTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
-                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
+                                toTime = TimeUtils.get24HourString(h, m)
+                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show()
                         },
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(horizontal = 4.dp)
                     ) {
-                        Text(if (toTime.isEmpty()) "End Time" else toTime)
+                        Text(if (toTime.isEmpty()) "End Time" else TimeUtils.formatTo12Hour(toTime))
                     }
                 }
 

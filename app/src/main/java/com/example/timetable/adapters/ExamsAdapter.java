@@ -18,6 +18,7 @@ import com.example.timetable.model.Exam;
 import com.example.timetable.R;
 import com.example.timetable.utils.AlertDialogsHelper;
 import com.example.timetable.utils.DbHelper;
+import com.example.timetable.utils.TimeUtils;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -73,7 +74,7 @@ public class ExamsAdapter extends ArrayAdapter<Exam> {
         holder.teacher.setText(exam.getTeacher());
         holder.room.setText(exam.getRoom());
         holder.date.setText(exam.getDate());
-        holder.time.setText(exam.getTime());
+        holder.time.setText(TimeUtils.formatTo12Hour(exam.getTime()));
         holder.cardView.setCardBackgroundColor(exam.getColor());
         holder.popup.setOnClickListener(new View.OnClickListener() {
             @Override
