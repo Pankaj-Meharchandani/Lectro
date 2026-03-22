@@ -161,7 +161,7 @@ fun NoteInfoScreen(noteId: Int, onBack: () -> Unit, viewModel: NoteInfoViewModel
                         onAddImage = { imagePickerLauncher.launch(arrayOf("image/*")) }
                     )
                     
-                    Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+                    Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState()).imePadding()) {
                         OutlinedTextField(
                             value = title,
                             onValueChange = { title = it },
@@ -188,9 +188,16 @@ fun NoteInfoScreen(noteId: Int, onBack: () -> Unit, viewModel: NoteInfoViewModel
                                     }
                                     
                                     if (prefix.isNotEmpty()) {
-                                        val newText = newValue.text.substring(0, newValue.selection.start) + 
-                                                    prefix + newValue.text.substring(newValue.selection.start)
-                                        textValue = TextFieldValue(newText, selection = TextRange(newValue.selection.start + prefix.length))
+                                        if (lastLine == prefix) {
+                                            // Blank bullet, remove it
+                                            val newText = textValue.text.substring(0, textValue.selection.start - prefix.length) + 
+                                                        "\n" + newValue.text.substring(newValue.selection.start)
+                                            textValue = TextFieldValue(newText, selection = TextRange(textValue.selection.start - prefix.length + 1))
+                                        } else {
+                                            val newText = newValue.text.substring(0, newValue.selection.start) + 
+                                                        prefix + newValue.text.substring(newValue.selection.start)
+                                            textValue = TextFieldValue(newText, selection = TextRange(newValue.selection.start + prefix.length))
+                                        }
                                         return@OutlinedTextField
                                     }
                                 }

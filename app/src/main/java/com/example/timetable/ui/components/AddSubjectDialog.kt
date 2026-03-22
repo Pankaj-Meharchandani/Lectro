@@ -1,6 +1,7 @@
 package com.example.timetable.ui.components
 
 import android.app.TimePickerDialog
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -60,7 +61,7 @@ fun AddSubjectDialog(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Subject Autocomplete
                 ExposedDropdownMenuBox(
@@ -76,7 +77,8 @@ fun AddSubjectDialog(
                         label = { Text(stringResource(R.string.subject)) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        singleLine = true
                     )
                     val filteredSubjects = subjectSuggestions.filter { it.contains(subject, ignoreCase = true) }
                     if (filteredSubjects.isNotEmpty()) {
@@ -98,7 +100,43 @@ fun AddSubjectDialog(
                     }
                 }
 
-                // Teacher Autocomplete
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Start Time", style = MaterialTheme.typography.labelSmall)
+                        Button(
+                            onClick = {
+                                val c = Calendar.getInstance()
+                                TimePickerDialog(context, { _, h, m ->
+                                    fromTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
+                                }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            Text(if (fromTime.isEmpty()) stringResource(R.string.select_time) else fromTime)
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("End Time", style = MaterialTheme.typography.labelSmall)
+                        Button(
+                            onClick = {
+                                val c = Calendar.getInstance()
+                                TimePickerDialog(context, { _, h, m ->
+                                    toTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
+                                }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            Text(if (toTime.isEmpty()) stringResource(R.string.select_time) else toTime)
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+                Text("Optional Details", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+
+                // Teacher Autocomplete (Secondary)
                 ExposedDropdownMenuBox(
                     expanded = teacherExpanded,
                     onExpandedChange = { teacherExpanded = it }
@@ -112,7 +150,8 @@ fun AddSubjectDialog(
                         label = { Text(stringResource(R.string.teacher)) },
                         modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = teacherExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        singleLine = true
                     )
                     val filteredTeachers = teacherSuggestions.filter { it.contains(teacher, ignoreCase = true) }
                     if (filteredTeachers.isNotEmpty()) {
@@ -137,33 +176,9 @@ fun AddSubjectDialog(
                     value = room,
                     onValueChange = { room = it },
                     label = { Text(stringResource(R.string.room)) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
-                
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            val c = Calendar.getInstance()
-                            TimePickerDialog(context, { _, h, m ->
-                                fromTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
-                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(if (fromTime.isEmpty()) stringResource(R.string.select_time) else fromTime)
-                    }
-                    Button(
-                        onClick = {
-                            val c = Calendar.getInstance()
-                            TimePickerDialog(context, { _, h, m ->
-                                toTime = String.format(Locale.getDefault(), "%02d:%02d", h, m)
-                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), true).show()
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(if (toTime.isEmpty()) stringResource(R.string.select_time) else toTime)
-                    }
-                }
 
                 Text(stringResource(R.string.select_color))
                 ColorPickerRow(selectedColor = color, onColorSelected = { color = it })
@@ -171,18 +186,20 @@ fun AddSubjectDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                if (subject.isNotBlank() && teacher.isNotBlank() && room.isNotBlank() && fromTime.isNotBlank() && toTime.isNotBlank()) {
+                if (subject.isNotBlank() && fromTime.isNotBlank() && toTime.isNotBlank()) {
                     onSave(Week().apply {
                         this.id = initialWeek.id
                         this.subject = subject
                         this.teacher = teacher
                         this.room = room
-                        this.fromTime = fromTime
-                        this.toTime = toTime
+                        this.setFromTime(fromTime)
+                        this.setToTime(toTime)
                         this.color = color
-                        this.fragment = initialWeek.fragment
+                        this.setFragment(initialWeek.getFragment())
                     })
                     onDismiss()
+                } else {
+                    Toast.makeText(context, "Please fill in all necessary details!", Toast.LENGTH_SHORT).show()
                 }
             }) {
                 Text(stringResource(R.string.save))
@@ -206,7 +223,7 @@ fun ColorPickerRow(selectedColor: Int, onColorSelected: (Int) -> Unit) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             colors.take(6).forEach { c ->
                 ColorCircle(color = c, isSelected = selectedColor == c.toArgb()) {
@@ -214,10 +231,10 @@ fun ColorPickerRow(selectedColor: Int, onColorSelected: (Int) -> Unit) {
                 }
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             colors.drop(6).forEach { c ->
                 ColorCircle(color = c, isSelected = selectedColor == c.toArgb()) {
@@ -232,12 +249,12 @@ fun ColorPickerRow(selectedColor: Int, onColorSelected: (Int) -> Unit) {
 fun ColorCircle(color: Color, isSelected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(36.dp)
             .clip(CircleShape)
             .background(color)
             .clickable(onClick = onClick)
             .border(
-                width = if (isSelected) 3.dp else 0.dp,
+                width = if (isSelected) 2.dp else 0.dp,
                 color = if (isSelected) Color.White else Color.Transparent,
                 shape = CircleShape
             )

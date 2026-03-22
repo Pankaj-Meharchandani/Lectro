@@ -9,10 +9,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
@@ -76,11 +78,11 @@ fun MainScreen(
                 showAddDialog = false
                 weekToEdit = null
             },
-            onSave = { week ->
+            onSave = { week: Week ->
                 if (weekToEdit != null) {
                     viewModel.updateWeek(week)
                 } else {
-                    week.fragment = days[pagerState.currentPage]
+                    week.setFragment(days[pagerState.currentPage])
                     viewModel.insertWeek(week)
                 }
                 weekToEdit = null
@@ -132,13 +134,29 @@ fun MainScreen(
                         selectedTabIndex = pagerState.currentPage,
                         edgePadding = 0.dp,
                         containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        indicator = { tabPositions ->
+                            if (pagerState.currentPage < tabPositions.size) {
+                                TabRowDefaults.SecondaryIndicator(
+                                    modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                                    height = 4.dp,
+                                    color = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            }
+                        }
                     ) {
                         days.forEachIndexed { index, title ->
                             Tab(
                                 selected = pagerState.currentPage == index,
                                 onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                                text = { Text(title) }
+                                text = { 
+                                    Text(
+                                        text = title,
+                                        fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal
+                                    ) 
+                                },
+                                selectedContentColor = MaterialTheme.colorScheme.onPrimary,
+                                unselectedContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
                             )
                         }
                     }
