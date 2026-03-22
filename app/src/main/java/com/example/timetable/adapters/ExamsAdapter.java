@@ -51,14 +51,7 @@ public class ExamsAdapter extends ArrayAdapter<Exam> {
     @NonNull
     @Override
     public View getView(final int position, View convertView, @NonNull ViewGroup parent) {
-        String subject = Objects.requireNonNull(getItem(position)).getSubject();
-        String teacher = Objects.requireNonNull(getItem(position)).getTeacher();
-        String room = Objects.requireNonNull(getItem(position)).getRoom();
-        String date = Objects.requireNonNull(getItem(position)).getDate();
-        String time = Objects.requireNonNull(getItem(position)).getTime();
-        int color = Objects.requireNonNull(getItem(position)).getColor();
-
-        exam = new Exam(subject, teacher, date, time, room, color);
+        exam = Objects.requireNonNull(getItem(position));
         final ViewHolder holder;
 
         if (convertView == null) {

@@ -45,6 +45,11 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
         loadTeachers()
     }
 
+    fun updateTeacher(teacher: Teacher) {
+        db.updateTeacher(teacher)
+        loadTeachers()
+    }
+
     fun moveTeacher(index: Int, up: Boolean) {
         val targetIndex = if (up) index - 1 else index + 1
         if (targetIndex in teachers.indices) {
@@ -61,6 +66,7 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
 @Composable
 fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var teacherToEdit by remember { mutableStateOf<Teacher?>(null) }
 
     Scaffold(
         topBar = {
@@ -87,7 +93,11 @@ fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()
             itemsIndexed(viewModel.teachers) { index, teacher ->
                 Box {
                     var showMenu by remember { mutableStateOf(false) }
-                    TeacherItem(teacher = teacher, onDelete = { viewModel.deleteTeacher(teacher) })
+                    TeacherItem(
+                        teacher = teacher, 
+                        onDelete = { viewModel.deleteTeacher(teacher) },
+                        onEdit = { teacherToEdit = it }
+                    )
                     IconButton(
                         onClick = { showMenu = true },
                         modifier = Modifier.align(Alignment.CenterEnd).padding(end = 60.dp)
@@ -111,40 +121,58 @@ fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()
         }
     }
 
-    if (showAddDialog) {
+    if (showAddDialog || teacherToEdit != null) {
         AddTeacherDialog(
-            onDismiss = { showAddDialog = false },
-            onSave = { teacher -> viewModel.insertTeacher(teacher) }
+            onDismiss = { 
+                showAddDialog = false
+                teacherToEdit = null
+            },
+            onSave = { teacher -> 
+                if (teacherToEdit != null) {
+                    viewModel.updateTeacher(teacher)
+                } else {
+                    viewModel.insertTeacher(teacher)
+                }
+                teacherToEdit = null
+            },
+            initialTeacher = teacherToEdit ?: Teacher()
         )
     }
 }
 
 @Composable
-fun AddTeacherDialog(onDismiss: () -> Unit, onSave: (Teacher) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var post by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+fun AddTeacherDialog(
+    onDismiss: () -> Unit, 
+    onSave: (Teacher) -> Unit,
+    initialTeacher: Teacher = Teacher()
+) {
+    var name by remember { mutableStateOf(initialTeacher.name ?: "") }
+    var post by remember { mutableStateOf(initialTeacher.post ?: "") }
+    var phone by remember { mutableStateOf(initialTeacher.phonenumber ?: "") }
+    var email by remember { mutableStateOf(initialTeacher.email ?: "") }
+    var cabinNumber by remember { mutableStateOf(initialTeacher.getCabinNumber() ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.add_teacher)) },
+        title = { Text(if (initialTeacher.id == 0) stringResource(R.string.add_teacher) else stringResource(R.string.edit_teacher)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.name)) })
                 OutlinedTextField(value = post, onValueChange = { post = it }, label = { Text(stringResource(R.string.post)) })
                 OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(stringResource(R.string.phone_number)) })
                 OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text(stringResource(R.string.email)) })
+                OutlinedTextField(value = cabinNumber, onValueChange = { cabinNumber = it }, label = { Text(stringResource(R.string.cabin_number)) })
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 if (name.isNotBlank()) {
-                    onSave(Teacher().apply {
+                    onSave(initialTeacher.apply {
                         this.name = name
                         this.post = post
                         this.phonenumber = phone
                         this.email = email
+                        this.setCabinNumber(cabinNumber)
                     })
                     onDismiss()
                 }
@@ -157,7 +185,11 @@ fun AddTeacherDialog(onDismiss: () -> Unit, onSave: (Teacher) -> Unit) {
 }
 
 @Composable
-fun TeacherItem(teacher: Teacher, onDelete: () -> Unit) {
+fun TeacherItem(
+    teacher: Teacher, 
+    onDelete: () -> Unit,
+    onEdit: (Teacher) -> Unit
+) {
     val teacherColor = if (teacher.color != 0) Color(teacher.color) else MaterialTheme.colorScheme.primary
     val containerColor = themedContainerColor(teacherColor)
     val contentColor = contentColorFor(containerColor)
@@ -166,6 +198,7 @@ fun TeacherItem(teacher: Teacher, onDelete: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
+        onClick = { onEdit(teacher) },
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
             contentColor = contentColor
@@ -176,13 +209,36 @@ fun TeacherItem(teacher: Teacher, onDelete: () -> Unit) {
                 .padding(16.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = teacher.name, style = MaterialTheme.typography.titleLarge)
-                Text(text = teacher.post, style = MaterialTheme.typography.bodyMedium)
-                Text(text = teacher.phonenumber, style = MaterialTheme.typography.bodySmall)
-                Text(text = teacher.email, style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.School, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = teacher.post, style = MaterialTheme.typography.bodyMedium)
+                }
+                if (teacher.phonenumber.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = teacher.phonenumber, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (teacher.email.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = teacher.email, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (teacher.getCabinNumber()?.isNotBlank() == true) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Room, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Cabin: ${teacher.getCabinNumber()}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete")

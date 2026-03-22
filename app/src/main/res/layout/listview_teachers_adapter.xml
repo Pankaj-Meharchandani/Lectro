@@ -41,6 +41,20 @@
                 card_view:layout_constraintTop_toBottomOf="@+id/numberteacher" />
 
             <TextView
+                android:id="@+id/cabinnumberteacher"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/cabin_number"
+                android:textAlignment="center"
+                android:textColor="@android:color/black"
+                android:textSize="18sp"
+                card_view:layout_constraintEnd_toEndOf="@+id/emailteacher"
+                card_view:layout_constraintStart_toEndOf="@+id/imageView6"
+                card_view:layout_constraintTop_toBottomOf="@+id/emailteacher" />
+
+            <TextView
                 android:id="@+id/nameteacher"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -140,9 +154,17 @@
                 android:id="@+id/imageView5"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                app:srcCompat="@drawable/baseline_phone_black_24"
+                app:srcCompat="@drawable/baseline_phone_24"
                 card_view:layout_constraintStart_toStartOf="@+id/personimage"
                 card_view:layout_constraintTop_toTopOf="@+id/numberteacher" />
+
+            <ImageView
+                android:id="@+id/imageView6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:srcCompat="@drawable/baseline_room_24"
+                card_view:layout_constraintStart_toStartOf="@+id/imageView4"
+                card_view:layout_constraintTop_toTopOf="@+id/cabinnumberteacher" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>

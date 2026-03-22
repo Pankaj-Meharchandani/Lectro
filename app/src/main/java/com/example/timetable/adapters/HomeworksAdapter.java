@@ -48,12 +48,7 @@ public class HomeworksAdapter extends ArrayAdapter<Homework> {
     @NonNull
     @Override
     public View getView(final int position, View convertView, @NonNull ViewGroup parent) {
-        String subject = Objects.requireNonNull(getItem(position)).getSubject();
-        String description = Objects.requireNonNull(getItem(position)).getDescription();
-        String date = Objects.requireNonNull(getItem(position)).getDate();
-        int color = Objects.requireNonNull(getItem(position)).getColor();
-
-        homework = new Homework(subject, description, date, color);
+        homework = Objects.requireNonNull(getItem(position));
         final ViewHolder holder;
 
         if(convertView == null){

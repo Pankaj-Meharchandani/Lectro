@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -62,25 +63,70 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.sevendays_setting))
-                Switch(checked = viewModel.sevenDaysEnabled, onCheckedChange = { viewModel.updateSevenDays(it) })
+            SettingsSection(title = "Appearance") {
+                SettingsItem(
+                    title = stringResource(R.string.sevendays_setting),
+                    control = {
+                        Switch(
+                            checked = viewModel.sevenDaysEnabled,
+                            onCheckedChange = { viewModel.updateSevenDays(it) }
+                        )
+                    }
+                )
             }
-            
-            OutlinedTextField(
-                value = viewModel.schoolWebsite,
-                onValueChange = { viewModel.updateSchoolWebsite(it) },
-                label = { Text(stringResource(R.string.school_website_setting)) },
-                modifier = Modifier.fillMaxWidth()
-            )
 
-            Button(
-                onClick = { showResetDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text(stringResource(R.string.reset_data))
+            HorizontalDivider()
+
+            SettingsSection(title = "Configuration") {
+                OutlinedTextField(
+                    value = viewModel.schoolWebsite,
+                    onValueChange = { viewModel.updateSchoolWebsite(it) },
+                    label = { Text(stringResource(R.string.school_website_setting)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("https://example.edu") }
+                )
+                Text(
+                    text = stringResource(R.string.school_website_setting_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            HorizontalDivider()
+
+            SettingsSection(title = "Danger Zone") {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = stringResource(R.string.reset_data),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = stringResource(R.string.reset_data_summary),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                        Button(
+                            onClick = { showResetDialog = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(stringResource(R.string.reset_data))
+                        }
+                    }
+                }
             }
         }
     }
@@ -91,14 +137,42 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
             title = { Text(stringResource(R.string.reset_data)) },
             text = { Text(stringResource(R.string.reset_warning)) },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.resetData()
-                    showResetDialog = false
-                }) { Text(stringResource(R.string.yes)) }
+                TextButton(
+                    onClick = {
+                        viewModel.resetData()
+                        showResetDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text(stringResource(R.string.yes)) }
             },
             dismissButton = {
                 TextButton(onClick = { showResetDialog = false }) { Text(stringResource(R.string.no)) }
             }
         )
+    }
+}
+
+@Composable
+fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        content()
+    }
+}
+
+@Composable
+fun SettingsItem(title: String, control: @Composable () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = title, style = MaterialTheme.typography.bodyLarge)
+        control()
     }
 }

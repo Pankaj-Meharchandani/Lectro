@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -25,6 +26,7 @@ import com.example.timetable.R
 import com.example.timetable.model.Exam
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
+import java.text.SimpleDateFormat
 import java.util.*
 
 class ExamViewModel(application: Application) : AndroidViewModel(application) {
@@ -73,17 +75,44 @@ class ExamViewModel(application: Application) : AndroidViewModel(application) {
 @Composable
 fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Upcoming", "Completed")
+
+    val currentDateTime = remember { Date() }
+    val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+
+    val filteredExams by remember(selectedTab) {
+        derivedStateOf {
+            viewModel.exams.filter { exam ->
+                val examDateTimeStr = "${exam.date} ${exam.time}"
+                val examDate = try { sdf.parse(examDateTimeStr) } catch (e: Exception) { null }
+                val isPast = examDate?.before(currentDateTime) ?: false
+                if (selectedTab == 0) !isPast else isPast
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(id = R.string.exams)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Column {
+                TopAppBar(
+                    title = { Text(stringResource(id = R.string.exams)) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+                TabRow(selectedTabIndex = selectedTab) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = { Text(title) }
+                        )
                     }
                 }
-            )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
@@ -96,7 +125,7 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            items(viewModel.exams) { exam ->
+            items(filteredExams) { exam ->
                 ExamItem(exam = exam, onDelete = { viewModel.deleteExam(exam) })
             }
         }
@@ -271,7 +300,7 @@ fun ExamItem(exam: Exam, onDelete: () -> Unit) {
                 .padding(16.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = exam.subject, style = MaterialTheme.typography.titleLarge)

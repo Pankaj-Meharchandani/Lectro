@@ -8,9 +8,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +24,7 @@ import com.example.timetable.R
 import com.example.timetable.model.Homework
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
+import java.text.SimpleDateFormat
 import java.util.*
 
 class AssignmentsViewModel(application: Application) : AndroidViewModel(application) {
@@ -60,23 +63,63 @@ class AssignmentsViewModel(application: Application) : AndroidViewModel(applicat
         loadAssignments()
         loadSuggestions()
     }
+
+    fun updateAssignment(assignment: Homework) {
+        db.updateHomework(assignment)
+        loadAssignments()
+    }
+
+    fun toggleComplete(assignment: Homework) {
+        assignment.setCompleted(if (assignment.getCompleted() == 1) 0 else 1)
+        db.updateHomework(assignment)
+        loadAssignments()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel = viewModel()) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var assignmentToEdit by remember { mutableStateOf<Homework?>(null) }
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf("Pending", "Overdue", "Completed")
+
+    val currentDate = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
+
+    val filteredAssignments by remember(selectedTab) {
+        derivedStateOf {
+            viewModel.assignments.filter { assignment ->
+                when (selectedTab) {
+                    0 -> assignment.getCompleted() == 0 && (assignment.date ?: "") >= currentDate
+                    1 -> assignment.getCompleted() == 0 && (assignment.date ?: "") < currentDate
+                    2 -> assignment.getCompleted() == 1
+                    else -> true
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(id = R.string.homeworks)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Column {
+                TopAppBar(
+                    title = { Text(stringResource(id = R.string.homeworks)) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                )
+                TabRow(selectedTabIndex = selectedTab) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = { Text(title) }
+                        )
                     }
                 }
-            )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
@@ -89,18 +132,34 @@ fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel = view
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            items(viewModel.assignments) { assignment ->
-                AssignmentItem(assignment = assignment, onDelete = { viewModel.deleteAssignment(assignment) })
+            items(filteredAssignments) { assignment ->
+                AssignmentItem(
+                    assignment = assignment, 
+                    onDelete = { viewModel.deleteAssignment(assignment) },
+                    onToggleComplete = { viewModel.toggleComplete(assignment) },
+                    onEdit = { assignmentToEdit = it }
+                )
             }
         }
     }
 
-    if (showAddDialog) {
+    if (showAddDialog || assignmentToEdit != null) {
         AddAssignmentDialog(
-            onDismiss = { showAddDialog = false },
-            onSave = { assignment -> viewModel.insertAssignment(assignment) },
+            onDismiss = { 
+                showAddDialog = false
+                assignmentToEdit = null
+            },
+            onSave = { assignment -> 
+                if (assignmentToEdit != null) {
+                    viewModel.updateAssignment(assignment)
+                } else {
+                    viewModel.insertAssignment(assignment)
+                }
+                assignmentToEdit = null
+            },
             onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
-            subjectSuggestions = viewModel.subjects
+            subjectSuggestions = viewModel.subjects,
+            initialAssignment = assignmentToEdit ?: Homework()
         )
     }
 }
@@ -111,12 +170,14 @@ fun AddAssignmentDialog(
     onDismiss: () -> Unit, 
     onSave: (Homework) -> Unit,
     onGetSubjectDetails: (String) -> com.example.timetable.model.Week?,
-    subjectSuggestions: List<String>
+    subjectSuggestions: List<String>,
+    initialAssignment: Homework = Homework()
 ) {
-    var subject by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf("") }
-    var color by remember { mutableIntStateOf(0) }
+    var subject by remember { mutableStateOf(initialAssignment.subject ?: "") }
+    var title by remember { mutableStateOf(initialAssignment.title ?: "") }
+    var description by remember { mutableStateOf(initialAssignment.description ?: "") }
+    var date by remember { mutableStateOf(initialAssignment.date ?: "") }
+    var color by remember { mutableIntStateOf(initialAssignment.color) }
     var subjectExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -128,7 +189,7 @@ fun AddAssignmentDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.add_homework)) },
+        title = { Text(if (initialAssignment.id == 0) stringResource(R.string.add_homework) else stringResource(R.string.edit_homework)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ExposedDropdownMenuBox(
@@ -159,6 +220,7 @@ fun AddAssignmentDialog(
                     }
                 }
 
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.title)) })
                 OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text(stringResource(R.string.desctiption)) })
                 
                 Button(onClick = {
@@ -173,9 +235,10 @@ fun AddAssignmentDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                if (subject.isNotBlank()) {
-                    onSave(Homework().apply {
+                if (subject.isNotBlank() && title.isNotBlank()) {
+                    onSave(initialAssignment.apply {
                         this.subject = subject
+                        this.title = title
                         this.description = description
                         this.date = date
                         this.color = color
@@ -191,7 +254,12 @@ fun AddAssignmentDialog(
 }
 
 @Composable
-fun AssignmentItem(assignment: Homework, onDelete: () -> Unit) {
+fun AssignmentItem(
+    assignment: Homework, 
+    onDelete: () -> Unit,
+    onToggleComplete: () -> Unit,
+    onEdit: (Homework) -> Unit
+) {
     val assignmentColor = if (assignment.color != 0) Color(assignment.color) else MaterialTheme.colorScheme.primary
     val containerColor = themedContainerColor(assignmentColor)
     val contentColor = contentColorFor(containerColor)
@@ -200,6 +268,7 @@ fun AssignmentItem(assignment: Homework, onDelete: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
+        onClick = { onEdit(assignment) },
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
             contentColor = contentColor
@@ -210,15 +279,27 @@ fun AssignmentItem(assignment: Homework, onDelete: () -> Unit) {
                 .padding(16.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = assignment.subject, style = MaterialTheme.typography.titleLarge)
-                Text(text = assignment.description, style = MaterialTheme.typography.bodyMedium)
+                Text(text = assignment.subject, style = MaterialTheme.typography.labelSmall)
+                Text(text = assignment.title ?: "", style = MaterialTheme.typography.titleLarge)
+                if (!assignment.description.isNullOrBlank()) {
+                    Text(text = assignment.description, style = MaterialTheme.typography.bodyMedium)
+                }
                 Text(text = "Deadline: ${assignment.date}", style = MaterialTheme.typography.bodySmall)
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete")
+            Row {
+                IconButton(onClick = onToggleComplete) {
+                    Icon(
+                        imageVector = Icons.Default.Check, 
+                        contentDescription = "Mark Complete",
+                        tint = if (assignment.getCompleted() == 1) Color.Green else contentColor
+                    )
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                }
             }
         }
     }

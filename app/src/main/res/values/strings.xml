@@ -78,10 +78,12 @@
     <string name="post_dialog">Post:</string>
     <string name="phonenumber_dialog">Phone:</string>
     <string name="email_dialog">Email:</string>
+    <string name="cabinnumber_dialog">Cabin No:</string>
     <string name="name">Name</string>
     <string name="phone_number">Phone number</string>
     <string name="post">Post</string>
     <string name="email">Email</string>
+    <string name="cabin_number">Cabin No</string>
 
     <!-- Exams Activity strings -->
     <string name="exams">Exams</string>

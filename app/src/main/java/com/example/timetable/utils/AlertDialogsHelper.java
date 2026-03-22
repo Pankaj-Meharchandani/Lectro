@@ -691,6 +691,8 @@ public class AlertDialogsHelper {
         editTextHashs.put(R.string.phone_number, phone_number);
         final EditText email = alertLayout.findViewById(R.id.email_dialog);
         editTextHashs.put(R.string.email, email);
+        final EditText cabinNumber = alertLayout.findViewById(R.id.cabinnumber_dialog);
+        editTextHashs.put(R.string.cabin_number, cabinNumber);
         final Button select_color = alertLayout.findViewById(R.id.select_color);
         final Teacher teacher = adapter.get(listposition);
 
@@ -698,6 +700,7 @@ public class AlertDialogsHelper {
         post.setText(teacher.getPost());
         phone_number.setText(teacher.getPhonenumber());
         email.setText(teacher.getEmail());
+        cabinNumber.setText(teacher.getCabinNumber());
         select_color.setBackgroundColor(teacher.getColor() != 0 ? teacher.getColor() : Color.WHITE);
 
         select_color.setOnClickListener(new View.OnClickListener() {
@@ -748,6 +751,7 @@ public class AlertDialogsHelper {
                     teacher.setPost(post.getText().toString());
                     teacher.setPhonenumber(phone_number.getText().toString());
                     teacher.setEmail(email.getText().toString());
+                    teacher.setCabinNumber(cabinNumber.getText().toString());
                     teacher.setColor(buttonColor.getColor());
                     dbHelper.updateTeacher(teacher);
                     teachersAdapter.notifyDataSetChanged();
@@ -767,6 +771,8 @@ public class AlertDialogsHelper {
         editTextHashs.put(R.string.phone_number, phone_number);
         final EditText email = alertLayout.findViewById(R.id.email_dialog);
         editTextHashs.put(R.string.email, email);
+        final EditText cabinNumber = alertLayout.findViewById(R.id.cabinnumber_dialog);
+        editTextHashs.put(R.string.cabin_number, cabinNumber);
         final Button select_color = alertLayout.findViewById(R.id.select_color);
         final Teacher teacher = new Teacher();
 
@@ -823,6 +829,7 @@ public class AlertDialogsHelper {
                     teacher.setPost(post.getText().toString());
                     teacher.setPhonenumber(phone_number.getText().toString());
                     teacher.setEmail(email.getText().toString());
+                    teacher.setCabinNumber(cabinNumber.getText().toString());
                     teacher.setColor(buttonColor.getColor());
                     dbHelper.insertTeacher(teacher);
 
@@ -834,6 +841,7 @@ public class AlertDialogsHelper {
                     post.getText().clear();
                     phone_number.getText().clear();
                     email.getText().clear();
+                    cabinNumber.getText().clear();
                     select_color.setBackgroundColor(Color.WHITE);
                     name.requestFocus();
                     dialog.dismiss();

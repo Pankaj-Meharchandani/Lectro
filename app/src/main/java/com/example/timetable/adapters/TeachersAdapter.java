@@ -35,6 +35,7 @@ public class TeachersAdapter extends ArrayAdapter<Teacher> {
         TextView post;
         TextView phonenumber;
         TextView email;
+        TextView cabinnumber;
         CardView cardView;
         ImageView popup;
     }
@@ -50,13 +51,7 @@ public class TeachersAdapter extends ArrayAdapter<Teacher> {
     @NonNull
     @Override
     public View getView(final int position, View convertView, @NonNull ViewGroup parent) {
-        String name = Objects.requireNonNull(getItem(position)).getName();
-        String post = Objects.requireNonNull(getItem(position)).getPost();
-        String phonenumber = Objects.requireNonNull(getItem(position)).getPhonenumber();
-        String email = Objects.requireNonNull(getItem(position)).getEmail();
-        int color = Objects.requireNonNull(getItem(position)).getColor();
-
-        teacher = new Teacher(name, post, phonenumber, email, color);
+        teacher = Objects.requireNonNull(getItem(position));
         final ViewHolder holder;
 
         if(convertView == null){
@@ -67,6 +62,7 @@ public class TeachersAdapter extends ArrayAdapter<Teacher> {
             holder.post = convertView.findViewById(R.id.postteacher);
             holder.phonenumber = convertView.findViewById(R.id.numberteacher);
             holder.email = convertView.findViewById(R.id.emailteacher);
+            holder.cabinnumber = convertView.findViewById(R.id.cabinnumberteacher);
             holder.cardView = convertView.findViewById(R.id.teacher_cardview);
             holder.popup = convertView.findViewById(R.id.popupbtn);
             convertView.setTag(holder);
@@ -78,6 +74,7 @@ public class TeachersAdapter extends ArrayAdapter<Teacher> {
         holder.post.setText(teacher.getPost());
         holder.phonenumber.setText(teacher.getPhonenumber());
         holder.email.setText(teacher.getEmail());
+        holder.cabinnumber.setText(teacher.getCabinNumber());
         holder.cardView.setCardBackgroundColor(teacher.getColor());
         holder.popup.setOnClickListener(new View.OnClickListener() {
             @Override
