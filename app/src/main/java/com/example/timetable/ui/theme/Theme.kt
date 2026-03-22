@@ -31,6 +31,16 @@ fun themedContainerColor(baseColor: Color): Color {
 }
 
 @Composable
+fun subtleThemedColor(baseColor: Color): Color {
+    val isDark = isSystemInDarkTheme()
+    return if (isDark) {
+        baseColor.copy(alpha = 0.1f).compositeOver(MaterialTheme.colorScheme.surface)
+    } else {
+        baseColor.copy(alpha = 0.05f).compositeOver(MaterialTheme.colorScheme.surface)
+    }
+}
+
+@Composable
 fun TimeTableTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,

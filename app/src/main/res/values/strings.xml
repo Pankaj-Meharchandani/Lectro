@@ -51,6 +51,7 @@
     <string name="title_activity_homeworks">AssignmentsActivity</string>
     <string name="homeworks">Assignments</string>
     <string name="select_date">Select deadline</string>
+    <string name="select_exam_date">Select date</string>
     <string name="deadline_dialog">Deadline:</string>
     <string name="deadline">Deadline</string>
     <string name="description_dialog">Description:</string>

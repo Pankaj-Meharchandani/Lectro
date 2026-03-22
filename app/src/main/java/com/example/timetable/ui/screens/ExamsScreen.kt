@@ -245,7 +245,7 @@ fun AddExamDialog(
                         date = String.format(Locale.getDefault(), "%04d-%02d-%02d", y, m + 1, d)
                     }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
                 }) {
-                    Text(if (date.isEmpty()) stringResource(R.string.select_date) else date)
+                    Text(if (date.isEmpty()) stringResource(R.string.select_exam_date) else date)
                 }
 
                 Button(onClick = {

@@ -37,7 +37,7 @@ import coil.compose.AsyncImage
 import com.example.timetable.R
 import com.example.timetable.model.Note
 import com.example.timetable.ui.components.ColorPickerRow
-import com.example.timetable.ui.theme.themedContainerColor
+import com.example.timetable.ui.theme.subtleThemedColor
 import com.example.timetable.utils.DbHelper
 
 class NoteInfoViewModel(application: Application) : AndroidViewModel(application) {
@@ -105,7 +105,7 @@ fun NoteInfoScreen(noteId: Int, onBack: () -> Unit, viewModel: NoteInfoViewModel
             }
         )
 
-        val containerColor = themedContainerColor(if (color != 0) Color(color) else MaterialTheme.colorScheme.surface)
+        val containerColor = subtleThemedColor(if (color != 0) Color(color) else MaterialTheme.colorScheme.surface)
 
         Scaffold(
             topBar = {
