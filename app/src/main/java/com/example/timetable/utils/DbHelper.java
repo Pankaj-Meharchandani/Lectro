@@ -18,7 +18,7 @@ import java.util.ArrayList;
 
 public class DbHelper extends SQLiteOpenHelper {
 
-    private static final int DB_VERSION = 9;
+    private static final int DB_VERSION = 10;
     private static final String DB_NAME = "timetabledb";
 
     private static final String TIMETABLE = "timetable";
@@ -61,6 +61,7 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String TEACHERS_PHONE_NUMBER = "phonenumber";
     private static final String TEACHERS_EMAIL = "email";
     private static final String TEACHERS_COLOR = "color";
+    private static final String TEACHERS_SORT_ORDER = "sort_order";
 
     private static final String EXAMS = "exams";
     private static final String EXAMS_ID = "id";
@@ -116,7 +117,8 @@ public class DbHelper extends SQLiteOpenHelper {
                 + TEACHERS_POST + " TEXT,"
                 + TEACHERS_PHONE_NUMBER + " TEXT,"
                 + TEACHERS_EMAIL + " TEXT,"
-                + TEACHERS_COLOR + " INTEGER" + ")";
+                + TEACHERS_COLOR + " INTEGER,"
+                + TEACHERS_SORT_ORDER + " INTEGER DEFAULT 0" + ")";
 
         String CREATE_EXAMS = "CREATE TABLE " + EXAMS + "("
                 + EXAMS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -182,6 +184,9 @@ public class DbHelper extends SQLiteOpenHelper {
             db.execSQL("ALTER TABLE " + SUBJECTS + " ADD COLUMN " + SUBJECTS_SORT_ORDER + " INTEGER DEFAULT 0");
             db.execSQL("ALTER TABLE " + NOTES + " ADD COLUMN " + NOTES_SORT_ORDER + " INTEGER DEFAULT 0");
             db.execSQL("ALTER TABLE " + MATERIALS + " ADD COLUMN " + MATERIALS_SORT_ORDER + " INTEGER DEFAULT 0");
+            onUpgrade(db, 9, newVersion);
+        } else if (oldVersion == 9) {
+            db.execSQL("ALTER TABLE " + TEACHERS + " ADD COLUMN " + TEACHERS_SORT_ORDER + " INTEGER DEFAULT 0");
         }
     }
 
@@ -438,7 +443,7 @@ public class DbHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         ArrayList<Teacher> teacherlist = new ArrayList<>();
         Teacher teacher;
-        Cursor cursor = db.rawQuery("SELECT * FROM " + TEACHERS, null);
+        Cursor cursor = db.rawQuery("SELECT * FROM " + TEACHERS + " ORDER BY " + TEACHERS_SORT_ORDER + " ASC, " + TEACHERS_NAME + " ASC", null);
         while (cursor.moveToNext()) {
             teacher = new Teacher();
             teacher.setId(getIntChecked(cursor, TEACHERS_ID));
@@ -452,6 +457,14 @@ public class DbHelper extends SQLiteOpenHelper {
         cursor.close();
         db.close();
         return teacherlist;
+    }
+
+    public void updateTeacherSortOrder(int teacherId, int newOrder) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(TEACHERS_SORT_ORDER, newOrder);
+        db.update(TEACHERS, values, TEACHERS_ID + "=?", new String[]{String.valueOf(teacherId)});
+        db.close();
     }
 
     public void addTeacherIfNew(String name, int color) {
@@ -626,7 +639,7 @@ public class DbHelper extends SQLiteOpenHelper {
     public ArrayList<Exam> getExam() {
         ArrayList<Exam> examlist = new ArrayList<>();
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM " + EXAMS, null);
+        Cursor cursor = db.rawQuery("SELECT * FROM " + EXAMS + " ORDER BY " + EXAMS_DATE + " ASC, " + EXAMS_TIME + " ASC", null);
         while (cursor.moveToNext()) {
             Exam exam = new Exam();
             exam.setId(getIntChecked(cursor, EXAMS_ID));
