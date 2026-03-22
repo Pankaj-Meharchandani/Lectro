@@ -177,7 +177,14 @@ fun AddSubjectDialog(
         },
         confirmButton = {
             TextButton(onClick = {
-                if (subject.isNotBlank() && fromTime.isNotBlank() && toTime.isNotBlank()) {
+                val errorMessage = when {
+                    subject.isBlank() -> "Please enter Subject"
+                    fromTime.isBlank() -> "Please select Start Time"
+                    toTime.isBlank() -> "Please select End Time"
+                    else -> null
+                }
+
+                if (errorMessage == null) {
                     onSave(Week().apply {
                         this.id = initialWeek.id
                         this.subject = subject
@@ -190,7 +197,7 @@ fun AddSubjectDialog(
                     })
                     onDismiss()
                 } else {
-                    Toast.makeText(context, "Please fill in all necessary details!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
                 }
             }) {
                 Text(stringResource(R.string.save))
