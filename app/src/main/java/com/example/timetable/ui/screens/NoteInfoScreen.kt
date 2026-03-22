@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,17 +17,23 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.timetable.R
 import com.example.timetable.model.Note
 import com.example.timetable.ui.components.ColorPickerRow
@@ -75,9 +84,7 @@ fun NoteInfoScreen(noteId: Int, onBack: () -> Unit, viewModel: NoteInfoViewModel
         }
 
         DisposableEffect(Unit) {
-            onDispose {
-                triggerSave()
-            }
+            onDispose { triggerSave() }
         }
 
         val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -85,11 +92,15 @@ fun NoteInfoScreen(noteId: Int, onBack: () -> Unit, viewModel: NoteInfoViewModel
             onResult = { uri ->
                 uri?.let {
                     val markdownImage = "\n![image]($it)\n"
-                    val selection = textValue.selection
-                    val newText = textValue.text.substring(0, selection.start) + 
+                    val start = textValue.selection.min
+                    val end = textValue.selection.max
+                    val newText = textValue.text.substring(0, start) + 
                                 markdownImage + 
-                                textValue.text.substring(selection.end)
-                    textValue = TextFieldValue(newText)
+                                textValue.text.substring(end)
+                    textValue = TextFieldValue(
+                        text = newText,
+                        selection = TextRange(start + markdownImage.length)
+                    )
                 }
             }
         )
@@ -137,10 +148,15 @@ fun NoteInfoScreen(noteId: Int, onBack: () -> Unit, viewModel: NoteInfoViewModel
                     FormattingToolbar(
                         onFormat = { prefix, suffix ->
                             val selection = textValue.selection
-                            val newText = textValue.text.substring(0, selection.start) + 
-                                        prefix + textValue.text.substring(selection.start, selection.end) + suffix +
-                                        textValue.text.substring(selection.end)
-                            textValue = TextFieldValue(newText)
+                            val start = selection.min
+                            val end = selection.max
+                            val newText = textValue.text.substring(0, start) + 
+                                        prefix + textValue.text.substring(start, end) + suffix +
+                                        textValue.text.substring(end)
+                            textValue = TextFieldValue(
+                                text = newText,
+                                selection = TextRange(start + prefix.length, end + prefix.length)
+                            )
                         },
                         onAddImage = { imagePickerLauncher.launch(arrayOf("image/*")) }
                     )
@@ -174,21 +190,28 @@ fun NoteInfoScreen(noteId: Int, onBack: () -> Unit, viewModel: NoteInfoViewModel
                                     if (prefix.isNotEmpty()) {
                                         val newText = newValue.text.substring(0, newValue.selection.start) + 
                                                     prefix + newValue.text.substring(newValue.selection.start)
-                                        textValue = TextFieldValue(newText, selection = androidx.compose.ui.text.TextRange(newValue.selection.start + prefix.length))
+                                        textValue = TextFieldValue(newText, selection = TextRange(newValue.selection.start + prefix.length))
                                         return@OutlinedTextField
                                     }
                                 }
                                 textValue = newValue
                             },
-                            label = { Text("Content (Markdown supported)") },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp)
+                            label = { Text("Content") },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 300.dp),
+                            visualTransformation = MarkdownVisualTransformation()
                         )
                     }
                 } else {
                     Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
                         Text(text = title, style = MaterialTheme.typography.headlineMedium)
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        MarkdownRenderer(text = textValue.text)
+                        MarkdownRenderer(
+                            text = textValue.text,
+                            onTextClick = { offset ->
+                                textValue = textValue.copy(selection = TextRange(offset))
+                                isEditing = true
+                            }
+                        )
                     }
                 }
             }
@@ -235,47 +258,147 @@ fun FormattingToolbar(onFormat: (String, String) -> Unit, onAddImage: () -> Unit
 }
 
 @Composable
-fun MarkdownRenderer(text: String) {
-    val lines = text.split('\n')
-    Column {
-        lines.forEach { line ->
-            when {
-                line.startsWith("# ") -> Text(line.substring(2), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                line.startsWith("## ") -> Text(line.substring(3), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                line.startsWith("### ") -> Text(line.substring(4), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                line.startsWith("* ") || line.startsWith("- ") -> {
-                    Row {
-                        Text("• ", style = MaterialTheme.typography.bodyLarge)
-                        Text(line.substring(2), style = MaterialTheme.typography.bodyLarge)
-                    }
+fun MarkdownRenderer(text: String, onTextClick: (Int) -> Unit) {
+    val blocks = remember(text) { parseMarkdownBlocks(text) }
+    
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        blocks.forEach { block ->
+            when (block) {
+                is MarkdownBlock.Image -> {
+                    AsyncImage(
+                        model = block.uri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp)
+                            .clickable { onTextClick(block.startIndex) },
+                        contentScale = ContentScale.Fit
+                    )
                 }
-                line.contains(Regex("^\\d+\\. ")) -> {
-                    Text(line, style = MaterialTheme.typography.bodyLarge)
-                }
-                line.startsWith("![image](") && line.endsWith(")") -> {
-                    val uri = line.substring(9, line.length - 1)
-                    Text("[Image: $uri]", color = MaterialTheme.colorScheme.primary, fontStyle = FontStyle.Italic)
-                }
-                else -> {
-                    // Simple bold parsing **text**
-                    val annotatedString = buildAnnotatedString {
-                        var current = line
-                        while (current.contains("**")) {
-                            val start = current.indexOf("**")
-                            val next = current.indexOf("**", start + 2)
-                            if (next == -1) break
-                            
-                            append(current.substring(0, start))
-                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                                append(current.substring(start + 2, next))
-                            }
-                            current = current.substring(next + 2)
-                        }
-                        append(current)
-                    }
-                    Text(text = annotatedString, style = MaterialTheme.typography.bodyLarge)
+                is MarkdownBlock.Text -> {
+                    var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+                    Text(
+                        text = block.annotatedString,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pointerInput(text) {
+                                detectTapGestures { offset ->
+                                    layoutResult?.let { result ->
+                                        val characterOffset = result.getOffsetForPosition(offset)
+                                        onTextClick(block.startIndex + characterOffset)
+                                    }
+                                }
+                            },
+                        onTextLayout = { layoutResult = it }
+                    )
                 }
             }
         }
+    }
+}
+
+sealed class MarkdownBlock {
+    data class Text(val annotatedString: AnnotatedString, val startIndex: Int) : MarkdownBlock()
+    data class Image(val uri: String, val startIndex: Int) : MarkdownBlock()
+}
+
+fun parseMarkdownBlocks(text: String): List<MarkdownBlock> {
+    val blocks = mutableListOf<MarkdownBlock>()
+    val lines = text.split('\n')
+    var currentIndex = 0
+    
+    var currentTextBlock = StringBuilder()
+    var textBlockStart = 0
+    
+    lines.forEach { line ->
+        if (line.startsWith("![image](") && line.endsWith(")")) {
+            if (currentTextBlock.isNotEmpty()) {
+                blocks.add(MarkdownBlock.Text(renderAnnotatedString(currentTextBlock.toString()), textBlockStart))
+                currentTextBlock = StringBuilder()
+            }
+            val uri = line.substring(9, line.length - 1)
+            blocks.add(MarkdownBlock.Image(uri, currentIndex))
+            textBlockStart = currentIndex + line.length + 1
+        } else {
+            if (currentTextBlock.isNotEmpty()) currentTextBlock.append("\n")
+            currentTextBlock.append(line)
+        }
+        currentIndex += line.length + 1
+    }
+    
+    if (currentTextBlock.isNotEmpty()) {
+        blocks.add(MarkdownBlock.Text(renderAnnotatedString(currentTextBlock.toString()), textBlockStart))
+    }
+    
+    return blocks
+}
+
+fun renderAnnotatedString(text: String): AnnotatedString {
+    return buildAnnotatedString {
+        val lines = text.split('\n')
+        lines.forEachIndexed { index, line ->
+            when {
+                line.startsWith("# ") -> {
+                    withStyle(SpanStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)) {
+                        append(line.substring(2))
+                    }
+                }
+                line.startsWith("## ") -> {
+                    withStyle(SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold)) {
+                        append(line.substring(3))
+                    }
+                }
+                line.startsWith("* ") || line.startsWith("- ") -> {
+                    append("• ")
+                    append(line.substring(2))
+                }
+                else -> {
+                    var current = line
+                    while (current.contains("**")) {
+                        val start = current.indexOf("**")
+                        val next = current.indexOf("**", start + 2)
+                        if (next == -1) break
+                        append(current.substring(0, start))
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(current.substring(start + 2, next))
+                        }
+                        current = current.substring(next + 2)
+                    }
+                    append(current)
+                }
+            }
+            if (index < lines.size - 1) append("\n")
+        }
+    }
+}
+
+class MarkdownVisualTransformation : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val styledText = buildAnnotatedString {
+            val lines = text.text.split('\n')
+            lines.forEachIndexed { index, line ->
+                when {
+                    line.startsWith("# ") -> {
+                        withStyle(SpanStyle(color = Color.Gray.copy(alpha = 0.3f))) { append("# ") }
+                        withStyle(SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold)) {
+                            append(line.substring(2))
+                        }
+                    }
+                    line.startsWith("## ") -> {
+                        withStyle(SpanStyle(color = Color.Gray.copy(alpha = 0.3f))) { append("## ") }
+                        withStyle(SpanStyle(fontSize = 18.sp, fontWeight = FontWeight.Bold)) {
+                            append(line.substring(3))
+                        }
+                    }
+                    line.startsWith("* ") || line.startsWith("- ") -> {
+                        withStyle(SpanStyle(color = Color.Gray.copy(alpha = 0.3f))) { append(line.take(2)) }
+                        append(line.substring(2))
+                    }
+                    else -> append(line)
+                }
+                if (index < lines.size - 1) append("\n")
+            }
+        }
+        return TransformedText(styledText, OffsetMapping.Identity)
     }
 }

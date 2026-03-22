@@ -290,7 +290,7 @@ public class DbHelper extends SQLiteOpenHelper {
         db.insert(HOMEWORKS, null, contentValues);
         db.close();
 
-        insertSubject(homework.getSubject(), homework.getColor(), "", "");
+        insertSubject(homework.getSubject(), homework.getColor(), "", null);
     }
 
     public void updateHomework(Homework homework) {
@@ -303,7 +303,7 @@ public class DbHelper extends SQLiteOpenHelper {
         db.update(HOMEWORKS, contentValues, HOMEWORKS_ID + " = ?", new String[]{String.valueOf(homework.getId())});
         db.close();
 
-        insertSubject(homework.getSubject(), homework.getColor(), "", "");
+        insertSubject(homework.getSubject(), homework.getColor(), "", null);
     }
 
     public void deleteHomeworkById(Homework homework) {
@@ -316,7 +316,7 @@ public class DbHelper extends SQLiteOpenHelper {
     public ArrayList<Homework> getHomework() {
         ArrayList<Homework> homeworklist = new ArrayList<>();
         SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery("SELECT * FROM " + HOMEWORKS, null);
+        Cursor cursor = db.rawQuery("SELECT * FROM " + HOMEWORKS + " ORDER BY " + HOMEWORKS_DATE + " ASC", null);
         while (cursor.moveToNext()) {
             Homework homework = new Homework();
             homework.setId(getIntChecked(cursor, HOMEWORKS_ID));
@@ -497,11 +497,14 @@ public class DbHelper extends SQLiteOpenHelper {
         contentValues.put(SUBJECTS_NAME, name);
         contentValues.put(SUBJECTS_COLOR, color);
         contentValues.put(SUBJECTS_TEACHER, teacher);
-        contentValues.put(SUBJECTS_ROOM, room);
 
         if (isSubjectInDb(name)) {
+            if (room != null) {
+                contentValues.put(SUBJECTS_ROOM, room);
+            }
             db.update(SUBJECTS, contentValues, SUBJECTS_NAME + "=?", new String[]{name});
         } else {
+            contentValues.put(SUBJECTS_ROOM, room != null ? room : "");
             db.insert(SUBJECTS, null, contentValues);
         }
         db.close();
@@ -611,7 +614,7 @@ public class DbHelper extends SQLiteOpenHelper {
         db.close();
 
         addTeacherIfNew(exam.getTeacher(), exam.getColor());
-        insertSubject(exam.getSubject(), exam.getColor(), exam.getTeacher(), exam.getRoom());
+        insertSubject(exam.getSubject(), exam.getColor(), exam.getTeacher(), null);
     }
 
     public void updateExam(Exam exam) {
@@ -627,7 +630,7 @@ public class DbHelper extends SQLiteOpenHelper {
         db.close();
 
         addTeacherIfNew(exam.getTeacher(), exam.getColor());
-        insertSubject(exam.getSubject(), exam.getColor(), exam.getTeacher(), exam.getRoom());
+        insertSubject(exam.getSubject(), exam.getColor(), exam.getTeacher(), null);
     }
 
     public void deleteExamById(Exam exam) {

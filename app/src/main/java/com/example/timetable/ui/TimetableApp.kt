@@ -17,7 +17,7 @@ fun TimetableApp() {
             MainScreen(
                 onNavigateToExams = { navController.navigate("exams") },
                 onNavigateToTeachers = { navController.navigate("teachers") },
-                onNavigateToHomeworks = { navController.navigate("homeworks") },
+                onNavigateToAssignments = { navController.navigate("assignments") },
                 onNavigateToNotes = { navController.navigate("notes") },
                 onNavigateToSettings = { navController.navigate("settings") },
                 onNavigateToSubjectDetail = { subjectId -> navController.navigate("subject_detail/$subjectId") }
@@ -29,8 +29,8 @@ fun TimetableApp() {
         composable("teachers") {
             TeachersScreen(onBack = { navController.popBackStack() })
         }
-        composable("homeworks") {
-            HomeworksScreen(onBack = { navController.popBackStack() })
+        composable("assignments") {
+            AssignmentsScreen(onBack = { navController.popBackStack() })
         }
         composable("notes") {
             NotesScreen(

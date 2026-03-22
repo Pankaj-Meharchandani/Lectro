@@ -203,13 +203,15 @@ fun SubjectDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 item {
                     Text(text = "Details", style = MaterialTheme.typography.titleMedium)
                     Text(text = "Teacher: ${subject.teacher}", style = MaterialTheme.typography.bodyLarge)
                     Text(text = "Room: ${subject.room}", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
                 if (viewModel.notes.isNotEmpty()) {
@@ -220,15 +222,9 @@ fun SubjectDetailScreen(
                             NoteItem(
                                 note = note, 
                                 onClick = { onNoteClick(note.id) },
-                                onDelete = { viewModel.deleteNote(note.id) }
+                                onDelete = { viewModel.deleteNote(note.id) },
+                                onReorder = { showMenu = true }
                             )
-                            // Add small drag/reorder handles or menu
-                            IconButton(
-                                onClick = { showMenu = true },
-                                modifier = Modifier.align(Alignment.TopEnd).padding(end = 40.dp)
-                            ) {
-                                Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
-                            }
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(
                                     text = { Text("Move Up") },
@@ -246,7 +242,10 @@ fun SubjectDetailScreen(
                 }
 
                 if (viewModel.materials.isNotEmpty()) {
-                    item { Text(text = "Materials", style = MaterialTheme.typography.titleMedium) }
+                    item { 
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = "Materials", style = MaterialTheme.typography.titleMedium) 
+                    }
                     itemsIndexed(viewModel.materials) { index, material ->
                         Box {
                             var showMenu by remember { mutableStateOf(false) }
@@ -254,14 +253,9 @@ fun SubjectDetailScreen(
                                 material = material,
                                 onClick = { openMaterial(material) },
                                 onEditName = { materialToEdit = material },
-                                onDelete = { viewModel.deleteMaterial(material.id) }
+                                onDelete = { viewModel.deleteMaterial(material.id) },
+                                onReorder = { showMenu = true }
                             )
-                            IconButton(
-                                onClick = { showMenu = true },
-                                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 80.dp)
-                            ) {
-                                Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
-                            }
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(
                                     text = { Text("Move Up") },
@@ -346,7 +340,13 @@ fun SimpleAddNoteDialog(onDismiss: () -> Unit, onSave: (String, String, Int) -> 
 }
 
 @Composable
-fun MaterialItem(material: Material, onClick: () -> Unit, onEditName: () -> Unit, onDelete: () -> Unit) {
+fun MaterialItem(
+    material: Material, 
+    onClick: () -> Unit, 
+    onEditName: () -> Unit, 
+    onDelete: () -> Unit,
+    onReorder: () -> Unit
+) {
     val icon = when {
         material.type?.startsWith("image/") == true -> Icons.Default.Image
         material.type?.contains("code") == true || material.name?.endsWith(".kt") == true || material.name?.endsWith(".java") == true -> Icons.Default.Code
@@ -365,6 +365,9 @@ fun MaterialItem(material: Material, onClick: () -> Unit, onEditName: () -> Unit
             Icon(icon, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = material.name ?: "", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            IconButton(onClick = onReorder) {
+                Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
+            }
             IconButton(onClick = onEditName) {
                 Icon(Icons.Default.Edit, contentDescription = "Edit Name")
             }

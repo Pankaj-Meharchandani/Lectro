@@ -31,7 +31,7 @@ import java.util.Calendar
 fun MainScreen(
     onNavigateToExams: () -> Unit,
     onNavigateToTeachers: () -> Unit,
-    onNavigateToHomeworks: () -> Unit,
+    onNavigateToAssignments: () -> Unit,
     onNavigateToNotes: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToSubjectDetail: (Int) -> Unit,
@@ -99,7 +99,7 @@ fun MainScreen(
                 NavigationDrawerContent(
                     onExamsClick = onNavigateToExams,
                     onTeachersClick = onNavigateToTeachers,
-                    onHomeworksClick = onNavigateToHomeworks,
+                    onAssignmentsClick = onNavigateToAssignments,
                     onNotesClick = onNavigateToNotes,
                     onSettingsClick = onNavigateToSettings,
                     onSchoolWebsiteClick = {
@@ -196,7 +196,7 @@ fun DayList(
 fun NavigationDrawerContent(
     onExamsClick: () -> Unit,
     onTeachersClick: () -> Unit,
-    onHomeworksClick: () -> Unit,
+    onAssignmentsClick: () -> Unit,
     onNotesClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onSchoolWebsiteClick: () -> Unit,
@@ -223,8 +223,8 @@ fun NavigationDrawerContent(
     NavigationDrawerItem(
         label = { Text(stringResource(id = R.string.homeworks)) },
         selected = false,
-        onClick = { onHomeworksClick(); onItemClick() },
-        icon = { Icon(Icons.Default.Home, contentDescription = null) }
+        onClick = { onAssignmentsClick(); onItemClick() },
+        icon = { Icon(Icons.Default.Assignment, contentDescription = null) }
     )
     NavigationDrawerItem(
         label = { Text(stringResource(id = R.string.notes)) },

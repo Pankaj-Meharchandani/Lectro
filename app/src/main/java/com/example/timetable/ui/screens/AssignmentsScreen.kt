@@ -24,21 +24,21 @@ import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
 import java.util.*
 
-class HomeworkViewModel(application: Application) : AndroidViewModel(application) {
+class AssignmentsViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)
-    var homeworks = mutableStateListOf<Homework>()
+    var assignments = mutableStateListOf<Homework>()
         private set
     var subjects = mutableStateListOf<String>()
         private set
 
     init {
-        loadHomeworks()
+        loadAssignments()
         loadSuggestions()
     }
 
-    fun loadHomeworks() {
-        homeworks.clear()
-        homeworks.addAll(db.getHomework())
+    fun loadAssignments() {
+        assignments.clear()
+        assignments.addAll(db.getHomework())
     }
 
     fun loadSuggestions() {
@@ -50,21 +50,21 @@ class HomeworkViewModel(application: Application) : AndroidViewModel(application
         return db.getSubjectDetails(name)
     }
 
-    fun deleteHomework(homework: Homework) {
-        db.deleteHomeworkById(homework)
-        loadHomeworks()
+    fun deleteAssignment(assignment: Homework) {
+        db.deleteHomeworkById(assignment)
+        loadAssignments()
     }
 
-    fun insertHomework(homework: Homework) {
-        db.insertHomework(homework)
-        loadHomeworks()
+    fun insertAssignment(assignment: Homework) {
+        db.insertHomework(assignment)
+        loadAssignments()
         loadSuggestions()
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeworksScreen(onBack: () -> Unit, viewModel: HomeworkViewModel = viewModel()) {
+fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel = viewModel()) {
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -89,16 +89,16 @@ fun HomeworksScreen(onBack: () -> Unit, viewModel: HomeworkViewModel = viewModel
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            items(viewModel.homeworks) { homework ->
-                HomeworkItem(homework = homework, onDelete = { viewModel.deleteHomework(homework) })
+            items(viewModel.assignments) { assignment ->
+                AssignmentItem(assignment = assignment, onDelete = { viewModel.deleteAssignment(assignment) })
             }
         }
     }
 
     if (showAddDialog) {
-        AddHomeworkDialog(
+        AddAssignmentDialog(
             onDismiss = { showAddDialog = false },
-            onSave = { homework -> viewModel.insertHomework(homework) },
+            onSave = { assignment -> viewModel.insertAssignment(assignment) },
             onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
             subjectSuggestions = viewModel.subjects
         )
@@ -107,7 +107,7 @@ fun HomeworksScreen(onBack: () -> Unit, viewModel: HomeworkViewModel = viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddHomeworkDialog(
+fun AddAssignmentDialog(
     onDismiss: () -> Unit, 
     onSave: (Homework) -> Unit,
     onGetSubjectDetails: (String) -> com.example.timetable.model.Week?,
@@ -191,9 +191,9 @@ fun AddHomeworkDialog(
 }
 
 @Composable
-fun HomeworkItem(homework: Homework, onDelete: () -> Unit) {
-    val homeworkColor = if (homework.color != 0) Color(homework.color) else MaterialTheme.colorScheme.primary
-    val containerColor = themedContainerColor(homeworkColor)
+fun AssignmentItem(assignment: Homework, onDelete: () -> Unit) {
+    val assignmentColor = if (assignment.color != 0) Color(assignment.color) else MaterialTheme.colorScheme.primary
+    val containerColor = themedContainerColor(assignmentColor)
     val contentColor = contentColorFor(containerColor)
 
     Card(
@@ -213,9 +213,9 @@ fun HomeworkItem(homework: Homework, onDelete: () -> Unit) {
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = homework.subject, style = MaterialTheme.typography.titleLarge)
-                Text(text = homework.description, style = MaterialTheme.typography.bodyMedium)
-                Text(text = "Deadline: ${homework.date}", style = MaterialTheme.typography.bodySmall)
+                Text(text = assignment.subject, style = MaterialTheme.typography.titleLarge)
+                Text(text = assignment.description, style = MaterialTheme.typography.bodyMedium)
+                Text(text = "Deadline: ${assignment.date}", style = MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete")
