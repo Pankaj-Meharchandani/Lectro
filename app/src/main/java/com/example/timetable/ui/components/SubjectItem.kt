@@ -35,13 +35,8 @@ fun SubjectItem(
     val contentColor = contentColorFor(containerColor)
     var showMenu by remember { mutableStateOf(false) }
 
-    val subjectDetails = remember(subject.subject, viewModel.allSubjects) {
-        if (attendanceEnabled) viewModel.getSubjectByName(subject.subject ?: "") else null
-    }
-
-    val attendanceStatus = remember(subject.id, viewModel.allSubjects) {
-        if (attendanceEnabled) viewModel.getAttendanceStatus(subject.id) else null
-    }
+    val subjectDetails = viewModel.allSubjects.find { it.name == subject.subject }
+    val attendanceStatus = if (attendanceEnabled) viewModel.todayAttendance[subject.id] else null
 
     val isAfterStartTime = remember(subject.fromTime) {
         if (subject.fromTime.isNullOrBlank()) false

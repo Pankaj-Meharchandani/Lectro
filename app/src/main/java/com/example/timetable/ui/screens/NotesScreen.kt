@@ -82,9 +82,6 @@ fun NotesScreen(
 ) {
     val context = LocalContext.current
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val attendanceEnabled by remember {
-        mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_ATTENDANCE_SETTING, true))
-    }
     val minAttendance = remember { sharedPref.getInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, 75) }
     var showAddDialog by remember { mutableStateOf(false) }
 
@@ -119,7 +116,7 @@ fun NotesScreen(
                             this.color = subject.color
                             this.id = subject.id
                         },
-                        attendanceEnabled = attendanceEnabled,
+                        attendanceEnabled = false,
                         minAttendance = minAttendance,
                         onClick = { onSubjectClick(subject.id) },
                         onMarkAttendance = { _, _, _ -> }

@@ -22,9 +22,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var allSubjects = mutableStateListOf<Subject>()
     var teachers = mutableStateListOf<String>()
     var userDetail by mutableStateOf(UserDetail())
+    val todayAttendance = mutableStateMapOf<Int, String?>()
 
     fun loadWeekData(day: String) {
         weekData[day] = db.getWeek(day)
+        loadAttendance()
+    }
+
+    fun loadAttendance() {
+        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        weekData.values.flatten().forEach { slot ->
+            todayAttendance[slot.id] = db.getAttendanceStatus(slot.id, date)
+        }
     }
 
     fun loadSuggestions() {
@@ -65,13 +74,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateAttendance(weekId: Int, subjectName: String, type: String) {
         val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         db.updateAttendance(weekId, subjectName, type, date)
-        weekData.keys.forEach { loadWeekData(it) }
+        todayAttendance[weekId] = type
         loadSuggestions()
     }
 
     fun getAttendanceStatus(weekId: Int): String? {
         val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         return db.getAttendanceStatus(weekId, date)
+    }
+
+    fun getAttendanceForSubject(subjectName: String) = db.getAttendanceForSubject(subjectName)
+
+    fun updateAttendanceByDate(weekId: Int, subjectName: String, type: String, date: String) {
+        db.updateAttendanceByDate(weekId, subjectName, type, date)
+        loadSuggestions()
+        loadAttendance()
     }
 
     fun getSubjectByName(name: String) = db.getSubjectByName(name)

@@ -44,6 +44,7 @@ import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.timetable.ui.screens.getAttendanceColor
 
 class SubjectDetailViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)

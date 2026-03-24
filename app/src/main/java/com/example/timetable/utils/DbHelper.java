@@ -975,6 +975,35 @@ public class DbHelper extends SQLiteOpenHelper {
         return weeklist;
     }
 
+    public void updateAttendanceByDate(int weekId, String subjectName, String type, String date) {
+        updateAttendance(weekId, subjectName, type, date);
+    }
+
+    public ArrayList<AttendanceRecord> getAttendanceForSubject(String subjectName) {
+        ArrayList<AttendanceRecord> records = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT " + ATTENDANCE_DATE + ", " + ATTENDANCE_STATUS + ", " + ATTENDANCE_WEEK_ID + " FROM " + ATTENDANCE +
+                       " JOIN " + TIMETABLE + " ON " + ATTENDANCE + "." + ATTENDANCE_WEEK_ID + " = " + TIMETABLE + "." + WEEK_ID +
+                       " WHERE " + TIMETABLE + "." + WEEK_SUBJECT + " = ?";
+        Cursor cursor = db.rawQuery(query, new String[]{subjectName});
+        while (cursor.moveToNext()) {
+            AttendanceRecord record = new AttendanceRecord();
+            record.date = cursor.getString(0);
+            record.status = cursor.getString(1);
+            record.weekId = cursor.getInt(2);
+            records.add(record);
+        }
+        cursor.close();
+        db.close();
+        return records;
+    }
+
+    public static class AttendanceRecord {
+        public String date;
+        public String status;
+        public int weekId;
+    }
+
     public Subject getSubjectByName(String name) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(SUBJECTS, null, SUBJECTS_NAME + " = ?", new String[]{name}, null, null, null);
