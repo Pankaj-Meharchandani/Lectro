@@ -298,7 +298,7 @@ fun HistoricalAttendanceDialog(
 
 @Composable
 fun AttendanceCalendar(records: List<DbHelper.AttendanceRecord>) {
-    val calendar = remember { Calendar.getInstance() }
+    var calendar by remember { mutableStateOf(Calendar.getInstance()) }
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
     val currentMonth = calendar.get(Calendar.MONTH)
     val currentYear = calendar.get(Calendar.YEAR)
@@ -310,12 +310,34 @@ fun AttendanceCalendar(records: List<DbHelper.AttendanceRecord>) {
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calendar.time),
-            style = MaterialTheme.typography.labelLarge,
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
-        )
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = {
+                val newCal = calendar.clone() as Calendar
+                newCal.add(Calendar.MONTH, -1)
+                calendar = newCal
+            }) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous Month")
+            }
+            
+            Text(
+                text = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calendar.time),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            
+            IconButton(onClick = {
+                val newCal = calendar.clone() as Calendar
+                newCal.add(Calendar.MONTH, 1)
+                calendar = newCal
+            }) {
+                Icon(Icons.Default.ChevronRight, contentDescription = "Next Month")
+            }
+        }
+
         Spacer(modifier = Modifier.height(8.dp))
         
         val daysOfWeek = listOf("S", "M", "T", "W", "T", "F", "S")

@@ -20,7 +20,7 @@ import java.util.ArrayList;
 
 public class DbHelper extends SQLiteOpenHelper {
 
-    private static final int DB_VERSION = 15;
+    private static final int DB_VERSION = 16;
     private static final String DB_NAME = "timetabledb";
 
     private static final String TIMETABLE = "timetable";
@@ -105,6 +105,7 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String ATTENDANCE_ID = "id";
     private static final String ATTENDANCE_DATE = "date";
     private static final String ATTENDANCE_WEEK_ID = "week_id";
+    private static final String ATTENDANCE_SUBJECT_NAME = "subject_name";
     private static final String ATTENDANCE_STATUS = "status";
 
     public DbHelper(Context context) {
@@ -195,6 +196,7 @@ public class DbHelper extends SQLiteOpenHelper {
                 + ATTENDANCE_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + ATTENDANCE_DATE + " TEXT,"
                 + ATTENDANCE_WEEK_ID + " INTEGER,"
+                + ATTENDANCE_SUBJECT_NAME + " TEXT,"
                 + ATTENDANCE_STATUS + " TEXT" + ")";
 
         db.execSQL(CREATE_TIMETABLE);
@@ -274,6 +276,11 @@ public class DbHelper extends SQLiteOpenHelper {
                     + ATTENDANCE_DATE + " TEXT,"
                     + ATTENDANCE_WEEK_ID + " INTEGER,"
                     + ATTENDANCE_STATUS + " TEXT)");
+            onUpgrade(db, 15, newVersion);
+        } else if (oldVersion == 15) {
+            db.execSQL("ALTER TABLE " + ATTENDANCE + " ADD COLUMN " + ATTENDANCE_SUBJECT_NAME + " TEXT");
+            // Populate subject_name for existing records if any
+            db.execSQL("UPDATE " + ATTENDANCE + " SET " + ATTENDANCE_SUBJECT_NAME + " = (SELECT " + WEEK_SUBJECT + " FROM " + TIMETABLE + " WHERE " + TIMETABLE + "." + WEEK_ID + " = " + ATTENDANCE + "." + ATTENDANCE_WEEK_ID + ") WHERE " + ATTENDANCE_WEEK_ID + " > 0");
         }
     }
 
@@ -890,8 +897,8 @@ public class DbHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
 
         Cursor cursor = db.query(ATTENDANCE, new String[]{ATTENDANCE_STATUS},
-                ATTENDANCE_WEEK_ID + " = ? AND " + ATTENDANCE_DATE + " = ?",
-                new String[]{String.valueOf(weekId), date}, null, null, null);
+                ATTENDANCE_SUBJECT_NAME + " = ? AND " + ATTENDANCE_DATE + " = ? AND " + ATTENDANCE_WEEK_ID + " = ?",
+                new String[]{subjectName, date, String.valueOf(weekId)}, null, null, null);
 
         String oldType = null;
         if (cursor.moveToFirst()) {
@@ -919,10 +926,11 @@ public class DbHelper extends SQLiteOpenHelper {
         ContentValues values = new ContentValues();
         values.put(ATTENDANCE_DATE, date);
         values.put(ATTENDANCE_WEEK_ID, weekId);
+        values.put(ATTENDANCE_SUBJECT_NAME, subjectName);
         values.put(ATTENDANCE_STATUS, type);
 
         if (oldType != null) {
-            db.update(ATTENDANCE, values, ATTENDANCE_WEEK_ID + " = ? AND " + ATTENDANCE_DATE + " = ?", new String[]{String.valueOf(weekId), date});
+            db.update(ATTENDANCE, values, ATTENDANCE_SUBJECT_NAME + " = ? AND " + ATTENDANCE_DATE + " = ? AND " + ATTENDANCE_WEEK_ID + " = ?", new String[]{subjectName, date, String.valueOf(weekId)});
         } else {
             db.insert(ATTENDANCE, null, values);
         }
@@ -982,10 +990,8 @@ public class DbHelper extends SQLiteOpenHelper {
     public ArrayList<AttendanceRecord> getAttendanceForSubject(String subjectName) {
         ArrayList<AttendanceRecord> records = new ArrayList<>();
         SQLiteDatabase db = this.getReadableDatabase();
-        String query = "SELECT " + ATTENDANCE_DATE + ", " + ATTENDANCE_STATUS + ", " + ATTENDANCE_WEEK_ID + " FROM " + ATTENDANCE +
-                       " JOIN " + TIMETABLE + " ON " + ATTENDANCE + "." + ATTENDANCE_WEEK_ID + " = " + TIMETABLE + "." + WEEK_ID +
-                       " WHERE " + TIMETABLE + "." + WEEK_SUBJECT + " = ?";
-        Cursor cursor = db.rawQuery(query, new String[]{subjectName});
+        Cursor cursor = db.query(ATTENDANCE, new String[]{ATTENDANCE_DATE, ATTENDANCE_STATUS, ATTENDANCE_WEEK_ID},
+                ATTENDANCE_SUBJECT_NAME + " = ?", new String[]{subjectName}, null, null, null);
         while (cursor.moveToNext()) {
             AttendanceRecord record = new AttendanceRecord();
             record.date = cursor.getString(0);
