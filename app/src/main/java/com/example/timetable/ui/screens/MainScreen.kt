@@ -10,6 +10,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -48,6 +49,7 @@ fun MainScreen(
     onNavigateToNotes: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToPersonalDetails: () -> Unit,
+    onNavigateToAttendance: () -> Unit,
     onNavigateToSubjectDetail: (Int) -> Unit,
     viewModel: MainViewModel = viewModel()
 ) {
@@ -62,6 +64,12 @@ fun MainScreen(
     var personalDetailsEnabled by remember {
         mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_PERSONAL_DETAILS_SETTING, true))
     }
+    var attendanceEnabled by remember {
+        mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_ATTENDANCE_SETTING, true))
+    }
+    var minAttendance by remember {
+        mutableIntStateOf(sharedPref.getInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, 75))
+    }
 
     DisposableEffect(sharedPref) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
@@ -71,6 +79,12 @@ fun MainScreen(
                 }
                 SettingsActivity.KEY_PERSONAL_DETAILS_SETTING -> {
                     personalDetailsEnabled = prefs.getBoolean(key, true)
+                }
+                SettingsActivity.KEY_ATTENDANCE_SETTING -> {
+                    attendanceEnabled = prefs.getBoolean(key, true)
+                }
+                SettingsActivity.KEY_MIN_ATTENDANCE_SETTING -> {
+                    minAttendance = prefs.getInt(key, 75)
                 }
             }
         }
@@ -195,6 +209,7 @@ fun MainScreen(
                     onTeachersClick = onNavigateToTeachers,
                     onAssignmentsClick = onNavigateToAssignments,
                     onNotesClick = onNavigateToNotes,
+                    onAttendanceClick = onNavigateToAttendance,
                     onSettingsClick = onNavigateToSettings,
                     personalDetailsEnabled = personalDetailsEnabled,
                     onPersonalDetailsClick = onNavigateToPersonalDetails,
@@ -280,11 +295,16 @@ fun MainScreen(
                 val dayData = viewModel.weekData[days[page]] ?: emptyList()
                 DayList(
                     subjects = dayData, 
+                    attendanceEnabled = attendanceEnabled,
+                    minAttendance = minAttendance,
                     onSubjectClick = { week ->
                         val subjectId = viewModel.getSubjectIdByName(week.subject)
                         if (subjectId != -1) {
                             onNavigateToSubjectDetail(subjectId)
                         }
+                    },
+                    onMarkAttendance = { weekId, subjectName, type ->
+                        viewModel.updateAttendance(weekId, subjectName, type)
                     },
                     onEditClick = { weekToEdit = it },
                     onDeleteClick = { viewModel.deleteWeek(it) }
@@ -297,7 +317,10 @@ fun MainScreen(
 @Composable
 fun DayList(
     subjects: List<Week>, 
+    attendanceEnabled: Boolean,
+    minAttendance: Int,
     onSubjectClick: (Week) -> Unit,
+    onMarkAttendance: (Int, String, String) -> Unit,
     onEditClick: (Week) -> Unit,
     onDeleteClick: (Week) -> Unit
 ) {
@@ -305,7 +328,10 @@ fun DayList(
         items(subjects) { subject ->
             SubjectItem(
                 subject = subject, 
+                attendanceEnabled = attendanceEnabled,
+                minAttendance = minAttendance,
                 onClick = { onSubjectClick(subject) },
+                onMarkAttendance = onMarkAttendance,
                 onEdit = { onEditClick(subject) },
                 onDelete = { onDeleteClick(subject) }
             )
@@ -319,6 +345,7 @@ fun NavigationDrawerContent(
     onTeachersClick: () -> Unit,
     onAssignmentsClick: () -> Unit,
     onNotesClick: () -> Unit,
+    onAttendanceClick: () -> Unit,
     onSettingsClick: () -> Unit,
     personalDetailsEnabled: Boolean,
     onPersonalDetailsClick: () -> Unit,
@@ -333,6 +360,12 @@ fun NavigationDrawerContent(
             icon = { Icon(Icons.Default.Badge, contentDescription = null) }
         )
     }
+    NavigationDrawerItem(
+        label = { Text("Attendance") },
+        selected = false,
+        onClick = { onAttendanceClick(); onItemClick() },
+        icon = { Icon(Icons.Default.DoneAll, contentDescription = null) }
+    )
     NavigationDrawerItem(
         label = { Text(stringResource(id = R.string.school_website)) },
         selected = false,

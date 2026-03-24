@@ -21,8 +21,12 @@ fun TimetableApp() {
                 onNavigateToNotes = { navController.navigate("notes") },
                 onNavigateToSettings = { navController.navigate("settings") },
                 onNavigateToPersonalDetails = { navController.navigate("personal_details") },
+                onNavigateToAttendance = { navController.navigate("attendance") },
                 onNavigateToSubjectDetail = { subjectId -> navController.navigate("subject_detail/$subjectId") }
             )
+        }
+        composable("attendance") {
+            AttendanceScreen(onBack = { navController.popBackStack() })
         }
         composable("personal_details") {
             PersonalDetailsScreen(onBack = { navController.popBackStack() })

@@ -24,29 +24,57 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.preference.PreferenceManager
 import com.example.timetable.R
+import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.model.Material
 import com.example.timetable.model.Note
 import com.example.timetable.model.Subject
+import com.example.timetable.model.Week
 import com.example.timetable.ui.components.ColorPickerRow
 import com.example.timetable.ui.components.NoteItem
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
+import java.text.SimpleDateFormat
+import java.util.*
 
 class SubjectDetailViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)
     var subject by mutableStateOf<Subject?>(null)
     var notes = mutableStateListOf<Note>()
     var materials = mutableStateListOf<Material>()
+    var slots = mutableStateListOf<Week>()
 
     fun loadSubjectData(id: Int) {
         val allSubjects = db.getAllSubjects()
-        subject = allSubjects.find { it.id == id }
+        val currentSubject = allSubjects.find { it.id == id }
+        subject = currentSubject
+        currentSubject?.name?.let {
+            slots.clear()
+            slots.addAll(db.getSlotsBySubject(it))
+        }
         loadNotes(id)
         loadMaterials(id)
+    }
+
+    fun updateAttendance(weekId: Int, type: String) {
+        subject?.let {
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            db.updateAttendance(weekId, it.name, type, date)
+            loadSubjectData(it.id)
+        }
+    }
+
+    fun getAttendanceStatus(weekId: Int): String? {
+        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        return db.getAttendanceStatus(weekId, date)
     }
 
     fun loadNotes(subjectId: Int) {
@@ -161,11 +189,26 @@ fun SubjectDetailScreen(
         }
     )
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadSubjectData(subjectId)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(subjectId) {
         viewModel.loadSubjectData(subjectId)
     }
 
     val subject = viewModel.subject
+    val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val minAttendance = remember { sharedPref.getInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, 75) }
 
     if (subject != null) {
         val headerColor = themedContainerColor(if (subject.color != 0) Color(subject.color) else MaterialTheme.colorScheme.primary)
@@ -211,6 +254,107 @@ fun SubjectDetailScreen(
                     Text(text = "Details", style = MaterialTheme.typography.titleMedium)
                     Text(text = "Teacher: ${subject.teacher}", style = MaterialTheme.typography.bodyLarge)
                     Text(text = "Room: ${subject.room}", style = MaterialTheme.typography.bodyLarge)
+                    
+                    val total = subject.attended + subject.missed
+                    val percentage = if (total > 0) (subject.attended.toFloat() / total * 100).toInt() else 0
+                    val color = getAttendanceColor(percentage, minAttendance)
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(text = "Attendance", style = MaterialTheme.typography.titleMedium)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            LinearProgressIndicator(
+                                progress = { if (total > 0) subject.attended.toFloat() / total else 0f },
+                                modifier = Modifier.fillMaxWidth().height(8.dp),
+                                color = color
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Present: ${subject.attended}, Absent: ${subject.missed}, Total: $total",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "$percentage%",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = color
+                        )
+                    }
+                    if (subject.skipped > 0) {
+                        Text(
+                            text = "Lectures didn't happen: ${subject.skipped}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(text = "Today's Status", style = MaterialTheme.typography.titleMedium)
+                    val currentDay = when (Calendar.getInstance().get(Calendar.DAY_OF_WEEK)) {
+                        Calendar.MONDAY -> "Monday"
+                        Calendar.TUESDAY -> "Tuesday"
+                        Calendar.WEDNESDAY -> "Wednesday"
+                        Calendar.THURSDAY -> "Thursday"
+                        Calendar.FRIDAY -> "Friday"
+                        Calendar.SATURDAY -> "Saturday"
+                        Calendar.SUNDAY -> "Sunday"
+                        else -> ""
+                    }
+                    val todaySlots = viewModel.slots.filter { it.fragment == currentDay }
+                    
+                    if (todaySlots.isEmpty()) {
+                        Text("No classes scheduled for today.", style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        todaySlots.forEach { slot ->
+                            val status = viewModel.getAttendanceStatus(slot.id)
+                            Card(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${slot.fromTime} - ${slot.toTime}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        if (status != null) {
+                                            Text(
+                                                text = status.replaceFirstChar { it.uppercase() },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                    
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        AttendanceButton("Present", status == "attended", Modifier.weight(1f)) {
+                                            viewModel.updateAttendance(slot.id, "attended")
+                                        }
+                                        AttendanceButton("Absent", status == "missed", Modifier.weight(1f)) {
+                                            viewModel.updateAttendance(slot.id, "missed")
+                                        }
+                                        AttendanceButton("No Class", status == "skipped", Modifier.weight(1f)) {
+                                            viewModel.updateAttendance(slot.id, "skipped")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
@@ -374,6 +518,27 @@ fun MaterialItem(
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete")
             }
+        }
+    }
+}
+
+@Composable
+fun AttendanceButton(text: String, isSelected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    if (isSelected) {
+        Button(
+            onClick = onClick,
+            modifier = modifier,
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text(text, style = MaterialTheme.typography.labelSmall)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            modifier = modifier,
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text(text, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

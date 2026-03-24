@@ -20,7 +20,7 @@ import java.util.ArrayList;
 
 public class DbHelper extends SQLiteOpenHelper {
 
-    private static final int DB_VERSION = 13;
+    private static final int DB_VERSION = 15;
     private static final String DB_NAME = "timetabledb";
 
     private static final String TIMETABLE = "timetable";
@@ -40,6 +40,9 @@ public class DbHelper extends SQLiteOpenHelper {
     public static final String SUBJECTS_TEACHER = "teacher";
     public static final String SUBJECTS_ROOM = "room";
     public static final String SUBJECTS_SORT_ORDER = "sort_order";
+    public static final String SUBJECTS_ATTENDED = "attended";
+    public static final String SUBJECTS_MISSED = "missed";
+    public static final String SUBJECTS_SKIPPED = "skipped";
 
     private static final String HOMEWORKS = "homeworks";
     private static final String HOMEWORKS_ID = "id";
@@ -97,6 +100,12 @@ public class DbHelper extends SQLiteOpenHelper {
     private static final String USER_FILES_ID = "id";
     private static final String USER_FILES_TITLE = "title";
     private static final String USER_FILES_PATH = "path";
+
+    private static final String ATTENDANCE = "attendance_records";
+    private static final String ATTENDANCE_ID = "id";
+    private static final String ATTENDANCE_DATE = "date";
+    private static final String ATTENDANCE_WEEK_ID = "week_id";
+    private static final String ATTENDANCE_STATUS = "status";
 
     public DbHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
@@ -156,7 +165,10 @@ public class DbHelper extends SQLiteOpenHelper {
                 + SUBJECTS_COLOR + " INTEGER,"
                 + SUBJECTS_TEACHER + " TEXT,"
                 + SUBJECTS_ROOM + " TEXT,"
-                + SUBJECTS_SORT_ORDER + " INTEGER DEFAULT 0" + ")";
+                + SUBJECTS_SORT_ORDER + " INTEGER DEFAULT 0,"
+                + SUBJECTS_ATTENDED + " INTEGER DEFAULT 0,"
+                + SUBJECTS_MISSED + " INTEGER DEFAULT 0,"
+                + SUBJECTS_SKIPPED + " INTEGER DEFAULT 0" + ")";
 
         String CREATE_MATERIALS = "CREATE TABLE " + MATERIALS + "("
                 + MATERIALS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -179,6 +191,12 @@ public class DbHelper extends SQLiteOpenHelper {
                 + USER_FILES_TITLE + " TEXT,"
                 + USER_FILES_PATH + " TEXT" + ")";
 
+        String CREATE_ATTENDANCE = "CREATE TABLE " + ATTENDANCE + "("
+                + ATTENDANCE_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + ATTENDANCE_DATE + " TEXT,"
+                + ATTENDANCE_WEEK_ID + " INTEGER,"
+                + ATTENDANCE_STATUS + " TEXT" + ")";
+
         db.execSQL(CREATE_TIMETABLE);
         db.execSQL(CREATE_HOMEWORKS);
         db.execSQL(CREATE_NOTES);
@@ -188,6 +206,7 @@ public class DbHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_MATERIALS);
         db.execSQL(CREATE_USER_DETAILS);
         db.execSQL(CREATE_USER_FILES);
+        db.execSQL(CREATE_ATTENDANCE);
     }
 
     @Override
@@ -243,6 +262,18 @@ public class DbHelper extends SQLiteOpenHelper {
                     + USER_FILES_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + USER_FILES_TITLE + " TEXT,"
                     + USER_FILES_PATH + " TEXT)");
+            onUpgrade(db, 13, newVersion);
+        } else if (oldVersion == 13) {
+            db.execSQL("ALTER TABLE " + SUBJECTS + " ADD COLUMN " + SUBJECTS_ATTENDED + " INTEGER DEFAULT 0");
+            db.execSQL("ALTER TABLE " + SUBJECTS + " ADD COLUMN " + SUBJECTS_MISSED + " INTEGER DEFAULT 0");
+            db.execSQL("ALTER TABLE " + SUBJECTS + " ADD COLUMN " + SUBJECTS_SKIPPED + " INTEGER DEFAULT 0");
+            onUpgrade(db, 14, newVersion);
+        } else if (oldVersion == 14) {
+            db.execSQL("CREATE TABLE " + ATTENDANCE + "("
+                    + ATTENDANCE_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + ATTENDANCE_DATE + " TEXT,"
+                    + ATTENDANCE_WEEK_ID + " INTEGER,"
+                    + ATTENDANCE_STATUS + " TEXT)");
         }
     }
 
@@ -607,6 +638,9 @@ public class DbHelper extends SQLiteOpenHelper {
             subject.setColor(getIntChecked(cursor, SUBJECTS_COLOR));
             subject.setTeacher(getStringChecked(cursor, SUBJECTS_TEACHER));
             subject.setRoom(getStringChecked(cursor, SUBJECTS_ROOM));
+            subject.setAttended(getIntChecked(cursor, SUBJECTS_ATTENDED));
+            subject.setMissed(getIntChecked(cursor, SUBJECTS_MISSED));
+            subject.setSkipped(getIntChecked(cursor, SUBJECTS_SKIPPED));
             subjects.add(subject);
         }
         cursor.close();
@@ -850,5 +884,114 @@ public class DbHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(USER_FILES, USER_FILES_ID + "=?", new String[]{String.valueOf(id)});
         db.close();
+    }
+
+    public void updateAttendance(int weekId, String subjectName, String type, String date) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        Cursor cursor = db.query(ATTENDANCE, new String[]{ATTENDANCE_STATUS},
+                ATTENDANCE_WEEK_ID + " = ? AND " + ATTENDANCE_DATE + " = ?",
+                new String[]{String.valueOf(weekId), date}, null, null, null);
+
+        String oldType = null;
+        if (cursor.moveToFirst()) {
+            oldType = cursor.getString(0);
+        }
+        cursor.close();
+
+        if (oldType != null && oldType.equals(type)) {
+            db.close();
+            return;
+        }
+
+        if (oldType != null) {
+            String oldColumn = getColumnNameForType(oldType);
+            if (oldColumn != null) {
+                db.execSQL("UPDATE " + SUBJECTS + " SET " + oldColumn + " = " + oldColumn + " - 1 WHERE " + SUBJECTS_NAME + " = ?", new String[]{subjectName});
+            }
+        }
+
+        String newColumn = getColumnNameForType(type);
+        if (newColumn != null) {
+            db.execSQL("UPDATE " + SUBJECTS + " SET " + newColumn + " = " + newColumn + " + 1 WHERE " + SUBJECTS_NAME + " = ?", new String[]{subjectName});
+        }
+
+        ContentValues values = new ContentValues();
+        values.put(ATTENDANCE_DATE, date);
+        values.put(ATTENDANCE_WEEK_ID, weekId);
+        values.put(ATTENDANCE_STATUS, type);
+
+        if (oldType != null) {
+            db.update(ATTENDANCE, values, ATTENDANCE_WEEK_ID + " = ? AND " + ATTENDANCE_DATE + " = ?", new String[]{String.valueOf(weekId), date});
+        } else {
+            db.insert(ATTENDANCE, null, values);
+        }
+        db.close();
+    }
+
+    private String getColumnNameForType(String type) {
+        switch (type) {
+            case "attended": return SUBJECTS_ATTENDED;
+            case "missed": return SUBJECTS_MISSED;
+            case "skipped": return SUBJECTS_SKIPPED;
+            default: return null;
+        }
+    }
+
+    public String getAttendanceStatus(int weekId, String date) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(ATTENDANCE, new String[]{ATTENDANCE_STATUS},
+                ATTENDANCE_WEEK_ID + " = ? AND " + ATTENDANCE_DATE + " = ?",
+                new String[]{String.valueOf(weekId), date}, null, null, null);
+        String status = null;
+        if (cursor.moveToFirst()) {
+            status = cursor.getString(0);
+        }
+        cursor.close();
+        db.close();
+        return status;
+    }
+
+    public ArrayList<Week> getSlotsBySubject(String name) {
+        ArrayList<Week> weeklist = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM " + TIMETABLE + " WHERE " + WEEK_SUBJECT + " = ? ORDER BY " + WEEK_FROM_TIME + " ASC", new String[]{name});
+        if (cursor.moveToFirst()) {
+            do {
+                Week week = new Week();
+                week.setId(getIntChecked(cursor, WEEK_ID));
+                week.setSubject(getStringChecked(cursor, WEEK_SUBJECT));
+                week.setFragment(getStringChecked(cursor, WEEK_FRAGMENT));
+                week.setTeacher(getStringChecked(cursor, WEEK_TEACHER));
+                week.setRoom(getStringChecked(cursor, WEEK_ROOM));
+                week.setFromTime(getStringChecked(cursor, WEEK_FROM_TIME));
+                week.setToTime(getStringChecked(cursor, WEEK_TO_TIME));
+                week.setColor(getIntChecked(cursor, WEEK_COLOR));
+                weeklist.add(week);
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        db.close();
+        return weeklist;
+    }
+
+    public Subject getSubjectByName(String name) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(SUBJECTS, null, SUBJECTS_NAME + " = ?", new String[]{name}, null, null, null);
+        Subject subject = null;
+        if (cursor.moveToFirst()) {
+            subject = new Subject();
+            subject.setId(getIntChecked(cursor, SUBJECTS_ID));
+            subject.setName(getStringChecked(cursor, SUBJECTS_NAME));
+            subject.setColor(getIntChecked(cursor, SUBJECTS_COLOR));
+            subject.setTeacher(getStringChecked(cursor, SUBJECTS_TEACHER));
+            subject.setRoom(getStringChecked(cursor, SUBJECTS_ROOM));
+            subject.setAttended(getIntChecked(cursor, SUBJECTS_ATTENDED));
+            subject.setMissed(getIntChecked(cursor, SUBJECTS_MISSED));
+            subject.setSkipped(getIntChecked(cursor, SUBJECTS_SKIPPED));
+        }
+        cursor.close();
+        db.close();
+        return subject;
     }
 }

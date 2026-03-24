@@ -8,6 +8,9 @@ public class Subject implements Serializable {
     private int color;
     private String teacher;
     private String room;
+    private int attended;
+    private int missed;
+    private int skipped;
 
     public Subject() {}
 
@@ -16,6 +19,16 @@ public class Subject implements Serializable {
         this.color = color;
         this.teacher = teacher;
         this.room = room;
+    }
+
+    public Subject(String name, int color, String teacher, String room, int attended, int missed, int skipped) {
+        this.name = name;
+        this.color = color;
+        this.teacher = teacher;
+        this.room = room;
+        this.attended = attended;
+        this.missed = missed;
+        this.skipped = skipped;
     }
 
     public int getId() {
@@ -56,6 +69,30 @@ public class Subject implements Serializable {
 
     public void setRoom(String room) {
         this.room = room;
+    }
+
+    public int getAttended() {
+        return attended;
+    }
+
+    public void setAttended(int attended) {
+        this.attended = attended;
+    }
+
+    public int getMissed() {
+        return missed;
+    }
+
+    public void setMissed(int missed) {
+        this.missed = missed;
+    }
+
+    public int getSkipped() {
+        return skipped;
+    }
+
+    public void setSkipped(int skipped) {
+        this.skipped = skipped;
     }
 }
 

@@ -12,6 +12,8 @@ public class SettingsActivity extends AppCompatActivity {
             KEY_SEVEN_DAYS_SETTING = "sevendays";
     public static final String KEY_SCHOOL_WEBSITE_SETTING = "schoolwebsite";
     public static final String KEY_PERSONAL_DETAILS_SETTING = "personal_details_enabled";
+    public static final String KEY_ATTENDANCE_SETTING = "attendance_enabled";
+    public static final String KEY_MIN_ATTENDANCE_SETTING = "min_attendance";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

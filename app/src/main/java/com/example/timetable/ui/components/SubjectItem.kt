@@ -11,21 +11,67 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timetable.model.Week
 import com.example.timetable.ui.theme.themedContainerColor
+import com.example.timetable.ui.viewmodel.MainViewModel
 import com.example.timetable.utils.TimeUtils
+import java.util.Calendar
+import com.example.timetable.ui.screens.getAttendanceColor
 
 @Composable
 fun SubjectItem(
     subject: Week, 
+    attendanceEnabled: Boolean,
+    minAttendance: Int,
     onClick: () -> Unit,
+    onMarkAttendance: (Int, String, String) -> Unit,
     onEdit: () -> Unit = {},
-    onDelete: () -> Unit = {}
+    onDelete: () -> Unit = {},
+    viewModel: MainViewModel = viewModel()
 ) {
     val subjectColor = if (subject.color != 0) Color(subject.color) else MaterialTheme.colorScheme.primary
     val containerColor = themedContainerColor(subjectColor)
     val contentColor = contentColorFor(containerColor)
     var showMenu by remember { mutableStateOf(false) }
+
+    val subjectDetails = remember(subject.subject, viewModel.allSubjects) {
+        if (attendanceEnabled) viewModel.getSubjectByName(subject.subject ?: "") else null
+    }
+
+    val attendanceStatus = remember(subject.id, viewModel.allSubjects) {
+        if (attendanceEnabled) viewModel.getAttendanceStatus(subject.id) else null
+    }
+
+    val isAfterStartTime = remember(subject.fromTime) {
+        if (subject.fromTime.isNullOrBlank()) false
+        else {
+            val now = Calendar.getInstance()
+            val timeParts = subject.fromTime.split(":")
+            if (timeParts.size == 2) {
+                val target = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, timeParts[0].toInt())
+                    set(Calendar.MINUTE, timeParts[1].toInt())
+                    set(Calendar.SECOND, 0)
+                }
+                now.after(target)
+            } else false
+        }
+    }
+
+    val isToday = remember(subject.fragment) {
+        val currentDay = when (Calendar.getInstance().get(Calendar.DAY_OF_WEEK)) {
+            Calendar.MONDAY -> "Monday"
+            Calendar.TUESDAY -> "Tuesday"
+            Calendar.WEDNESDAY -> "Wednesday"
+            Calendar.THURSDAY -> "Thursday"
+            Calendar.FRIDAY -> "Friday"
+            Calendar.SATURDAY -> "Saturday"
+            Calendar.SUNDAY -> "Sunday"
+            else -> ""
+        }
+        subject.fragment == currentDay
+    }
 
     Card(
         modifier = Modifier
@@ -125,6 +171,65 @@ fun SubjectItem(
                         style = MaterialTheme.typography.bodyMedium,
                         color = contentColor
                     )
+                }
+            }
+
+            if (attendanceEnabled && subjectDetails != null) {
+                val total = subjectDetails.attended + subjectDetails.missed
+                val progress = if (total > 0) subjectDetails.attended.toFloat() / total else 0f
+                val percentage = (progress * 100).toInt()
+                val color = getAttendanceColor(percentage, minAttendance)
+
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(8.dp),
+                        color = color,
+                        trackColor = contentColor.copy(alpha = 0.2f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "$percentage%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor
+                    )
+                }
+
+                if (isToday && isAfterStartTime && attendanceStatus == null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        FilledTonalButton(
+                            onClick = { onMarkAttendance(subject.id, subject.subject ?: "", "attended") },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("Present", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        FilledTonalButton(
+                            onClick = { onMarkAttendance(subject.id, subject.subject ?: "", "missed") },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("Absent", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        FilledTonalButton(
+                            onClick = { onMarkAttendance(subject.id, subject.subject ?: "", "skipped") },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("No Class", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                 }
             }
         }

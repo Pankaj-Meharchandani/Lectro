@@ -80,6 +80,12 @@ fun NotesScreen(
     onSubjectClick: (Int) -> Unit,
     viewModel: NoteViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val attendanceEnabled by remember {
+        mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_ATTENDANCE_SETTING, true))
+    }
+    val minAttendance = remember { sharedPref.getInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, 75) }
     var showAddDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -113,7 +119,10 @@ fun NotesScreen(
                             this.color = subject.color
                             this.id = subject.id
                         },
-                        onClick = { onSubjectClick(subject.id) }
+                        attendanceEnabled = attendanceEnabled,
+                        minAttendance = minAttendance,
+                        onClick = { onSubjectClick(subject.id) },
+                        onMarkAttendance = { _, _, _ -> }
                     )
                     IconButton(
                         onClick = { showMenu = true },
