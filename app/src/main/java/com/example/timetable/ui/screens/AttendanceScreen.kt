@@ -250,8 +250,9 @@ fun HistoricalAttendanceDialog(
             confirmButton = {
                 TextButton(onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(millis))
-                        selectedDate = date
+                        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                        sdf.timeZone = TimeZone.getTimeZone("UTC")
+                        selectedDate = sdf.format(Date(millis))
                         showTypePicker = true
                     }
                     showDatePicker = false
@@ -419,9 +420,7 @@ fun HistoricalTypeButton(text: String, color: Color, onClick: () -> Unit) {
 private fun markAttendance(viewModel: MainViewModel, subject: Subject, date: String, type: String) {
     val slots = viewModel.getSubjectDetails(subject.name ?: "") 
     val weekId = slots?.id ?: -1
-    if (weekId != -1) {
-        viewModel.updateAttendanceByDate(weekId, subject.name ?: "", type, date)
-    }
+    viewModel.updateAttendanceByDate(weekId, subject.name ?: "", type, date)
 }
 
 fun getAttendanceColor(percentage: Int, goal: Int): Color {
