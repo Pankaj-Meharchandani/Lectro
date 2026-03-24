@@ -1,6 +1,6 @@
 # TimeTable
 <h1 align=center>
-<img src="app/src/logo-files/logo.png" width=50%>
+<img src="app/src/main/ic_launcher-playstore.png" width=20%>
 </h1>
 
 ### Contribute
