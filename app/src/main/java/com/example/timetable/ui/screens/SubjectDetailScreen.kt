@@ -348,7 +348,7 @@ fun SubjectDetailScreen(
                                         AttendanceButton("Absent", status == "missed", Modifier.weight(1f)) {
                                             viewModel.updateAttendance(slot.id, "missed")
                                         }
-                                        AttendanceButton("No Class", status == "skipped", Modifier.weight(1f)) {
+                                        AttendanceButton("Cancelled", status == "skipped", Modifier.weight(1f)) {
                                             viewModel.updateAttendance(slot.id, "skipped")
                                         }
                                     }

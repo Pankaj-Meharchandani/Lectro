@@ -222,7 +222,7 @@ fun SubjectItem(
                             modifier = Modifier.weight(1f),
                             contentPadding = PaddingValues(0.dp)
                         ) {
-                            Text("No Class", style = MaterialTheme.typography.labelSmall)
+                            Text("Cancelled", style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,12 +17,19 @@ import androidx.preference.PreferenceManager
 import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.model.Subject
 import com.example.timetable.ui.viewmodel.MainViewModel
+import com.example.timetable.utils.DbHelper
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import kotlin.math.roundToInt
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,7 +88,8 @@ fun AttendanceScreen(
                 Slider(
                     value = minAttendance.toFloat(),
                     onValueChange = {
-                        minAttendance = it.toInt()
+                        val newValue = (it / 5f).roundToInt() * 5
+                        minAttendance = newValue
                         sharedPref.edit().putInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, minAttendance).apply()
                     },
                     valueRange = 0f..100f,
@@ -157,7 +164,7 @@ fun AttendanceSubjectItem(subject: Subject, goal: Int, onClick: (Subject) -> Uni
             ) {
                 Text("Present: ${subject.attended}")
                 Text("Absent: ${subject.missed}")
-                Text("No Class: ${subject.skipped}")
+                Text("Cancelled: ${subject.skipped}")
             }
             Text(
                 text = "Total classes: ${total + subject.skipped}",
@@ -175,43 +182,47 @@ fun HistoricalAttendanceDialog(
     viewModel: MainViewModel,
     onDismiss: () -> Unit
 ) {
-    val records = remember(subject.name) { viewModel.getAttendanceForSubject(subject.name ?: "") }
+    var refreshTrigger by remember { mutableIntStateOf(0) }
+    val records = remember { mutableStateListOf<DbHelper.AttendanceRecord>() }
+    
+    LaunchedEffect(subject.name, refreshTrigger) {
+        records.clear()
+        records.addAll(viewModel.getAttendanceForSubject(subject.name ?: ""))
+    }
+
     var showDatePicker by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf("") }
     var showTypePicker by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Historical Attendance: ${subject.name}") },
+        title = { Text("Attendance History: ${subject.name}") },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 400.dp)
+                    .heightIn(max = 500.dp)
             ) {
+                AttendanceCalendar(records)
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text("Recent Activity", style = MaterialTheme.typography.titleSmall)
+                
                 if (records.isEmpty()) {
-                    Text("No past records found.", modifier = Modifier.padding(16.dp))
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text("No records found.", style = MaterialTheme.typography.bodyMedium)
+                    }
                 } else {
                     LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(records.sortedByDescending { it.date }) { record ->
+                        items(records.sortedByDescending { it.date }, key = { it.date + it.weekId }) { record ->
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(record.date, style = MaterialTheme.typography.bodyMedium)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    val (icon, color, label) = when (record.status) {
-                                        "attended" -> Triple(Icons.Default.Check, Color(0xFF4CAF50), "Present")
-                                        "missed" -> Triple(Icons.Default.Close, Color(0xFFF44336), "Absent")
-                                        else -> Triple(Icons.Default.Block, Color.Gray, "No Class")
-                                    }
-                                    Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(label, style = MaterialTheme.typography.bodySmall, color = color)
-                                }
+                                StatusIcon(record.status)
                             }
                         }
                     }
@@ -219,9 +230,7 @@ fun HistoricalAttendanceDialog(
 
                 Button(
                     onClick = { showDatePicker = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp)
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -259,34 +268,118 @@ fun HistoricalAttendanceDialog(
     if (showTypePicker) {
         AlertDialog(
             onDismissRequest = { showTypePicker = false },
-            title = { Text("Select Status for $selectedDate") },
+            title = { Text("Status for $selectedDate") },
             text = {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        HistoricalTypeButton("Present", Color(0xFF4CAF50)) {
-                            markAttendance(viewModel, subject, selectedDate, "attended")
-                            showTypePicker = false
-                            onDismiss() // Refresh
-                        }
-                        HistoricalTypeButton("Absent", Color(0xFFF44336)) {
-                            markAttendance(viewModel, subject, selectedDate, "missed")
-                            showTypePicker = false
-                            onDismiss()
-                        }
-                        HistoricalTypeButton("No Class", Color.Gray) {
-                            markAttendance(viewModel, subject, selectedDate, "skipped")
-                            showTypePicker = false
-                            onDismiss()
-                        }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    HistoricalTypeButton("Present", Color(0xFF4CAF50)) {
+                        markAttendance(viewModel, subject, selectedDate, "attended")
+                        refreshTrigger++
+                        showTypePicker = false
+                    }
+                    HistoricalTypeButton("Absent", Color(0xFFF44336)) {
+                        markAttendance(viewModel, subject, selectedDate, "missed")
+                        refreshTrigger++
+                        showTypePicker = false
+                    }
+                    HistoricalTypeButton("Cancelled", Color.Gray) {
+                        markAttendance(viewModel, subject, selectedDate, "skipped")
+                        refreshTrigger++
+                        showTypePicker = false
                     }
                 }
             },
             confirmButton = {}
         )
     }
+}
+
+@Composable
+fun AttendanceCalendar(records: List<DbHelper.AttendanceRecord>) {
+    val calendar = remember { Calendar.getInstance() }
+    val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+    val currentMonth = calendar.get(Calendar.MONTH)
+    val currentYear = calendar.get(Calendar.YEAR)
+    
+    val monthStartDay = remember(currentMonth, currentYear) {
+        val cal = Calendar.getInstance()
+        cal.set(currentYear, currentMonth, 1)
+        cal.get(Calendar.DAY_OF_WEEK)
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(calendar.time),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        val daysOfWeek = listOf("S", "M", "T", "W", "T", "F", "S")
+        Row(modifier = Modifier.fillMaxWidth()) {
+            daysOfWeek.forEach { day ->
+                Text(
+                    text = day,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        
+        val totalCells = ((daysInMonth + monthStartDay - 1 + 6) / 7) * 7
+        for (row in 0 until totalCells / 7) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                for (col in 1..7) {
+                    val dayNum = row * 7 + col - monthStartDay + 1
+                    Box(
+                        modifier = Modifier.weight(1f).aspectRatio(1f).padding(2.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (dayNum in 1..daysInMonth) {
+                            val dateStr = String.format(Locale.US, "%04d-%02d-%02d", currentYear, currentMonth + 1, dayNum)
+                            val record = records.find { it.date == dateStr }
+                            
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = dayNum.toString(), style = MaterialTheme.typography.bodySmall)
+                                if (record != null) {
+                                    StatusDot(record.status)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun StatusIcon(status: String) {
+    val (icon, color, label) = when (status) {
+        "attended" -> Triple(Icons.Default.Check, Color(0xFF4CAF50), "Present")
+        "missed" -> Triple(Icons.Default.Close, Color(0xFFF44336), "Absent")
+        else -> Triple(Icons.Default.Block, Color.Gray, "Cancelled")
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(label, style = MaterialTheme.typography.bodySmall, color = color)
+    }
+}
+
+@Composable
+fun StatusDot(status: String) {
+    val (icon, color) = when (status) {
+        "attended" -> Icons.Default.Check to Color(0xFF4CAF50)
+        "missed" -> Icons.Default.Close to Color(0xFFF44336)
+        else -> Icons.Default.Block to Color.Gray
+    }
+    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(12.dp))
 }
 
 @Composable
