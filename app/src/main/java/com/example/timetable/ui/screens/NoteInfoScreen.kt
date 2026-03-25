@@ -14,7 +14,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
@@ -538,20 +543,29 @@ private fun PaperEditor(
                         .heightIn(min = 700.dp)
                         .focusRequester(bodyFocusRequester)
                         .pointerInput(textValue) {
-                            detectTapGestures { offset ->
-                                textLayoutResult?.let { layout ->
-                                    val position = layout.getOffsetForPosition(offset)
-                                    val lineStart = textValue.text.lastIndexOf('\n', (position - 1).coerceAtLeast(0)) + 1
-                                    val lineEnd = textValue.text.indexOf('\n', position).let { if (it == -1) textValue.text.length else it }
-                                    val line = textValue.text.substring(lineStart, lineEnd)
-                                    
-                                    if (line.startsWith("- [ ] ") || line.startsWith("- [x] ") || line.startsWith("- [X] ")) {
-                                        // Identity mapping means position is correct raw offset
-                                        if (position >= lineStart && position < lineStart + 6) {
-                                            val isChecked = line.startsWith("- [x] ") || line.startsWith("- [X] ")
-                                            val newMarker = if (isChecked) "- [ ] " else "- [x] "
-                                            val newText = textValue.text.substring(0, lineStart) + newMarker + textValue.text.substring(lineStart + 6)
-                                            onTextChange(textValue.copy(text = newText))
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    val up = event.changes.find { it.changedToUp() }
+                                    if (up != null) {
+                                        val offset = up.position
+                                        textLayoutResult?.let { layout ->
+                                            val position = layout.getOffsetForPosition(offset)
+                                            val text = textValue.text
+                                            val lineStart = text.lastIndexOf('\n', (position - 1).coerceAtLeast(0)) + 1
+                                            val lineEnd = text.indexOf('\n', position).let { if (it == -1) text.length else it }
+                                            if (lineStart < text.length && lineEnd >= lineStart) {
+                                                val line = text.substring(lineStart, lineEnd)
+                                                if (line.startsWith("- [ ] ") || line.startsWith("- [x] ") || line.startsWith("- [X] ")) {
+                                                    if (position >= lineStart && position < lineStart + 6) {
+                                                        val isChecked = line.startsWith("- [x] ") || line.startsWith("- [X] ")
+                                                        val newMarker = if (isChecked) "- [ ] " else "- [x] "
+                                                        val newText = text.substring(0, lineStart) + newMarker + text.substring(lineStart + 6)
+                                                        onTextChange(textValue.copy(text = newText))
+                                                        up.consume()
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -942,8 +956,8 @@ class NoteVisualTransformation : VisualTransformation {
                 val regex = Regex("\\[img:(.*?)\\]")
                 regex.findAll(line).forEach { m ->
                     parseInlineSpans(line.substring(last, m.range.first))
-                    // Ensure the placeholder is consistently sized and doesn't fluctuate
-                    withStyle(SpanStyle(fontSize = 70.sp, color = Color.Transparent, letterSpacing = 0.sp)) { append(m.value) }
+                    // Using a small font size for the placeholder allows the user to control spacing with newlines
+                    withStyle(SpanStyle(fontSize = 20.sp, color = Color.Transparent, letterSpacing = 0.sp)) { append(m.value) }
                     last = m.range.last + 1
                 }
                 parseInlineSpans(line.substring(last))

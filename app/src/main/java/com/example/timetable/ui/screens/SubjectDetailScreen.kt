@@ -423,8 +423,8 @@ fun SubjectDetailScreen(
     if (showAddNoteDialog) {
         SimpleAddNoteDialog(
             onDismiss = { showAddNoteDialog = false },
-            onSave = { title, content, color -> 
-                viewModel.addNote(title, content, color)
+            onSave = { title, color -> 
+                viewModel.addNote(title, "", color)
             }
         )
     }
@@ -451,9 +451,8 @@ fun SubjectDetailScreen(
 }
 
 @Composable
-fun SimpleAddNoteDialog(onDismiss: () -> Unit, onSave: (String, String, Int) -> Unit) {
+fun SimpleAddNoteDialog(onDismiss: () -> Unit, onSave: (String, Int) -> Unit) {
     var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
     var color by remember { mutableIntStateOf(0) }
 
     AlertDialog(
@@ -464,8 +463,7 @@ fun SimpleAddNoteDialog(onDismiss: () -> Unit, onSave: (String, String, Int) -> 
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") })
-                OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("Content") })
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
                 Text("Note Color")
                 ColorPickerRow(selectedColor = color, onColorSelected = { color = it })
             }
@@ -473,7 +471,7 @@ fun SimpleAddNoteDialog(onDismiss: () -> Unit, onSave: (String, String, Int) -> 
         confirmButton = {
             TextButton(onClick = {
                 if (title.isNotBlank()) {
-                    onSave(title, content, color)
+                    onSave(title, color)
                     onDismiss()
                 }
             }) { Text("Save") }

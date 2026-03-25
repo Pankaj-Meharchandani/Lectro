@@ -159,7 +159,6 @@ fun NotesScreen(
 @Composable
 fun AddNoteDialog(onDismiss: () -> Unit, onSave: (Note, String) -> Unit, subjectSuggestions: List<String>) {
     var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
     var subjectName by remember { mutableStateOf("") }
     var color by remember { mutableIntStateOf(0) }
     var subjectExpanded by remember { mutableStateOf(false) }
@@ -172,7 +171,7 @@ fun AddNoteDialog(onDismiss: () -> Unit, onSave: (Note, String) -> Unit, subject
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.title)) })
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text(stringResource(R.string.title)) }, modifier = Modifier.fillMaxWidth())
                 
                 ExposedDropdownMenuBox(
                     expanded = subjectExpanded,
@@ -185,7 +184,7 @@ fun AddNoteDialog(onDismiss: () -> Unit, onSave: (Note, String) -> Unit, subject
                             subjectExpanded = it.isNotEmpty()
                         },
                         label = { Text("Subject (creates if new)") },
-                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+                        modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, true).fillMaxWidth(),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = subjectExpanded) }
                     )
                     val filtered = subjectSuggestions.filter { it.contains(subjectName, ignoreCase = true) }
@@ -201,7 +200,6 @@ fun AddNoteDialog(onDismiss: () -> Unit, onSave: (Note, String) -> Unit, subject
                     }
                 }
 
-                OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("Content") })
                 Text("Note Color")
                 ColorPickerRow(selectedColor = color, onColorSelected = { color = it })
             }
@@ -211,7 +209,7 @@ fun AddNoteDialog(onDismiss: () -> Unit, onSave: (Note, String) -> Unit, subject
                 if (title.isNotBlank()) {
                     onSave(Note().apply {
                         this.title = title
-                        this.text = content
+                        this.text = ""
                         this.color = color
                     }, subjectName)
                     onDismiss()
