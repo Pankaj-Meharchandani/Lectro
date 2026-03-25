@@ -39,6 +39,12 @@ import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.model.Week
 import com.example.timetable.ui.components.AddSubjectDialog
 import com.example.timetable.ui.components.SubjectItem
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
 import com.example.timetable.ui.viewmodel.MainViewModel
 import com.example.timetable.utils.BrowserUtil
 import com.example.timetable.utils.PdfExportUtil
@@ -400,7 +406,7 @@ fun MainScreen(
                         .padding(vertical = 16.dp)
                     ) {
                         Text(
-                            text = info.releaseNotes,
+                            text = parseMarkdown(info.releaseNotes),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.fillMaxWidth(),
@@ -444,6 +450,87 @@ fun MainScreen(
                     ) {
                         Text("Ignore this version", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun parseMarkdown(text: String): AnnotatedString {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant
+    
+    return buildAnnotatedString {
+        val lines = text.split('\n')
+        lines.forEachIndexed { index, line ->
+            val trimmed = line.trim()
+            when {
+                trimmed.startsWith("# ") -> {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) {
+                        append(trimmed.substring(2))
+                    }
+                }
+                trimmed.startsWith("## ") -> {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp, color = primaryColor)) {
+                        append(trimmed.substring(3))
+                    }
+                }
+                trimmed.startsWith("### ") -> {
+                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, fontSize = 16.sp)) {
+                        append(trimmed.substring(4))
+                    }
+                }
+                trimmed.startsWith("- ") -> {
+                    append(" • ")
+                    append(parseInlineMarkdown(trimmed.substring(2)))
+                }
+                trimmed == "---" -> {
+                    withStyle(SpanStyle(color = outlineColor)) {
+                        append("────────────────────────")
+                    }
+                }
+                else -> {
+                    append(parseInlineMarkdown(line))
+                }
+            }
+            if (index < lines.size - 1) append("\n")
+        }
+    }
+}
+
+private fun parseInlineMarkdown(text: String): AnnotatedString {
+    return buildAnnotatedString {
+        var i = 0
+        while (i < text.length) {
+            when {
+                text.startsWith("**", i) -> {
+                    val end = text.indexOf("**", i + 2)
+                    if (end != -1) {
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append(text.substring(i + 2, end))
+                        }
+                        i = end + 2
+                    } else {
+                        append(text[i])
+                        i++
+                    }
+                }
+                text.startsWith("*", i) -> {
+                    val end = text.indexOf("*", i + 1)
+                    if (end != -1) {
+                        withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                            append(text.substring(i + 1, end))
+                        }
+                        i = end + 1
+                    } else {
+                        append(text[i])
+                        i++
+                    }
+                }
+                else -> {
+                    append(text[i])
+                    i++
                 }
             }
         }
