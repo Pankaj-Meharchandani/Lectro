@@ -118,23 +118,6 @@ private fun processTextInput(newValue: TextFieldValue, oldValue: TextFieldValue)
     val lineStart   = oldValue.text.lastIndexOf('\n', oldCursor - 1) + 1
     val currentLine = oldValue.text.substring(lineStart, oldCursor)
 
-    // ── A: auto-close inline tags ────────────────────────────────────────
-    val closeSuffix = buildString {
-        AUTO_CLOSE_TAGS.forEach { (open, close) ->
-            // Count raw occurrences on this line
-            val openCount  = countOccurrences(currentLine, open)
-            val closeCount = if (open == close) 0 else countOccurrences(currentLine, close)
-            val unclosed = if (open == close) (openCount % 2 != 0) else (openCount > closeCount)
-            if (unclosed) append(close)
-        }
-        // Alignment tags: auto-close if line starts with <center>/<right> but doesn't end with close
-        ALIGN_OPEN.forEachIndexed { i, op ->
-            if (currentLine.trimStart().startsWith(op) && !currentLine.trimEnd().endsWith(ALIGN_CLOSE[i])) {
-                append(ALIGN_CLOSE[i])
-            }
-        }
-    }
-
     // ── B: list prefix ────────────────────────────────────────────────────
     val listPrefix: String = when {
         currentLine.matches(Regex("^\\s*\\* .+"))            ->
@@ -161,11 +144,43 @@ private fun processTextInput(newValue: TextFieldValue, oldValue: TextFieldValue)
         return TextFieldValue(newText, TextRange(lineStart + 1))
     }
 
+    // ── A: auto-close inline tags & persistence ────────────────────────────
+    val closeSuffix = StringBuilder()
+    val openPrefix  = StringBuilder()
+    AUTO_CLOSE_TAGS.forEach { (open, close) ->
+        val openCount  = countOccurrences(currentLine, open)
+        val closeCount = if (open == close) 0 else countOccurrences(currentLine, close)
+        val unclosed = if (open == close) (openCount % 2 != 0) else (openCount > closeCount)
+        if (unclosed) {
+            closeSuffix.append(close)
+            openPrefix.append(open)
+        }
+    }
+    // Alignment tags
+    ALIGN_OPEN.forEachIndexed { i, op ->
+        if (currentLine.trimStart().startsWith(op) && !currentLine.trimEnd().endsWith(ALIGN_CLOSE[i])) {
+            closeSuffix.append(ALIGN_CLOSE[i])
+            openPrefix.insert(0, op)
+        }
+    }
+
+    // Clean up "redundant" tags (if user hits enter on an empty formatted line)
+    if (currentLine.trim().isNotEmpty()) {
+        val isJustTags = AUTO_CLOSE_TAGS.any { (op, cl) ->
+            val t = currentLine.trim()
+            t == op || t == "$op$cl"
+        }
+        if (isJustTags) {
+            val newText = oldValue.text.substring(0, lineStart) + "\n" + newValue.text.substring(cursorAfter)
+            return TextFieldValue(newText, TextRange(lineStart + 1))
+        }
+    }
+
     // Compose final text
     val beforeNewline = newValue.text.substring(0, cursorAfter - 1)
     val afterNewline  = newValue.text.substring(cursorAfter)
-    val newText       = beforeNewline + closeSuffix + "\n" + listPrefix + afterNewline
-    val newCursor     = cursorAfter + closeSuffix.length + listPrefix.length
+    val newText       = beforeNewline + closeSuffix.toString() + "\n" + listPrefix + openPrefix.toString() + afterNewline
+    val newCursor     = cursorAfter + closeSuffix.length + listPrefix.length + openPrefix.length
     return TextFieldValue(newText, TextRange(newCursor))
 }
 
@@ -798,8 +813,8 @@ class NoteVisualTransformation : VisualTransformation {
 
             // ── Blockquote ────────────────────────────────────────────────
             line.startsWith("> ") -> {
-                withStyle(SpanStyle(color = Color(0xFF9575CD), background = Color(0xFFF3E5F5))) { append("│ ") }
-                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("> ") }
+                withStyle(SpanStyle(color = Color(0xFF9575CD), background = Color(0xFFF3E5F5))) { append("│") }
+                append(" ")
                 withStyle(SpanStyle(color = Color(0xFF7E57C2), fontStyle = FontStyle.Italic)) {
                     parseInlineSpans(line.substring(2))
                 }
@@ -813,13 +828,13 @@ class NoteVisualTransformation : VisualTransformation {
             // ── Checkbox (FIX: checked case uses startsWith not both-startsWith) ──
             line.startsWith("- [ ] ") -> {
                 // render symbol visually, hide the raw marker bytes
-                withStyle(SpanStyle(color = Color(0xFF90A4AE), fontSize = 16.sp)) { append("☐ ") }
-                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("- [ ] ") }
+                withStyle(SpanStyle(color = Color(0xFF90A4AE), fontSize = 16.sp)) { append("☐") }
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append(line.substring(1, 6)) }
                 parseInlineSpans(line.substring(6))
             }
             line.length >= 6 && (line.substring(0, 6) == "- [x] " || line.substring(0, 6) == "- [X] ") -> {
-                withStyle(SpanStyle(color = Color(0xFF4CAF50), fontSize = 16.sp)) { append("☑ ") }
-                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append(line.substring(0, 6)) }
+                withStyle(SpanStyle(color = Color(0xFF4CAF50), fontSize = 16.sp)) { append("☑") }
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append(line.substring(1, 6)) }
                 withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough, color = Color.Gray)) {
                     parseInlineSpans(line.substring(6))
                 }
@@ -854,26 +869,13 @@ class NoteVisualTransformation : VisualTransformation {
             withStyle(SpanStyle(color = Color.Transparent, fontSize = 2.sp, background = Color(0xFFDDE0E8))) { append(line) }
             return
         }
-        // Parse cells between pipes
         withStyle(SpanStyle(background = Color(0xFFF7F8FC))) {
-            var i = 0
-            val parts = line.split("|")
-            parts.forEachIndexed { idx, cell ->
-                val trimmed = cell.trim()
-                if (idx == 0 && trimmed.isEmpty()) {
-                    withStyle(SpanStyle(color = Color(0xFFCDD0DA), fontSize = 14.sp)) { append("|") }
-                    return@forEachIndexed
+            line.forEach { char ->
+                if (char == '|') {
+                    withStyle(SpanStyle(color = Color(0xFFCDD0DA), fontSize = 14.sp)) { append('|') }
+                } else {
+                    withStyle(SpanStyle(fontSize = 14.sp, color = Color(0xFF1A1A2E))) { append(char) }
                 }
-                if (idx == parts.lastIndex && trimmed.isEmpty()) {
-                    withStyle(SpanStyle(color = Color(0xFFCDD0DA), fontSize = 14.sp)) { append("|") }
-                    return@forEachIndexed
-                }
-                if (trimmed.isEmpty() && idx != 0 && idx != parts.lastIndex) {
-                    withStyle(SpanStyle(color = Color(0xFFCDD0DA), fontSize = 14.sp)) { append(" | ") }
-                    return@forEachIndexed
-                }
-                withStyle(SpanStyle(fontSize = 14.sp, color = Color(0xFF1A1A2E))) { append(" $trimmed ") }
-                if (idx < parts.lastIndex) withStyle(SpanStyle(color = Color(0xFFCDD0DA), fontSize = 14.sp)) { append("|") }
             }
         }
     }
@@ -919,12 +921,10 @@ class NoteVisualTransformation : VisualTransformation {
                 }
                 // Bullet at start of line
                 text.startsWith("* ", i) && i == 0 -> {
-                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("* ") }
-                    append("• "); i += 2
+                    append("•"); i++
                 }
                 text.startsWith("- ", i) && i == 0 -> {
-                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("- ") }
-                    append("• "); i += 2
+                    append("•"); i++
                 }
                 // Italic * (not bullet)
                 text.startsWith("*", i) -> {
