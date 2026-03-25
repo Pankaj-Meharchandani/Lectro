@@ -246,12 +246,29 @@ fun NoteInfoScreen(
                             val selection = textValue.selection
                             val start = selection.min
                             val end = selection.max
+                            val selectedText = textValue.text.substring(start, end)
+
+                            // Strip conflicting alignment wrappers if inserting a new alignment tag
+                            val alignmentPrefixes = listOf("<center>", "<right>")
+                            val alignmentSuffixes = listOf("</center>", "</right>")
+                            val isAlignmentOp = prefix in alignmentPrefixes
+
+                            val cleanedSelected = if (isAlignmentOp) {
+                                var s = selectedText
+                                alignmentPrefixes.forEachIndexed { i, ap ->
+                                    if (s.startsWith(ap) && s.endsWith(alignmentSuffixes[i])) {
+                                        s = s.substring(ap.length, s.length - alignmentSuffixes[i].length)
+                                    }
+                                }
+                                s
+                            } else selectedText
+
                             val newText = textValue.text.substring(0, start) +
-                                    prefix + textValue.text.substring(start, end) + suffix +
+                                    prefix + cleanedSelected + suffix +
                                     textValue.text.substring(end)
                             textValue = TextFieldValue(
                                 text = newText,
-                                selection = TextRange(start + prefix.length, end + prefix.length)
+                                selection = TextRange(start + prefix.length, start + prefix.length + cleanedSelected.length)
                             )
                         },
                         onAddImage = { imagePickerLauncher.launch(arrayOf("image/*")) }
@@ -328,7 +345,10 @@ fun NoteInfoScreen(
                 PaperEditor(
                     textValue = textValue,
                     onTextChange = { newValue ->
-                        handleAutoList(newValue, textValue) { textValue = it }
+                        val old = textValue // capture stable snapshot
+                        handleAutoList(newValue, old) { result ->
+                            textValue = result
+                        }
                         isSaved = false
                     },
                     scrollState = scrollState,
@@ -500,6 +520,31 @@ private fun PaperEditor(
     accentColor: Color
 ) {
     val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+
+    // Auto-scroll: keep cursor visible as text grows
+    LaunchedEffect(textValue.selection, textLayoutResult) {
+        val layout = textLayoutResult ?: return@LaunchedEffect
+        val cursorPos = textValue.selection.start.coerceIn(0, layout.layoutInput.text.length)
+        if (cursorPos < layout.layoutInput.text.length) {
+            val cursorRect = layout.getCursorRect(cursorPos)
+            // top/bottom of cursor in the full scrollable content (add top padding offset)
+            val topPaddingPx = with(density) { 20.dp.toPx() }
+            val cursorTop = (cursorRect.top + topPaddingPx).toInt()
+            val cursorBottom = (cursorRect.bottom + topPaddingPx).toInt()
+            // Visible window
+            val visibleTop = scrollState.value
+            val visibleBottom = visibleTop + scrollState.viewportSize
+            when {
+                cursorBottom > visibleBottom -> scope.launch {
+                    scrollState.animateScrollTo(cursorBottom - scrollState.viewportSize + 80)
+                }
+                cursorTop < visibleTop -> scope.launch {
+                    scrollState.animateScrollTo((cursorTop - 80).coerceAtLeast(0))
+                }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -546,7 +591,7 @@ private fun PaperEditor(
                     textStyle = TextStyle(
                         fontSize = 16.sp,
                         color = Color(0xFF1A1A2E),
-                        lineHeight = 28.sp,
+                        lineHeight = 24.sp,
                         fontFamily = FontFamily.Default,
                         letterSpacing = 0.1.sp
                     ),
@@ -603,7 +648,7 @@ private fun PaperEditor(
 }
 
 private fun drawRuledLines(scope: DrawScope) {
-    val lineHeight = with(scope) { 28.dp.toPx() }
+    val lineHeight = with(scope) { 24.dp.toPx() }
     val startY = with(scope) { 20.dp.toPx() }
     var y = startY + lineHeight
     while (y < scope.size.height) {
@@ -1105,50 +1150,57 @@ private fun handleAutoList(
     oldValue: TextFieldValue,
     onResult: (TextFieldValue) -> Unit
 ) {
-    if (newValue.text.length > oldValue.text.length &&
-        newValue.text.getOrNull(newValue.selection.start - 1) == '\n'
-    ) {
-        val lines = oldValue.text.substring(0, oldValue.selection.start).split('\n')
-        val lastLine = lines.lastOrNull() ?: ""
+    // Only intercept when a newline was just inserted
+    if (newValue.text.length <= oldValue.text.length) { onResult(newValue); return }
+    val insertedChar = newValue.text.getOrNull(newValue.selection.start - 1)
+    if (insertedChar != '\n') { onResult(newValue); return }
 
-        val prefix: String = when {
-            lastLine.trimStart().startsWith("* ") ->
-                lastLine.substring(0, lastLine.indexOf("* ") + 2)
+    // Find the line that was just completed (before the new newline)
+    val textBeforeCursor = oldValue.text.substring(0, oldValue.selection.start.coerceAtMost(oldValue.text.length))
+    val lines = textBeforeCursor.split('\n')
+    val lastLine = lines.lastOrNull() ?: ""
 
-            lastLine.trimStart().startsWith("- ") ->
-                lastLine.substring(0, lastLine.indexOf("- ") + 2)
+    // Determine list prefix — ONLY if the line genuinely starts with a list marker
+    val prefix: String = when {
+        // Unordered bullet: "* text" or "- text" — must have content after marker to continue
+        lastLine.matches(Regex("^\\s*\\* .+")) ->
+            lastLine.substring(0, lastLine.indexOf("* ") + 2)
 
-            lastLine.trimStart().startsWith("- [ ] ") ->
-                lastLine.substring(0, lastLine.indexOf("- [ ] ") + 6)
+        lastLine.matches(Regex("^\\s*- \\[[ xX]\\] .+")) ->
+            lastLine.substring(0, lastLine.indexOf("- [") + 6) // "- [ ] "
 
-            lastLine.trimStart().contains(Regex("^\\d+(\\.\\d+)*\\. ")) -> {
-                val match = Regex("^(\\s*)(\\d+(\\.\\d+)*)\\. ").find(lastLine)
-                if (match != null) {
-                    val indent = match.groupValues[1]
-                    val numbers = match.groupValues[2].split('.').map { it.toIntOrNull() ?: 0 }.toMutableList()
-                    numbers[numbers.lastIndex]++
-                    "$indent${numbers.joinToString(".")}. "
-                } else ""
-            }
+        lastLine.matches(Regex("^\\s*- .+")) ->
+            lastLine.substring(0, lastLine.indexOf("- ") + 2)
 
-            else -> ""
+        // Numbered list: "1. text" or "1.2. text"
+        lastLine.matches(Regex("^\\s*\\d+(\\.\\d+)*\\. .+")) -> {
+            val match = Regex("^(\\s*)(\\d+(\\.\\d+)*)\\. ").find(lastLine)
+            if (match != null) {
+                val indent = match.groupValues[1]
+                val numbers = match.groupValues[2].split('.').map { it.toIntOrNull() ?: 0 }.toMutableList()
+                numbers[numbers.lastIndex]++
+                "$indent${numbers.joinToString(".")}. "
+            } else ""
         }
 
-        if (prefix.isNotEmpty()) {
-            if (lastLine.trim() == prefix.trim()) {
-                // Empty list item → exit list
-                val newText = oldValue.text.substring(0, oldValue.selection.start - lastLine.length) +
-                        "\n" + newValue.text.substring(newValue.selection.start)
-                onResult(TextFieldValue(newText, selection = TextRange(oldValue.selection.start - lastLine.length + 1)))
-            } else {
-                val insertAt = newValue.selection.start
-                val newText = newValue.text.substring(0, insertAt) + prefix + newValue.text.substring(insertAt)
-                onResult(TextFieldValue(newText, selection = TextRange(insertAt + prefix.length)))
-            }
-            return
-        }
+        else -> ""
     }
-    onResult(newValue)
+
+    if (prefix.isEmpty()) { onResult(newValue); return }
+
+    // If the previous line was ONLY the prefix (empty list item) → exit the list
+    if (lastLine.trim() == prefix.trim()) {
+        val removeFrom = textBeforeCursor.length - lastLine.length
+        val newText = oldValue.text.substring(0, removeFrom) +
+                "\n" + newValue.text.substring(newValue.selection.start)
+        onResult(TextFieldValue(newText, selection = TextRange(removeFrom + 1)))
+        return
+    }
+
+    // Continue the list: insert prefix after the newline
+    val insertAt = newValue.selection.start
+    val newText = newValue.text.substring(0, insertAt) + prefix + newValue.text.substring(insertAt)
+    onResult(TextFieldValue(newText, selection = TextRange(insertAt + prefix.length)))
 }
 
 // ─────────────────────────────────────────────
@@ -1249,9 +1301,10 @@ class EnhancedWYSIWYGTransformation : VisualTransformation {
                     }
                     // Normal line with inline formatting
                     else -> {
+                        // Determine alignment: check for wrapping tags (only outermost matters)
                         val alignment = when {
-                            line.startsWith("<center>") && line.endsWith("</center>") -> TextAlign.Center
-                            line.startsWith("<right>") && line.endsWith("</right>") -> TextAlign.Right
+                            line.startsWith("<center>") -> TextAlign.Center
+                            line.startsWith("<right>") -> TextAlign.Right
                             else -> TextAlign.Left
                         }
                         // Numbered list indent
@@ -1272,13 +1325,20 @@ class EnhancedWYSIWYGTransformation : VisualTransformation {
     }
 
     private fun AnnotatedString.Builder.renderRichInline(line: String) {
+        // Note: alignment tags (<center>, <right>) are already handled at the line level
+        // in filter(). By the time renderRichInline is called, `line` may still contain
+        // them (we pass the full line), but we must hide the tags and render the inner content.
         var current = line
         var startTag = ""; var endTag = ""
 
-        if (current.startsWith("<center>") && current.endsWith("</center>")) {
-            startTag = "<center>"; endTag = "</center>"
-        } else if (current.startsWith("<right>") && current.endsWith("</right>")) {
-            startTag = "<right>"; endTag = "</right>"
+        // Strip outermost alignment wrapper (only exact full-line wrappers)
+        when {
+            current.startsWith("<center>") && current.endsWith("</center>") -> {
+                startTag = "<center>"; endTag = "</center>"
+            }
+            current.startsWith("<right>") && current.endsWith("</right>") -> {
+                startTag = "<right>"; endTag = "</right>"
+            }
         }
 
         if (startTag.isNotEmpty()) {
