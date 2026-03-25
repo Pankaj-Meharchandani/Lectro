@@ -67,6 +67,7 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
 fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()) {
     var showAddDialog by remember { mutableStateOf(false) }
     var teacherToEdit by remember { mutableStateOf<Teacher?>(null) }
+    var teacherToDelete by remember { mutableStateOf<Teacher?>(null) }
 
     Scaffold(
         topBar = {
@@ -95,7 +96,7 @@ fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()
                     var showMenu by remember { mutableStateOf(false) }
                     TeacherItem(
                         teacher = teacher, 
-                        onDelete = { viewModel.deleteTeacher(teacher) },
+                        onDelete = { teacherToDelete = teacher },
                         onEdit = { teacherToEdit = it }
                     )
                     IconButton(
@@ -136,6 +137,25 @@ fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()
                 teacherToEdit = null
             },
             initialTeacher = teacherToEdit ?: Teacher()
+        )
+    }
+
+    teacherToDelete?.let { teacher ->
+        AlertDialog(
+            onDismissRequest = { teacherToDelete = null },
+            title = { Text("Delete Teacher") },
+            text = { Text("Are you sure you want to delete '${teacher.name}' from your contacts?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteTeacher(teacher)
+                    teacherToDelete = null
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { teacherToDelete = null }) { Text("Cancel") }
+            }
         )
     }
 }

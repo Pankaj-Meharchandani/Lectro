@@ -303,6 +303,22 @@ public class DbHelper extends SQLiteOpenHelper {
         db.execSQL("DELETE FROM " + EXAMS);
         db.execSQL("DELETE FROM " + SUBJECTS);
         db.execSQL("DELETE FROM " + MATERIALS);
+        db.execSQL("DELETE FROM " + ATTENDANCE);
+        db.close();
+    }
+
+    public void removeFullSchedule() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("DELETE FROM " + TIMETABLE);
+        db.close();
+    }
+
+    public void removeAllSubjects() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("DELETE FROM " + SUBJECTS);
+        db.execSQL("DELETE FROM " + TIMETABLE);
+        db.execSQL("DELETE FROM " + MATERIALS);
+        db.execSQL("DELETE FROM " + ATTENDANCE);
         db.close();
     }
 

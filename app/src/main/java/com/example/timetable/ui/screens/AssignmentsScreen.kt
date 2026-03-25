@@ -81,6 +81,7 @@ class AssignmentsViewModel(application: Application) : AndroidViewModel(applicat
 fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel = viewModel()) {
     var showAddDialog by remember { mutableStateOf(false) }
     var assignmentToEdit by remember { mutableStateOf<Homework?>(null) }
+    var assignmentToDelete by remember { mutableStateOf<Homework?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Pending", "Overdue", "Completed")
 
@@ -135,7 +136,7 @@ fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel = view
             items(filteredAssignments) { assignment ->
                 AssignmentItem(
                     assignment = assignment, 
-                    onDelete = { viewModel.deleteAssignment(assignment) },
+                    onDelete = { assignmentToDelete = assignment },
                     onToggleComplete = { viewModel.toggleComplete(assignment) },
                     onEdit = { assignmentToEdit = it }
                 )
@@ -160,6 +161,25 @@ fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel = view
             onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
             subjectSuggestions = viewModel.subjects,
             initialAssignment = assignmentToEdit ?: Homework()
+        )
+    }
+
+    assignmentToDelete?.let { assignment ->
+        AlertDialog(
+            onDismissRequest = { assignmentToDelete = null },
+            title = { Text("Delete Assignment") },
+            text = { Text("Are you sure you want to delete '${assignment.title}'?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteAssignment(assignment)
+                    assignmentToDelete = null
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { assignmentToDelete = null }) { Text("Cancel") }
+            }
         )
     }
 }

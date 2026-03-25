@@ -3,6 +3,8 @@ package com.example.timetable.ui.screens
 import android.app.Application
 import android.content.SharedPreferences
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -45,12 +47,20 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun resetData() {
         db.resetAllData()
     }
+
+    fun removeFullSchedule() {
+        db.removeFullSchedule()
+    }
+
+    fun removeAllSubjects() {
+        db.removeAllSubjects()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel()) {
-    var showResetDialog by remember { mutableStateOf(false) }
+    var resetType by remember { mutableStateOf<ResetType?>(null) }
 
     Scaffold(
         topBar = {
@@ -68,6 +78,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
@@ -113,57 +124,103 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
             HorizontalDivider()
 
             SettingsSection(title = "Danger Zone") {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = stringResource(R.string.reset_data),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Text(
-                            text = stringResource(R.string.reset_data_summary),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                        Button(
-                            onClick = { showResetDialog = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(stringResource(R.string.reset_data))
-                        }
-                    }
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Remove Full Schedule
+                    DangerCard(
+                        title = "Remove Full Schedule",
+                        description = "Wipes all timetable slots but keeps subjects, homeworks, and notes.",
+                        buttonText = "Remove Schedule",
+                        onClick = { resetType = ResetType.SCHEDULE }
+                    )
+
+                    // Remove All Subjects
+                    DangerCard(
+                        title = "Remove All Subjects",
+                        description = "Deletes all subjects, which also clears the schedule and associated materials.",
+                        buttonText = "Remove Subjects",
+                        onClick = { resetType = ResetType.SUBJECTS }
+                    )
+
+                    // Reset All Data
+                    DangerCard(
+                        title = stringResource(R.string.reset_data),
+                        description = "Wipes everything (schedule, subjects, homeworks, notes, attendance) but keeps your personal details.",
+                        buttonText = stringResource(R.string.reset_data),
+                        onClick = { resetType = ResetType.ALL }
+                    )
                 }
             }
         }
     }
 
-    if (showResetDialog) {
+    resetType?.let { type ->
+        val title = when (type) {
+            ResetType.SCHEDULE -> "Remove Schedule?"
+            ResetType.SUBJECTS -> "Remove All Subjects?"
+            ResetType.ALL -> stringResource(R.string.reset_data)
+        }
+        val message = when (type) {
+            ResetType.SCHEDULE -> "Are you sure you want to clear your entire timetable? This cannot be undone."
+            ResetType.SUBJECTS -> "This will delete all subjects and clear your schedule. Are you sure?"
+            ResetType.ALL -> stringResource(R.string.reset_warning)
+        }
+
         AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = { Text(stringResource(R.string.reset_data)) },
-            text = { Text(stringResource(R.string.reset_warning)) },
+            onDismissRequest = { resetType = null },
+            title = { Text(title) },
+            text = { Text(message) },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.resetData()
-                        showResetDialog = false
+                        when (type) {
+                            ResetType.SCHEDULE -> viewModel.removeFullSchedule()
+                            ResetType.SUBJECTS -> viewModel.removeAllSubjects()
+                            ResetType.ALL -> viewModel.resetData()
+                        }
+                        resetType = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) { Text(stringResource(R.string.yes)) }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) { Text(stringResource(R.string.no)) }
+                TextButton(onClick = { resetType = null }) { Text(stringResource(R.string.no)) }
             }
         )
+    }
+}
+
+enum class ResetType { SCHEDULE, SUBJECTS, ALL }
+
+@Composable
+fun DangerCard(title: String, description: String, buttonText: String, onClick: () -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+            Button(
+                onClick = onClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(buttonText)
+            }
+        }
     }
 }
 

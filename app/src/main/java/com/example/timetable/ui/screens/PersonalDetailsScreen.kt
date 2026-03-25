@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import android.widget.Toast
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -138,6 +139,14 @@ fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewMode
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show()
+                        onBack()
+                    }) {
+                        Icon(Icons.Default.Done, contentDescription = "Save")
                     }
                 }
             )

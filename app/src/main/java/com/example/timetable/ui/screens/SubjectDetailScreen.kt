@@ -163,6 +163,8 @@ fun SubjectDetailScreen(
     val context = LocalContext.current
     var showAddNoteDialog by remember { mutableStateOf(false) }
     var materialToEdit by remember { mutableStateOf<Material?>(null) }
+    var noteToDelete by remember { mutableStateOf<Note?>(null) }
+    var materialToDelete by remember { mutableStateOf<Material?>(null) }
 
     val openMaterial = { material: Material ->
         try {
@@ -367,7 +369,7 @@ fun SubjectDetailScreen(
                             NoteItem(
                                 note = note, 
                                 onClick = { onNoteClick(note.id) },
-                                onDelete = { viewModel.deleteNote(note.id) },
+                                onDelete = { noteToDelete = note },
                                 onReorder = { showMenu = true }
                             )
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
@@ -398,7 +400,7 @@ fun SubjectDetailScreen(
                                 material = material,
                                 onClick = { openMaterial(material) },
                                 onEditName = { materialToEdit = material },
-                                onDelete = { viewModel.deleteMaterial(material.id) },
+                                onDelete = { materialToDelete = material },
                                 onReorder = { showMenu = true }
                             )
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
@@ -445,6 +447,44 @@ fun SubjectDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { materialToEdit = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    noteToDelete?.let { note ->
+        AlertDialog(
+            onDismissRequest = { noteToDelete = null },
+            title = { Text("Delete Note") },
+            text = { Text("Are you sure you want to delete this note? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteNote(note.id)
+                    noteToDelete = null
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { noteToDelete = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    materialToDelete?.let { material ->
+        AlertDialog(
+            onDismissRequest = { materialToDelete = null },
+            title = { Text("Delete Material") },
+            text = { Text("Are you sure you want to delete '${material.name}'?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteMaterial(material.id)
+                    materialToDelete = null
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { materialToDelete = null }) { Text("Cancel") }
             }
         )
     }

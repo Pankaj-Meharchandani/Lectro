@@ -76,6 +76,7 @@ class ExamViewModel(application: Application) : AndroidViewModel(application) {
 @Composable
 fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
     var showAddDialog by remember { mutableStateOf(false) }
+    var examToDelete by remember { mutableStateOf<Exam?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Upcoming", "Completed")
 
@@ -127,7 +128,7 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
                 .padding(padding)
         ) {
             items(filteredExams) { exam ->
-                ExamItem(exam = exam, onDelete = { viewModel.deleteExam(exam) })
+                ExamItem(exam = exam, onDelete = { examToDelete = exam })
             }
         }
     }
@@ -139,6 +140,25 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
             onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
             subjectSuggestions = viewModel.subjects,
             teacherSuggestions = viewModel.teachers
+        )
+    }
+
+    examToDelete?.let { exam ->
+        AlertDialog(
+            onDismissRequest = { examToDelete = null },
+            title = { Text("Delete Exam") },
+            text = { Text("Are you sure you want to delete the '${exam.subject}' exam?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteExam(exam)
+                    examToDelete = null
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { examToDelete = null }) { Text("Cancel") }
+            }
         )
     }
 }

@@ -102,6 +102,7 @@ fun MainScreen(
     val pagerState = rememberPagerState(pageCount = { days.size })
     var showAddDialog by remember { mutableStateOf(false) }
     var weekToEdit by remember { mutableStateOf<Week?>(null) }
+    var weekToDelete by remember { mutableStateOf<Week?>(null) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -310,10 +311,29 @@ fun MainScreen(
                         viewModel.updateAttendance(weekId, subjectName, type)
                     },
                     onEditClick = { weekToEdit = it },
-                    onDeleteClick = { viewModel.deleteWeek(it) }
+                    onDeleteClick = { weekToDelete = it }
                 )
             }
         }
+    }
+
+    weekToDelete?.let { week ->
+        AlertDialog(
+            onDismissRequest = { weekToDelete = null },
+            title = { Text("Delete Slot") },
+            text = { Text("Are you sure you want to delete this ${week.subject} slot?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteWeek(week)
+                    weekToDelete = null
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { weekToDelete = null }) { Text("Cancel") }
+            }
+        )
     }
 }
 
