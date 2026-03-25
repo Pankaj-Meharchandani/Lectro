@@ -24,11 +24,13 @@ import com.example.timetable.R
 import com.example.timetable.model.Homework
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.NotificationHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
 class AssignmentsViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)
+    private val notificationHelper = NotificationHelper(application)
     var assignments = mutableStateListOf<Homework>()
         private set
     var subjects = mutableStateListOf<String>()
@@ -56,23 +58,27 @@ class AssignmentsViewModel(application: Application) : AndroidViewModel(applicat
     fun deleteAssignment(assignment: Homework) {
         db.deleteHomeworkById(assignment)
         loadAssignments()
+        notificationHelper.scheduleEventsForToday()
     }
 
     fun insertAssignment(assignment: Homework) {
         db.insertHomework(assignment)
         loadAssignments()
         loadSuggestions()
+        notificationHelper.scheduleEventsForToday()
     }
 
     fun updateAssignment(assignment: Homework) {
         db.updateHomework(assignment)
         loadAssignments()
+        notificationHelper.scheduleEventsForToday()
     }
 
     fun toggleComplete(assignment: Homework) {
         assignment.setCompleted(if (assignment.getCompleted() == 1) 0 else 1)
         db.updateHomework(assignment)
         loadAssignments()
+        notificationHelper.scheduleEventsForToday()
     }
 }
 

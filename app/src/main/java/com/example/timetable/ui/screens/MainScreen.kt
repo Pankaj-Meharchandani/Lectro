@@ -46,10 +46,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import com.example.timetable.ui.viewmodel.MainViewModel
-import com.example.timetable.utils.BrowserUtil
-import com.example.timetable.utils.PdfExportUtil
-import com.example.timetable.utils.UpdateInfo
-import com.example.timetable.utils.UpdateManager
+import com.example.timetable.utils.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -139,6 +136,7 @@ fun MainScreen(
     }
     
     LaunchedEffect(Unit) {
+        NotificationHelper(context)
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         val currentVersion = packageInfo.versionName ?: ""
         val info = UpdateManager.checkForUpdates(currentVersion)

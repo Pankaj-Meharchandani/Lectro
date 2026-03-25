@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -28,6 +30,11 @@
 
         <receiver
             android:name=".utils.DailyReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".utils.AlarmReceiver"
             android:enabled="true"
             android:exported="false" />
 

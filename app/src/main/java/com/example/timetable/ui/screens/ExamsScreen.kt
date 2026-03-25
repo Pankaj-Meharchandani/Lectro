@@ -26,12 +26,14 @@ import com.example.timetable.R
 import com.example.timetable.model.Exam
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.NotificationHelper
 import com.example.timetable.utils.TimeUtils
 import java.text.SimpleDateFormat
 import java.util.*
 
 class ExamViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)
+    private val notificationHelper = NotificationHelper(application)
     var exams = mutableStateListOf<Exam>()
         private set
     var subjects = mutableStateListOf<String>()
@@ -63,12 +65,14 @@ class ExamViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteExam(exam: Exam) {
         db.deleteExamById(exam)
         loadExams()
+        notificationHelper.scheduleEventsForToday()
     }
 
     fun insertExam(exam: Exam) {
         db.insertExam(exam)
         loadExams()
         loadSuggestions()
+        notificationHelper.scheduleEventsForToday()
     }
 }
 

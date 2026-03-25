@@ -11,11 +11,13 @@ import com.example.timetable.model.Subject
 import com.example.timetable.model.UserDetail
 import com.example.timetable.model.Week
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.NotificationHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)
+    private val notificationHelper = NotificationHelper(application)
     
     val weekData = mutableStateMapOf<String, List<Week>>()
     var subjects = mutableStateListOf<String>()
@@ -57,18 +59,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteWeek(week: Week) {
         db.deleteWeekById(week)
         loadWeekData(week.fragment)
+        notificationHelper.scheduleEventsForToday()
     }
     
     fun insertWeek(week: Week) {
         db.insertWeek(week)
         loadWeekData(week.fragment)
         loadSuggestions()
+        notificationHelper.scheduleEventsForToday()
     }
 
     fun updateWeek(week: Week) {
         db.updateWeek(week)
         loadWeekData(week.fragment)
         loadSuggestions()
+        notificationHelper.scheduleEventsForToday()
     }
 
     fun updateAttendance(weekId: Int, subjectName: String, type: String) {

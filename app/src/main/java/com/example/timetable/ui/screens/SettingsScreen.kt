@@ -1,7 +1,20 @@
 package com.example.timetable.ui.screens
 
+import android.Manifest
+import android.app.AlarmManager
 import android.app.Application
+import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,24 +27,71 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
 import com.example.timetable.R
 import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.WakeUpAlarmReceiver
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)
     private val sharedPref = PreferenceManager.getDefaultSharedPreferences(application)
+    private val alarmManager = application.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     var sevenDaysEnabled by mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_SEVEN_DAYS_SETTING, false))
     var personalDetailsEnabled by mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_PERSONAL_DETAILS_SETTING, true))
     var schoolWebsite by mutableStateOf(sharedPref.getString(SettingsActivity.KEY_SCHOOL_WEBSITE_SETTING, "") ?: "")
 
+    var notificationsEnabled by mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_NOTIFICATIONS_ENABLED, false))
+    var scheduleReminder by mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_SCHEDULE_REMINDER, true))
+    var assignmentReminder by mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_ASSIGNMENT_REMINDER, true))
+    var examReminder by mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_EXAM_REMINDER, true))
+    var attendanceAlert by mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_ATTENDANCE_ALERT, true))
+
+    fun canScheduleExactAlarms(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+    }
+
     fun updateSevenDays(enabled: Boolean) {
         sharedPref.edit().putBoolean(SettingsActivity.KEY_SEVEN_DAYS_SETTING, enabled).apply()
         sevenDaysEnabled = enabled
+    }
+
+    fun updateNotificationsEnabled(enabled: Boolean) {
+        sharedPref.edit().putBoolean(SettingsActivity.KEY_NOTIFICATIONS_ENABLED, enabled).apply()
+        notificationsEnabled = enabled
+        if (enabled) {
+            WakeUpAlarmReceiver.scheduleAlarm(getApplication())
+        } else {
+            WakeUpAlarmReceiver.cancelAlarm(getApplication())
+        }
+    }
+
+    fun updateScheduleReminder(enabled: Boolean) {
+        sharedPref.edit().putBoolean(SettingsActivity.KEY_SCHEDULE_REMINDER, enabled).apply()
+        scheduleReminder = enabled
+    }
+
+    fun updateAssignmentReminder(enabled: Boolean) {
+        sharedPref.edit().putBoolean(SettingsActivity.KEY_ASSIGNMENT_REMINDER, enabled).apply()
+        assignmentReminder = enabled
+    }
+
+    fun updateExamReminder(enabled: Boolean) {
+        sharedPref.edit().putBoolean(SettingsActivity.KEY_EXAM_REMINDER, enabled).apply()
+        examReminder = enabled
+    }
+
+    fun updateAttendanceAlert(enabled: Boolean) {
+        sharedPref.edit().putBoolean(SettingsActivity.KEY_ATTENDANCE_ALERT, enabled).apply()
+        attendanceAlert = enabled
     }
 
     fun updatePersonalDetails(enabled: Boolean) {
@@ -60,7 +120,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel()) {
+    val context = LocalContext.current
     var resetType by remember { mutableStateOf<ResetType?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            viewModel.updateNotificationsEnabled(true)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -119,6 +188,118 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
                 )
+            }
+
+            HorizontalDivider()
+
+            SettingsSection(title = "Notifications") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SettingsItem(
+                            title = "Enable Notifications",
+                            control = {
+                                Switch(
+                                    checked = viewModel.notificationsEnabled,
+                                    onCheckedChange = { checked ->
+                                        if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            if (ContextCompat.checkSelfPermission(
+                                                    context,
+                                                    Manifest.permission.POST_NOTIFICATIONS
+                                                ) != PackageManager.PERMISSION_GRANTED
+                                            ) {
+                                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                                return@Switch
+                                            }
+                                        }
+                                        viewModel.updateNotificationsEnabled(checked)
+                                    }
+                                )
+                            }
+                        )
+
+                        AnimatedVisibility(
+                            visible = viewModel.notificationsEnabled,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(top = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                if (!viewModel.canScheduleExactAlarms()) {
+                                    Card(
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Text(
+                                                "Exact alarms permission is missing. Reminders might be delayed.",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                            TextButton(
+                                                onClick = {
+                                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                                        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                                                            data = Uri.fromParts("package", context.packageName, null)
+                                                        }
+                                                        context.startActivity(intent)
+                                                    }
+                                                },
+                                                contentPadding = PaddingValues(0.dp)
+                                            ) {
+                                                Text("Grant Permission", style = MaterialTheme.typography.labelLarge)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                SettingsItem(
+                                    title = "Schedule Reminder",
+                                    control = {
+                                        Switch(
+                                            checked = viewModel.scheduleReminder,
+                                            onCheckedChange = { viewModel.updateScheduleReminder(it) }
+                                        )
+                                    }
+                                )
+                                SettingsItem(
+                                    title = "Assignment Reminder",
+                                    control = {
+                                        Switch(
+                                            checked = viewModel.assignmentReminder,
+                                            onCheckedChange = { viewModel.updateAssignmentReminder(it) }
+                                        )
+                                    }
+                                )
+                                SettingsItem(
+                                    title = "Exam Reminder",
+                                    control = {
+                                        Switch(
+                                            checked = viewModel.examReminder,
+                                            onCheckedChange = { viewModel.updateExamReminder(it) }
+                                        )
+                                    }
+                                )
+                                SettingsItem(
+                                    title = "Attendance Alert",
+                                    control = {
+                                        Switch(
+                                            checked = viewModel.attendanceAlert,
+                                            onCheckedChange = { viewModel.updateAttendanceAlert(it) }
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             HorizontalDivider()

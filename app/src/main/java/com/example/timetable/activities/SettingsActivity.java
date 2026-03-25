@@ -14,6 +14,13 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String KEY_PERSONAL_DETAILS_SETTING = "personal_details_enabled";
     public static final String KEY_ATTENDANCE_SETTING = "attendance_enabled";
     public static final String KEY_MIN_ATTENDANCE_SETTING = "min_attendance";
+
+    public static final String KEY_NOTIFICATIONS_ENABLED = "notifications_enabled";
+    public static final String KEY_SCHEDULE_REMINDER = "schedule_reminder";
+    public static final String KEY_ASSIGNMENT_REMINDER = "assignment_reminder";
+    public static final String KEY_EXAM_REMINDER = "exam_reminder";
+    public static final String KEY_ATTENDANCE_ALERT = "attendance_alert";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
