@@ -184,6 +184,24 @@ public class AlertDialogsHelper {
                     Snackbar.make(alertLayout, R.string.time_error, Snackbar.LENGTH_LONG).show();
                 } else {
                     DbHelper db = new DbHelper(activity);
+                    String from = week.getFromTime();
+                    String to = week.getToTime();
+                    
+                    if (from != null && to != null && from.compareTo(to) >= 0) {
+                        Snackbar.make(alertLayout, "Start time must be before end time", Snackbar.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    ArrayList<Week> existing = db.getWeek(week.getFragment());
+                    for (Week ex : existing) {
+                        if (ex.getId() != week.getId()) {
+                            if (from.compareTo(ex.getToTime()) < 0 && to.compareTo(ex.getFromTime()) > 0) {
+                                Snackbar.make(alertLayout, "Time clashes with: " + ex.getSubject(), Snackbar.LENGTH_LONG).show();
+                                return;
+                            }
+                        }
+                    }
+
                     WeekAdapter weekAdapter = (WeekAdapter) listView.getAdapter(); // In order to get notifyDataSetChanged() method.
                     ColorDrawable buttonColor = (ColorDrawable) select_color.getBackground();
                     week.setSubject(subject.getText().toString());
@@ -421,20 +439,38 @@ public class AlertDialogsHelper {
                 } else if(!from_time.getText().toString().matches(".*\\d+.*") || !to_time.getText().toString().matches(".*\\d+.*")) {
                     Snackbar.make(alertLayout, R.string.time_error, Snackbar.LENGTH_LONG).show();
                 } else {
-                    ColorDrawable buttonColor = (ColorDrawable) select_color.getBackground();
+                    String from = week.getFromTime();
+                    String to = week.getToTime();
+
+                    if (from != null && to != null && from.compareTo(to) >= 0) {
+                        Snackbar.make(alertLayout, "Start time must be before end time", Snackbar.LENGTH_LONG).show();
+                        return;
+                    }
+
                     if (adapter != null && viewPager != null) {
                         String fragmentName = adapter.getItem(viewPager.getCurrentItem()).getClass().getSimpleName();
                         if (fragmentName.endsWith("Fragment")) {
                             fragmentName = fragmentName.substring(0, fragmentName.length() - "Fragment".length());
                         }
+
+                        ArrayList<Week> existing = dbHelper.getWeek(fragmentName);
+                        for (Week ex : existing) {
+                            if (from != null && to != null && from.compareTo(ex.getToTime()) < 0 && to.compareTo(ex.getFromTime()) > 0) {
+                                Snackbar.make(alertLayout, "Time clashes with: " + ex.getSubject(), Snackbar.LENGTH_LONG).show();
+                                return;
+                            }
+                        }
+
                         week.setSubject(subject.getText().toString());
                         week.setFragment(fragmentName);
                         week.setTeacher(teacher.getText().toString());
                         week.setRoom(room.getText().toString());
+                        ColorDrawable buttonColor = (ColorDrawable) select_color.getBackground();
                         week.setColor(buttonColor.getColor());
                         dbHelper.insertWeek(week);
                         adapter.notifyDataSetChanged();
                     } else {
+                        ColorDrawable buttonColor = (ColorDrawable) select_color.getBackground();
                         dbHelper.insertSubject(subject.getText().toString(), buttonColor.getColor(), teacher.getText().toString(), room.getText().toString());
                     }
                     if (onSaveCallback != null) {

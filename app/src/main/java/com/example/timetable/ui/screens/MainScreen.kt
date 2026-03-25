@@ -133,6 +133,7 @@ fun MainScreen(
     }
 
     if (showAddDialog || weekToEdit != null) {
+        val currentDay = if (weekToEdit != null) weekToEdit!!.getFragment() else days[pagerState.currentPage]
         AddSubjectDialog(
             onDismiss = { 
                 showAddDialog = false
@@ -142,7 +143,7 @@ fun MainScreen(
                 if (weekToEdit != null) {
                     viewModel.updateWeek(week)
                 } else {
-                    week.setFragment(days[pagerState.currentPage])
+                    week.setFragment(currentDay)
                     viewModel.insertWeek(week)
                 }
                 weekToEdit = null
@@ -150,7 +151,8 @@ fun MainScreen(
             onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
             initialWeek = weekToEdit ?: Week(),
             subjectSuggestions = viewModel.subjects,
-            teacherSuggestions = viewModel.teachers
+            teacherSuggestions = viewModel.teachers,
+            existingSlots = viewModel.weekData[currentDay] ?: emptyList()
         )
     }
 

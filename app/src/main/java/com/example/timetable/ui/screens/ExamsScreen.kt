@@ -305,7 +305,8 @@ fun ExamItem(exam: Exam, onDelete: () -> Unit) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = exam.subject, style = MaterialTheme.typography.titleLarge)
-                Text(text = "${exam.date} at ${TimeUtils.formatTo12Hour(exam.time)}", style = MaterialTheme.typography.bodyMedium)
+                val dateTimeText = if (exam.time.isNullOrBlank()) exam.date else "${exam.date} at ${TimeUtils.formatTo12Hour(exam.time)}"
+                Text(text = dateTimeText, style = MaterialTheme.typography.bodyMedium)
                 Text(text = "Room: ${exam.room}", style = MaterialTheme.typography.bodySmall)
                 Text(text = "Teacher: ${exam.teacher}", style = MaterialTheme.typography.bodySmall)
             }

@@ -31,7 +31,8 @@ fun AddSubjectDialog(
     onGetSubjectDetails: (String) -> Week?,
     initialWeek: Week = Week(),
     subjectSuggestions: List<String> = emptyList(),
-    teacherSuggestions: List<String> = emptyList()
+    teacherSuggestions: List<String> = emptyList(),
+    existingSlots: List<Week> = emptyList()
 ) {
     var subject by remember { mutableStateOf(initialWeek.subject ?: "") }
     var teacher by remember { mutableStateOf(initialWeek.teacher ?: "") }
@@ -182,6 +183,16 @@ fun AddSubjectDialog(
                     subject.isBlank() -> "Please enter Subject"
                     fromTime.isBlank() -> "Please select Start Time"
                     toTime.isBlank() -> "Please select End Time"
+                    fromTime >= toTime -> "Start Time must be before End Time"
+                    existingSlots.any { existing ->
+                        existing.id != initialWeek.id &&
+                        fromTime < (existing.toTime ?: "") &&
+                        toTime > (existing.fromTime ?: "")
+                    } -> "Time clashes with another class: ${existingSlots.find { existing -> 
+                        existing.id != initialWeek.id &&
+                        fromTime < (existing.toTime ?: "") &&
+                        toTime > (existing.fromTime ?: "")
+                    }?.subject}"
                     else -> null
                 }
 
