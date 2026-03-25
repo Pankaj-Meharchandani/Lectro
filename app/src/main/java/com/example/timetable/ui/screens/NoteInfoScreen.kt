@@ -169,7 +169,8 @@ private fun processTextInput(newValue: TextFieldValue, oldValue: TextFieldValue)
         val isJustTags = AUTO_CLOSE_TAGS.any { (op, cl) ->
             val t = currentLine.trim()
             t == op || t == "$op$cl"
-        }
+        } || ALIGN_OPEN.any { currentLine.trim() == it } || ALIGN_OPEN.any { op -> ALIGN_CLOSE.any { cl -> currentLine.trim() == "$op$cl" } }
+        
         if (isJustTags) {
             val newText = oldValue.text.substring(0, lineStart) + "\n" + newValue.text.substring(cursorAfter)
             return TextFieldValue(newText, TextRange(lineStart + 1))
@@ -473,7 +474,7 @@ private fun PaperEditor(
                     textStyle = TextStyle(fontSize = 16.sp, color = Color(0xFF1A1A2E), lineHeight = 24.sp, letterSpacing = 0.1.sp),
                     cursorBrush  = SolidColor(accentColor),
                     onTextLayout = onTextLayout,
-                    visualTransformation = NoteVisualTransformation(),
+                    visualTransformation = remember { NoteVisualTransformation() },
                     decorationBox = { inner ->
                         if (textValue.text.isEmpty()) Text("Start writing…",
                             style = TextStyle(fontSize = 16.sp, color = Color.Gray.copy(.35f), lineHeight = 24.sp))
@@ -789,23 +790,21 @@ class NoteVisualTransformation : VisualTransformation {
 
     private fun AnnotatedString.Builder.renderLine(line: String) {
         when {
-            // ── Headings — ### before ## before # ────────────────────────
+            // ── Headings ──────────────────────────────────────────────────
             line.startsWith("### ") -> {
-                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("### ") }
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("### ") }
                 withStyle(SpanStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF2D2D44))) {
                     parseInlineSpans(line.substring(4))
                 }
             }
             line.startsWith("## ") -> {
-                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("## ") }
-                // H2 is ~20sp → occupies ~2 ruled lines naturally
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("## ") }
                 withStyle(SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1A1A2E), letterSpacing = (-0.3).sp)) {
                     parseInlineSpans(line.substring(3))
                 }
             }
             line.startsWith("# ") -> {
-                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("# ") }
-                // H1 is ~26sp → occupies ~2 ruled lines naturally
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("# ") }
                 withStyle(SpanStyle(fontSize = 26.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A2E), letterSpacing = (-0.5).sp)) {
                     parseInlineSpans(line.substring(2))
                 }
@@ -813,7 +812,7 @@ class NoteVisualTransformation : VisualTransformation {
 
             // ── Blockquote ────────────────────────────────────────────────
             line.startsWith("> ") -> {
-                withStyle(SpanStyle(color = Color(0xFF9575CD), background = Color(0xFFF3E5F5))) { append("│") }
+                withStyle(SpanStyle(color = Color(0xFF9575CD), background = Color(0xFFF3E5F5).copy(alpha = 0.4f))) { append("│") }
                 append(" ")
                 withStyle(SpanStyle(color = Color(0xFF7E57C2), fontStyle = FontStyle.Italic)) {
                     parseInlineSpans(line.substring(2))
@@ -825,30 +824,36 @@ class NoteVisualTransformation : VisualTransformation {
                 withStyle(SpanStyle(background = Color(0xFFE0E0E0), color = Color.Transparent, fontSize = 2.sp)) { append(line) }
             }
 
-            // ── Checkbox (FIX: checked case uses startsWith not both-startsWith) ──
+            // ── Checkbox ──────────────────────────────────────────────────
             line.startsWith("- [ ] ") -> {
-                // render symbol visually, hide the raw marker bytes
                 withStyle(SpanStyle(color = Color(0xFF90A4AE), fontSize = 16.sp)) { append("☐") }
-                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append(line.substring(1, 6)) }
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append(line.substring(1, 6)) }
                 parseInlineSpans(line.substring(6))
             }
             line.length >= 6 && (line.substring(0, 6) == "- [x] " || line.substring(0, 6) == "- [X] ") -> {
                 withStyle(SpanStyle(color = Color(0xFF4CAF50), fontSize = 16.sp)) { append("☑") }
-                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append(line.substring(1, 6)) }
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append(line.substring(1, 6)) }
                 withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough, color = Color.Gray)) {
                     parseInlineSpans(line.substring(6))
                 }
             }
 
             // ── Image placeholder ─────────────────────────────────────────
-            line.contains(Regex("\\[img:(.*?)\\]")) -> {
-                withStyle(SpanStyle(fontSize = 160.sp, color = Color.Transparent)) { append(line) }
+            line.contains("[img:") -> {
+                var last = 0
+                val regex = Regex("\\[img:(.*?)\\]")
+                regex.findAll(line).forEach { m ->
+                    parseInlineSpans(line.substring(last, m.range.first))
+                    withStyle(SpanStyle(fontSize = 110.sp, color = Color.Transparent)) { append(m.value) }
+                    last = m.range.last + 1
+                }
+                parseInlineSpans(line.substring(last))
             }
 
             // ── Table ─────────────────────────────────────────────────────
             line.trimStart().startsWith("|") -> renderTableRow(line)
 
-            // ── Normal line (alignment, lists, inline) ────────────────────
+            // ── Normal line ───────────────────────────────────────────────
             else -> {
                 val alignment = when {
                     line.startsWith("<center>") -> TextAlign.Center
@@ -862,33 +867,30 @@ class NoteVisualTransformation : VisualTransformation {
         }
     }
 
-    // ── Table row ──────────────────────────────────────────────────────────
     private fun AnnotatedString.Builder.renderTableRow(line: String) {
         val isSep = line.replace("|", "").replace("-", "").replace(":", "").replace(" ", "").isEmpty()
         if (isSep) {
             withStyle(SpanStyle(color = Color.Transparent, fontSize = 2.sp, background = Color(0xFFDDE0E8))) { append(line) }
             return
         }
-        withStyle(SpanStyle(background = Color(0xFFF7F8FC))) {
-            line.forEach { char ->
-                if (char == '|') {
-                    withStyle(SpanStyle(color = Color(0xFFCDD0DA), fontSize = 14.sp)) { append('|') }
-                } else {
-                    withStyle(SpanStyle(fontSize = 14.sp, color = Color(0xFF1A1A2E))) { append(char) }
-                }
+        line.forEach { char ->
+            if (char == '|') {
+                withStyle(SpanStyle(color = Color(0xFFCDD0DA), fontSize = 14.sp)) { append('|') }
+            } else {
+                withStyle(SpanStyle(fontSize = 14.sp, color = Color(0xFF1A1A2E))) { append(char) }
             }
         }
     }
 
-    // ── Render with alignment tag stripped ────────────────────────────────
     private fun AnnotatedString.Builder.renderInlineWithAlignStrip(line: String) {
         var current = line
+        var startTag = ""
         var endTag  = ""
 
         ALIGN_OPEN.forEachIndexed { i, open ->
             if (current.startsWith(open)) {
+                startTag = open
                 val close = ALIGN_CLOSE[i]
-                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append(open) }
                 current = if (current.endsWith(close)) {
                     endTag = close
                     current.substring(open.length, current.length - close.length)
@@ -899,87 +901,94 @@ class NoteVisualTransformation : VisualTransformation {
             }
         }
 
+        if (startTag.isNotEmpty()) withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append(startTag) }
         parseInlineSpans(current)
-
-        if (endTag.isNotEmpty()) withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append(endTag) }
+        if (endTag.isNotEmpty()) withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append(endTag) }
     }
 
-    // ── Inline spans parser ────────────────────────────────────────────────
     private fun AnnotatedString.Builder.parseInlineSpans(text: String) {
         var i = 0
         while (i < text.length) {
+            val remaining = text.substring(i)
             when {
-                // Bold ** (check before single *)
-                text.startsWith("**", i) -> {
+                // Bold
+                remaining.startsWith("**") -> {
                     val end = text.indexOf("**", i + 2)
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("**") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("**") }
                         withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(text.substring(i + 2, end)) }
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("**") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("**") }
                         i = end + 2
                     } else { append(text[i]); i++ }
                 }
-                // Bullet at start of line
-                text.startsWith("* ", i) && i == 0 -> {
+                // Bullet
+                remaining.startsWith("* ") && i == 0 -> {
                     append("•"); i++
                 }
-                text.startsWith("- ", i) && i == 0 -> {
+                remaining.startsWith("- ") && i == 0 -> {
                     append("•"); i++
                 }
-                // Italic * (not bullet)
-                text.startsWith("*", i) -> {
+                // Italic
+                remaining.startsWith("*") -> {
                     val end = text.indexOf("*", i + 1)
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("*") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("*") }
                         withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(text.substring(i + 1, end)) }
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("*") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("*") }
                         i = end + 1
                     } else { append(text[i]); i++ }
                 }
                 // Underline
-                text.startsWith("<u>", i) -> {
+                remaining.startsWith("<u>") -> {
                     val end = text.indexOf("</u>", i + 3)
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("<u>") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("<u>") }
                         withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) { append(text.substring(i + 3, end)) }
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("</u>") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("</u>") }
                         i = end + 4
                     } else { append(text[i]); i++ }
                 }
                 // Strikethrough
-                text.startsWith("~~", i) -> {
+                remaining.startsWith("~~") -> {
                     val end = text.indexOf("~~", i + 2)
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("~~") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("~~") }
                         withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(text.substring(i + 2, end)) }
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("~~") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("~~") }
                         i = end + 2
                     } else { append(text[i]); i++ }
                 }
                 // Inline code
-                text.startsWith("`", i) -> {
+                remaining.startsWith("`") -> {
                     val end = text.indexOf("`", i + 1)
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("`") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("`") }
                         withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = Color(0xFFF0F0F5),
                             color = Color(0xFFD32F2F), fontSize = 14.sp)) { append(text.substring(i + 1, end)) }
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("`") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("`") }
                         i = end + 1
                     } else { append(text[i]); i++ }
                 }
-                // Link [text](url)
-                text.startsWith("[", i) -> {
+                // Link
+                remaining.startsWith("[") && !remaining.startsWith("[img:") -> {
                     val cb = text.indexOf("]", i + 1)
                     val op = if (cb != -1 && cb + 1 < text.length && text[cb + 1] == '(') cb + 1 else -1
                     val cp = if (op != -1) text.indexOf(")", op + 1) else -1
                     if (cb != -1 && op != -1 && cp != -1) {
                         val linkText = text.substring(i + 1, cb)
                         val url      = text.substring(op + 1, cp)
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("[") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("[") }
                         withStyle(SpanStyle(color = Color(0xFF1565C0), textDecoration = TextDecoration.Underline)) { append(linkText) }
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.sp)) { append("]($url)") }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("]($url)") }
                         i = cp + 1
                     } else { append(text[i]); i++ }
+                }
+                // Alignment and Heading tags in middle of text
+                ALIGN_OPEN.any { remaining.startsWith(it) } || ALIGN_CLOSE.any { remaining.startsWith(it) } || 
+                remaining.startsWith("### ") || remaining.startsWith("## ") || remaining.startsWith("# ") -> {
+                    val tag = (ALIGN_OPEN + ALIGN_CLOSE + listOf("### ", "## ", "# ")).find { remaining.startsWith(it) }!!
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append(tag) }
+                    i += tag.length
                 }
                 else -> { append(text[i]); i++ }
             }
