@@ -13,7 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
@@ -100,7 +102,10 @@ data class FormattingState(
     val isItalic: Boolean = false,
     val isUnderline: Boolean = false,
     val isStrikethrough: Boolean = false,
-    val isCode: Boolean = false
+    val isCode: Boolean = false,
+    val isBullet: Boolean = false,
+    val isOrdered: Boolean = false,
+    val alignment: TextAlign = TextAlign.Left
 )
 
 private fun getFormattingState(textValue: TextFieldValue): FormattingState {
@@ -112,8 +117,17 @@ private fun getFormattingState(textValue: TextFieldValue): FormattingState {
     val lineStart = text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)) + 1
     val lineEnd = text.indexOf('\n', cursor).let { if (it == -1) text.length else it }
     val line = text.substring(lineStart, lineEnd)
-    val cursorInLine = cursor - lineStart
+    
+    val isBullet = line.trimStart().startsWith("* ") || line.trimStart().startsWith("- ")
+    val isOrdered = line.trimStart().matches(Regex("^\\s*\\d+(\\.\\d+)*\\. .*"))
+    
+    val align = when {
+        line.startsWith("<center>") -> TextAlign.Center
+        line.startsWith("<right>")  -> TextAlign.Right
+        else                        -> TextAlign.Left
+    }
 
+    val cursorInLine = cursor - lineStart
     fun isInside(open: String, close: String): Boolean {
         var lastIdx = 0
         while (true) {
@@ -125,19 +139,15 @@ private fun getFormattingState(textValue: TextFieldValue): FormattingState {
         }
     }
 
-    // Check longer tags first
-    val bold = isInside("**", "**")
-    val italic = isInside("*", "*")
-    val underline = isInside("<u>", "</u>")
-    val strike = isInside("~~", "~~")
-    val code = isInside("`", "`")
-
     return FormattingState(
-        isBold = bold,
-        isItalic = italic && !bold, // Simple heuristic: if it's bold, we don't necessarily say it's italic unless it's ***
-        isUnderline = underline,
-        isStrikethrough = strike,
-        isCode = code
+        isBold = isInside("**", "**"),
+        isItalic = isInside("*", "*") && !isInside("**", "**"),
+        isUnderline = isInside("<u>", "</u>"),
+        isStrikethrough = isInside("~~", "~~"),
+        isCode = isInside("`", "`"),
+        isBullet = isBullet,
+        isOrdered = isOrdered,
+        alignment = align
     )
 }
 
@@ -164,7 +174,7 @@ private fun processTextInput(newValue: TextFieldValue, oldValue: TextFieldValue)
     val lineStart   = oldValue.text.lastIndexOf('\n', oldCursor - 1) + 1
     val currentLine = oldValue.text.substring(lineStart, oldCursor)
 
-    // ── B: list prefix ────────────────────────────────────────────────────
+    // ── B: list & table prefix ─────────────────────────────────────────────
     val listPrefix: String = when {
         currentLine.matches(Regex("^\\s*\\* .+"))            ->
             currentLine.substring(0, currentLine.indexOf("* ") + 2)
@@ -181,11 +191,19 @@ private fun processTextInput(newValue: TextFieldValue, oldValue: TextFieldValue)
                 "$indent${nums.joinToString(".")}. "
             } else ""
         }
+        currentLine.trim().startsWith("|") && currentLine.indexOf('|', 1) != -1 -> {
+            val pipeCount = currentLine.count { it == '|' }
+            if (pipeCount >= 2) "| " + " | ".repeat(pipeCount - 2) + " |" else ""
+        }
         else -> ""
     }
 
-    // Empty list item → exit list (remove marker, plain newline)
-    if (listPrefix.isNotEmpty() && currentLine.trim() == listPrefix.trim()) {
+    // Empty list/table item → exit (remove marker, plain newline)
+    val isTable = currentLine.trim().startsWith("|")
+    val isEmptyMarker = if (isTable) currentLine.replace("|", "").replace(" ", "").isEmpty()
+                        else currentLine.trim() == listPrefix.trim()
+
+    if (listPrefix.isNotEmpty() && isEmptyMarker) {
         val newText = oldValue.text.substring(0, lineStart) + "\n" + newValue.text.substring(cursorAfter)
         return TextFieldValue(newText, TextRange(lineStart + 1))
     }
@@ -303,7 +321,9 @@ fun NoteInfoScreen(
         val start = sel.min
         val end   = sel.max
 
-        if (prefix in ALIGN_OPEN) {
+        val isAlignment = prefix in ALIGN_OPEN || (prefix == "" && suffix == "")
+
+        if (isAlignment) {
             // Alignment: operate on the whole current line
             val lineStart   = full.lastIndexOf('\n', start - 1) + 1
             val lineEnd     = full.indexOf('\n', end).let { if (it == -1) full.length else it }
@@ -316,10 +336,9 @@ fun NoteInfoScreen(
                 lineContent = if (lineContent.endsWith(cl))
                     lineContent.substring(op.length, lineContent.length - cl.length)
                 else lineContent.substring(op.length)
-                // If user pressed same alignment again → toggle off (done), else wrap with new one
             }
-            val newLine = if (alreadyIdx == ALIGN_OPEN.indexOf(prefix)) {
-                lineContent // toggled off
+            val newLine = if (prefix == "" || (alreadyIdx != -1 && ALIGN_OPEN[alreadyIdx] == prefix)) {
+                lineContent // toggled off or switched to left
             } else {
                 "$prefix$lineContent$suffix"
             }
@@ -517,7 +536,27 @@ private fun PaperEditor(
                         .fillMaxWidth()
                         .padding(start = 72.dp, end = 24.dp, top = 20.dp, bottom = 200.dp)
                         .heightIn(min = 700.dp)
-                        .focusRequester(bodyFocusRequester),
+                        .focusRequester(bodyFocusRequester)
+                        .pointerInput(textValue) {
+                            detectTapGestures { offset ->
+                                textLayoutResult?.let { layout ->
+                                    val position = layout.getOffsetForPosition(offset)
+                                    val lineStart = textValue.text.lastIndexOf('\n', (position - 1).coerceAtLeast(0)) + 1
+                                    val lineEnd = textValue.text.indexOf('\n', position).let { if (it == -1) textValue.text.length else it }
+                                    val line = textValue.text.substring(lineStart, lineEnd)
+                                    
+                                    if (line.startsWith("- [ ] ") || line.startsWith("- [x] ") || line.startsWith("- [X] ")) {
+                                        // Identity mapping means position is correct raw offset
+                                        if (position >= lineStart && position < lineStart + 6) {
+                                            val isChecked = line.startsWith("- [x] ") || line.startsWith("- [X] ")
+                                            val newMarker = if (isChecked) "- [ ] " else "- [x] "
+                                            val newText = textValue.text.substring(0, lineStart) + newMarker + textValue.text.substring(lineStart + 6)
+                                            onTextChange(textValue.copy(text = newText))
+                                        }
+                                    }
+                                }
+                            }
+                        },
                     textStyle = TextStyle(fontSize = 16.sp, color = Color(0xFF1A1A2E), lineHeight = 24.sp, letterSpacing = 0.1.sp),
                     cursorBrush  = SolidColor(accentColor),
                     onTextLayout = onTextLayout,
@@ -615,12 +654,15 @@ private fun EnhancedFormattingToolbar(
                         FmtBtn(null, "H3", labelText = "H3", labelSize = 10.sp) { onFormat("### ", "") }
                     }
                     1 -> {
-                        FmtBtn(Icons.Default.FormatAlignLeft,   "Left")    { onFormat("",          "")           }
-                        FmtBtn(Icons.Default.FormatAlignCenter, "Center")  { onFormat("<center>",   "</center>")  }
-                        FmtBtn(Icons.Default.FormatAlignRight,  "Right")   { onFormat("<right>",    "</right>")   }
+                        val isLeft = fmtState.alignment == TextAlign.Left
+                        val isCenter = fmtState.alignment == TextAlign.Center
+                        val isRight = fmtState.alignment == TextAlign.Right
+                        FmtBtn(Icons.Default.FormatAlignLeft,   "Left", isActive = isLeft)    { onFormat("",          "")           }
+                        FmtBtn(Icons.Default.FormatAlignCenter, "Center", isActive = isCenter)  { onFormat("<center>",   "</center>")  }
+                        FmtBtn(Icons.Default.FormatAlignRight,  "Right", isActive = isRight)   { onFormat("<right>",    "</right>")   }
                         ToolbarDivider()
-                        FmtBtn(Icons.AutoMirrored.Filled.FormatListBulleted, "Bullet")   { onFormat("* ",  "") }
-                        FmtBtn(Icons.Default.FormatListNumbered,             "Numbered") { onFormat("1. ", "") }
+                        FmtBtn(Icons.AutoMirrored.Filled.FormatListBulleted, "Bullet", isActive = fmtState.isBullet)   { onFormat("* ",  "") }
+                        FmtBtn(Icons.Default.FormatListNumbered,             "Numbered", isActive = fmtState.isOrdered) { onFormat("1. ", "") }
                         FmtBtn(Icons.Default.HorizontalRule,                 "Divider")  { onFormat("\n---\n", "") }
                         ToolbarDivider()
                         FmtBtn(Icons.Default.FormatQuote, "Quote") { onFormat("> ", "") }
@@ -901,7 +943,7 @@ class NoteVisualTransformation : VisualTransformation {
                 regex.findAll(line).forEach { m ->
                     parseInlineSpans(line.substring(last, m.range.first))
                     // Ensure the placeholder is consistently sized and doesn't fluctuate
-                    withStyle(SpanStyle(fontSize = 110.sp, color = Color.Transparent, letterSpacing = 0.sp)) { append(m.value) }
+                    withStyle(SpanStyle(fontSize = 70.sp, color = Color.Transparent, letterSpacing = 0.sp)) { append(m.value) }
                     last = m.range.last + 1
                 }
                 parseInlineSpans(line.substring(last))
