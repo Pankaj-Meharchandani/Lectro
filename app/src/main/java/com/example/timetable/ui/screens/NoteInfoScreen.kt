@@ -95,6 +95,52 @@ private fun noteAccentColor(color: Int): Color =
         Color((b.red * .72f).coerceIn(0f,1f), (b.green * .72f).coerceIn(0f,1f), (b.blue * .72f).coerceIn(0f,1f))
     } else Color(0xFF5C6BC0)
 
+data class FormattingState(
+    val isBold: Boolean = false,
+    val isItalic: Boolean = false,
+    val isUnderline: Boolean = false,
+    val isStrikethrough: Boolean = false,
+    val isCode: Boolean = false
+)
+
+private fun getFormattingState(textValue: TextFieldValue): FormattingState {
+    val text = textValue.text
+    val selection = textValue.selection
+    if (text.isEmpty()) return FormattingState()
+    
+    val cursor = selection.start
+    val lineStart = text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)) + 1
+    val lineEnd = text.indexOf('\n', cursor).let { if (it == -1) text.length else it }
+    val line = text.substring(lineStart, lineEnd)
+    val cursorInLine = cursor - lineStart
+
+    fun isInside(open: String, close: String): Boolean {
+        var lastIdx = 0
+        while (true) {
+            val start = line.indexOf(open, lastIdx)
+            if (start == -1 || start >= cursorInLine) return false
+            val end = line.indexOf(close, start + open.length)
+            if (end == -1 || end >= cursorInLine) return true
+            lastIdx = end + close.length
+        }
+    }
+
+    // Check longer tags first
+    val bold = isInside("**", "**")
+    val italic = isInside("*", "*")
+    val underline = isInside("<u>", "</u>")
+    val strike = isInside("~~", "~~")
+    val code = isInside("`", "`")
+
+    return FormattingState(
+        isBold = bold,
+        isItalic = italic && !bold, // Simple heuristic: if it's bold, we don't necessarily say it's italic unless it's ***
+        isUnderline = underline,
+        isStrikethrough = strike,
+        isCode = code
+    )
+}
+
 // ─────────────────────────────────────────────
 // Text input processor
 // ─────────────────────────────────────────────
@@ -311,9 +357,10 @@ fun NoteInfoScreen(
         },
         containerColor = containerColor,
         bottomBar = {
+            val fmtState = getFormattingState(textValue)
             Column {
                 AnimatedVisibility(visible = formattingBarExpanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                    EnhancedFormattingToolbar(accentColor = accentColor, onFormat = onFormat, onAddImage = { imageLauncher.launch(arrayOf("image/*")) })
+                    EnhancedFormattingToolbar(accentColor = accentColor, fmtState = fmtState, onFormat = onFormat, onAddImage = { imageLauncher.launch(arrayOf("image/*")) })
                 }
                 NoteStatusBar(
                     wordCount = viewModel.wordCount, charCount = viewModel.charCount,
@@ -528,6 +575,7 @@ private fun drawRuledLines(scope: DrawScope) {
 @Composable
 private fun EnhancedFormattingToolbar(
     accentColor: Color,
+    fmtState: FormattingState,
     onFormat: (String, String) -> Unit,
     onAddImage: () -> Unit
 ) {
@@ -557,10 +605,10 @@ private fun EnhancedFormattingToolbar(
             ) {
                 when (selectedTab) {
                     0 -> {
-                        FmtBtn(Icons.Default.FormatBold,         "Bold")      { onFormat("**",   "**")   }
-                        FmtBtn(Icons.Default.FormatItalic,       "Italic")    { onFormat("*",    "*")    }
-                        FmtBtn(Icons.Default.FormatUnderlined,   "Underline") { onFormat("<u>",  "</u>") }
-                        FmtBtn(Icons.Default.FormatStrikethrough,"Strike")    { onFormat("~~",   "~~")   }
+                        FmtBtn(Icons.Default.FormatBold,         "Bold",      isActive = fmtState.isBold)      { onFormat("**",   "**")   }
+                        FmtBtn(Icons.Default.FormatItalic,       "Italic",    isActive = fmtState.isItalic)    { onFormat("*",    "*")    }
+                        FmtBtn(Icons.Default.FormatUnderlined,   "Underline", isActive = fmtState.isUnderline) { onFormat("<u>",  "</u>") }
+                        FmtBtn(Icons.Default.FormatStrikethrough,"Strike",    isActive = fmtState.isStrikethrough) { onFormat("~~",   "~~")   }
                         ToolbarDivider()
                         FmtBtn(null, "H1", labelText = "H1", labelSize = 14.sp) { onFormat("# ",   "") }
                         FmtBtn(null, "H2", labelText = "H2", labelSize = 12.sp) { onFormat("## ",  "") }
@@ -576,7 +624,7 @@ private fun EnhancedFormattingToolbar(
                         FmtBtn(Icons.Default.HorizontalRule,                 "Divider")  { onFormat("\n---\n", "") }
                         ToolbarDivider()
                         FmtBtn(Icons.Default.FormatQuote, "Quote") { onFormat("> ", "") }
-                        FmtBtn(Icons.Default.Code,        "Code")  { onFormat("`",  "`") }
+                        FmtBtn(Icons.Default.Code,        "Code", isActive = fmtState.isCode)  { onFormat("`",  "`") }
                     }
                     2 -> {
                         FmtBtn(Icons.Default.Image,     "Image")    { onAddImage() }
@@ -598,12 +646,19 @@ private fun FmtBtn(
     desc: String,
     labelText: String? = null,
     labelSize: TextUnit = 14.sp,
+    isActive: Boolean = false,
     onClick: () -> Unit
 ) {
-    IconButton(onClick = onClick, modifier = Modifier.size(42.dp)) {
+    IconButton(
+        onClick = onClick, 
+        modifier = Modifier
+            .size(42.dp)
+            .background(if (isActive) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, RoundedCornerShape(8.dp))
+            .then(if (isActive) Modifier.shadow(1.dp, RoundedCornerShape(8.dp)) else Modifier)
+    ) {
         when {
-            labelText != null -> Text(labelText, fontWeight = FontWeight.Bold, fontSize = labelSize)
-            icon != null      -> Icon(icon, contentDescription = desc, modifier = Modifier.size(22.dp))
+            labelText != null -> Text(labelText, fontWeight = FontWeight.Bold, fontSize = labelSize, color = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray)
+            icon != null      -> Icon(icon, contentDescription = desc, modifier = Modifier.size(22.dp), tint = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray)
         }
     }
 }
@@ -781,14 +836,15 @@ class NoteVisualTransformation : VisualTransformation {
         val result = buildAnnotatedString {
             val lines = text.text.split('\n')
             lines.forEachIndexed { idx, line ->
-                renderLine(line)
+                val nextLine = lines.getOrNull(idx + 1)
+                renderLine(line, nextLine)
                 if (idx < lines.size - 1) append('\n')
             }
         }
         return TransformedText(result, OffsetMapping.Identity)
     }
 
-    private fun AnnotatedString.Builder.renderLine(line: String) {
+    private fun AnnotatedString.Builder.renderLine(line: String, nextLine: String? = null) {
         when {
             // ── Headings ──────────────────────────────────────────────────
             line.startsWith("### ") -> {
@@ -844,14 +900,20 @@ class NoteVisualTransformation : VisualTransformation {
                 val regex = Regex("\\[img:(.*?)\\]")
                 regex.findAll(line).forEach { m ->
                     parseInlineSpans(line.substring(last, m.range.first))
-                    withStyle(SpanStyle(fontSize = 110.sp, color = Color.Transparent)) { append(m.value) }
+                    // Ensure the placeholder is consistently sized and doesn't fluctuate
+                    withStyle(SpanStyle(fontSize = 110.sp, color = Color.Transparent, letterSpacing = 0.sp)) { append(m.value) }
                     last = m.range.last + 1
                 }
                 parseInlineSpans(line.substring(last))
             }
 
             // ── Table ─────────────────────────────────────────────────────
-            line.trimStart().startsWith("|") -> renderTableRow(line)
+            line.trimStart().startsWith("|") -> {
+                val isHeader = nextLine?.let {
+                    it.trim().startsWith("|") && it.replace("|", "").replace("-", "").replace(":", "").replace(" ", "").isEmpty()
+                } ?: false
+                renderTableRow(line, isHeader)
+            }
 
             // ── Normal line ───────────────────────────────────────────────
             else -> {
@@ -867,7 +929,7 @@ class NoteVisualTransformation : VisualTransformation {
         }
     }
 
-    private fun AnnotatedString.Builder.renderTableRow(line: String) {
+    private fun AnnotatedString.Builder.renderTableRow(line: String, isHeader: Boolean = false) {
         val isSep = line.replace("|", "").replace("-", "").replace(":", "").replace(" ", "").isEmpty()
         if (isSep) {
             withStyle(SpanStyle(color = Color.Transparent, fontSize = 2.sp, background = Color(0xFFDDE0E8))) { append(line) }
@@ -877,7 +939,7 @@ class NoteVisualTransformation : VisualTransformation {
             if (char == '|') {
                 withStyle(SpanStyle(color = Color(0xFFCDD0DA), fontSize = 14.sp)) { append('|') }
             } else {
-                withStyle(SpanStyle(fontSize = 14.sp, color = Color(0xFF1A1A2E))) { append(char) }
+                withStyle(SpanStyle(fontSize = 14.sp, color = Color(0xFF1A1A2E), fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal)) { append(char) }
             }
         }
     }
@@ -914,12 +976,15 @@ class NoteVisualTransformation : VisualTransformation {
                 // Bold
                 remaining.startsWith("**") -> {
                     val end = text.indexOf("**", i + 2)
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("**") }
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("**") }
                         withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(text.substring(i + 2, end)) }
                         withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("**") }
                         i = end + 2
-                    } else { append(text[i]); i++ }
+                    } else {
+                        // Unclosed, but keep marker tiny to avoid layout jumps
+                        i += 2
+                    }
                 }
                 // Bullet
                 remaining.startsWith("* ") && i == 0 -> {
@@ -931,43 +996,51 @@ class NoteVisualTransformation : VisualTransformation {
                 // Italic
                 remaining.startsWith("*") -> {
                     val end = text.indexOf("*", i + 1)
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("*") }
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("*") }
                         withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(text.substring(i + 1, end)) }
                         withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("*") }
                         i = end + 1
-                    } else { append(text[i]); i++ }
+                    } else {
+                        i++
+                    }
                 }
                 // Underline
                 remaining.startsWith("<u>") -> {
                     val end = text.indexOf("</u>", i + 3)
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("<u>") }
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("<u>") }
                         withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) { append(text.substring(i + 3, end)) }
                         withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("</u>") }
                         i = end + 4
-                    } else { append(text[i]); i++ }
+                    } else {
+                        i += 3
+                    }
                 }
                 // Strikethrough
                 remaining.startsWith("~~") -> {
                     val end = text.indexOf("~~", i + 2)
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("~~") }
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("~~") }
                         withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(text.substring(i + 2, end)) }
                         withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("~~") }
                         i = end + 2
-                    } else { append(text[i]); i++ }
+                    } else {
+                        i += 2
+                    }
                 }
                 // Inline code
                 remaining.startsWith("`") -> {
                     val end = text.indexOf("`", i + 1)
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("`") }
                     if (end != -1) {
-                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("`") }
                         withStyle(SpanStyle(fontFamily = FontFamily.Monospace, background = Color(0xFFF0F0F5),
                             color = Color(0xFFD32F2F), fontSize = 14.sp)) { append(text.substring(i + 1, end)) }
                         withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("`") }
                         i = end + 1
-                    } else { append(text[i]); i++ }
+                    } else {
+                        i++
+                    }
                 }
                 // Link
                 remaining.startsWith("[") && !remaining.startsWith("[img:") -> {
