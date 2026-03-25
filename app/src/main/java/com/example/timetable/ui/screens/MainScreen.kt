@@ -8,7 +8,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.filled.*
@@ -22,7 +25,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -37,6 +42,8 @@ import com.example.timetable.ui.components.SubjectItem
 import com.example.timetable.ui.viewmodel.MainViewModel
 import com.example.timetable.utils.BrowserUtil
 import com.example.timetable.utils.PdfExportUtil
+import com.example.timetable.utils.UpdateInfo
+import com.example.timetable.utils.UpdateManager
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -56,6 +63,8 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     var switchSevenDays by remember { 
@@ -123,6 +132,15 @@ fun MainScreen(
         viewModel.loadSuggestions()
     }
     
+    LaunchedEffect(Unit) {
+        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+        val currentVersion = packageInfo.versionName ?: ""
+        val info = UpdateManager.checkForUpdates(currentVersion)
+        if (info != null && !UpdateManager.isVersionIgnored(context, info.latestVersion)) {
+            updateInfo = info
+        }
+    }
+
     LaunchedEffect(Unit) {
         val calendar = Calendar.getInstance()
         val day = calendar.get(Calendar.DAY_OF_WEEK)
@@ -334,6 +352,101 @@ fun MainScreen(
                 TextButton(onClick = { weekToDelete = null }) { Text("Cancel") }
             }
         )
+    }
+    updateInfo?.let { info ->
+        BasicAlertDialog(
+            onDismissRequest = { updateInfo = null },
+            modifier = Modifier.fillMaxWidth(0.92f),
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "New update available",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Update the app to version v${info.latestVersion}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    Text(
+                        text = "What's new",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    Box(modifier = Modifier
+                        .heightIn(max = 250.dp)
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 16.dp)
+                    ) {
+                        Text(
+                            text = info.releaseNotes,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Start
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Spacer(Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { updateInfo = null },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Later")
+                        }
+                        Button(
+                            onClick = {
+                                UpdateManager.openUpdateUrl(context, info.downloadUrl)
+                                updateInfo = null
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Update")
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    TextButton(
+                        onClick = {
+                            UpdateManager.ignoreVersion(context, info.latestVersion)
+                            updateInfo = null
+                        }
+                    ) {
+                        Text("Ignore this version", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
     }
 }
 
