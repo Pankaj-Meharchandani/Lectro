@@ -777,30 +777,33 @@ public class DbHelper extends SQLiteOpenHelper {
         db.update(SUBJECTS, values, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)});
 
         String targetName = oldName != null ? oldName : name;
-        ContentValues colorCascade = new ContentValues();
-        colorCascade.put(WEEK_COLOR, color);
-        db.update(TIMETABLE, colorCascade, WEEK_SUBJECT + "=?", new String[]{targetName});
+        
+        // 1. Force update colors in all related tables
+        ContentValues colorUpdate = new ContentValues();
+        colorUpdate.put(WEEK_COLOR, color);
+        db.update(TIMETABLE, colorUpdate, WEEK_SUBJECT + "=?", new String[]{targetName});
 
-        colorCascade.clear();
-        colorCascade.put(HOMEWORKS_COLOR, color);
-        db.update(HOMEWORKS, colorCascade, HOMEWORKS_SUBJECT + "=?", new String[]{targetName});
+        colorUpdate.clear();
+        colorUpdate.put(HOMEWORKS_COLOR, color);
+        db.update(HOMEWORKS, colorUpdate, HOMEWORKS_SUBJECT + "=?", new String[]{targetName});
 
-        colorCascade.clear();
-        colorCascade.put(EXAMS_COLOR, color);
-        db.update(EXAMS, colorCascade, EXAMS_SUBJECT + "=?", new String[]{targetName});
+        colorUpdate.clear();
+        colorUpdate.put(EXAMS_COLOR, color);
+        db.update(EXAMS, colorUpdate, EXAMS_SUBJECT + "=?", new String[]{targetName});
 
+        // 2. Cascade name change if name was modified
         if (oldName != null && !oldName.equals(name)) {
-            ContentValues cascade = new ContentValues();
-            cascade.put(WEEK_SUBJECT, name);
-            db.update(TIMETABLE, cascade, WEEK_SUBJECT + "=?", new String[]{oldName});
+            ContentValues nameUpdate = new ContentValues();
+            nameUpdate.put(WEEK_SUBJECT, name);
+            db.update(TIMETABLE, nameUpdate, WEEK_SUBJECT + "=?", new String[]{oldName});
 
-            cascade.clear();
-            cascade.put(HOMEWORKS_SUBJECT, name);
-            db.update(HOMEWORKS, cascade, HOMEWORKS_SUBJECT + "=?", new String[]{oldName});
+            nameUpdate.clear();
+            nameUpdate.put(HOMEWORKS_SUBJECT, name);
+            db.update(HOMEWORKS, nameUpdate, HOMEWORKS_SUBJECT + "=?", new String[]{oldName});
 
-            cascade.clear();
-            cascade.put(EXAMS_SUBJECT, name);
-            db.update(EXAMS, cascade, EXAMS_SUBJECT + "=?", new String[]{oldName});
+            nameUpdate.clear();
+            nameUpdate.put(EXAMS_SUBJECT, name);
+            db.update(EXAMS, nameUpdate, EXAMS_SUBJECT + "=?", new String[]{oldName});
         }
         db.close();
     }
