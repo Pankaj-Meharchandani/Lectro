@@ -17,6 +17,36 @@
 
 ---
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260325_203831.jpg" width="180" alt="Screen 1" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_124947.jpg" width="180" alt="Screen 2" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_124957.jpg" width="180" alt="Screen 3" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125059.jpg" width="180" alt="Screen 4" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125135.jpg" width="180" alt="Screen 5" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125142.jpg" width="180" alt="Screen 6" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125148.jpg" width="180" alt="Screen 7" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125159.jpg" width="180" alt="Screen 8" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125254.jpg" width="180" alt="Screen 9" />
+  &nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125738.jpg" width="180" alt="Screen 10" />
+</p>
+
+---
+
 ## Features
 
 ### 📅 Timetable
