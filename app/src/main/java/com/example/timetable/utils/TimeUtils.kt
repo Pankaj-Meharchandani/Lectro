@@ -22,4 +22,17 @@ object TimeUtils {
     fun get24HourString(hour: Int, minute: Int): String {
         return String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
     }
+
+    @JvmStatic
+    fun parse24Hour(time24: String?): Pair<Int, Int>? {
+        if (time24.isNullOrBlank()) return null
+        return try {
+            val parts = time24.split(":")
+            if (parts.size == 2) {
+                Pair(parts[0].toInt(), parts[1].toInt())
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

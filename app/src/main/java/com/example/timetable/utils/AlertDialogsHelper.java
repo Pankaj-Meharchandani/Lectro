@@ -98,9 +98,9 @@ public class AlertDialogsHelper {
 
             @Override
             public void onClick(View v) {
-                final Calendar c = Calendar.getInstance();
-                int mHour = c.get(Calendar.HOUR_OF_DAY);
-                int mMinute = c.get(Calendar.MINUTE);
+                kotlin.Pair<Integer, Integer> time = TimeUtils.parse24Hour(week.getFromTime());
+                int mHour = time != null ? time.getFirst() : Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+                int mMinute = time != null ? time.getSecond() : Calendar.getInstance().get(Calendar.MINUTE);
                 TimePickerDialog timePickerDialog = new TimePickerDialog(activity,
                         new TimePickerDialog.OnTimeSetListener() {
 
@@ -121,9 +121,9 @@ public class AlertDialogsHelper {
 
             @Override
             public void onClick(View v) {
-                final Calendar c = Calendar.getInstance();
-                int hour = c.get(Calendar.HOUR_OF_DAY);
-                int minute = c.get(Calendar.MINUTE);
+                kotlin.Pair<Integer, Integer> time = TimeUtils.parse24Hour(week.getToTime());
+                int hour = time != null ? time.getFirst() : Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+                int minute = time != null ? time.getSecond() : Calendar.getInstance().get(Calendar.MINUTE);
                 TimePickerDialog timePickerDialog = new TimePickerDialog(activity,
                         new TimePickerDialog.OnTimeSetListener() {
 
@@ -351,9 +351,9 @@ public class AlertDialogsHelper {
         from_time.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final Calendar c = Calendar.getInstance();
-                int mHour = c.get(Calendar.HOUR_OF_DAY);
-                int mMinute = c.get(Calendar.MINUTE);
+                kotlin.Pair<Integer, Integer> time = TimeUtils.parse24Hour(week.getFromTime());
+                int mHour = time != null ? time.getFirst() : Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+                int mMinute = time != null ? time.getSecond() : Calendar.getInstance().get(Calendar.MINUTE);
                 TimePickerDialog timePickerDialog = new TimePickerDialog(activity,
                         new TimePickerDialog.OnTimeSetListener() {
 
@@ -371,9 +371,9 @@ public class AlertDialogsHelper {
         to_time.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final Calendar c = Calendar.getInstance();
-                int hour = c.get(Calendar.HOUR_OF_DAY);
-                int minute = c.get(Calendar.MINUTE);
+                kotlin.Pair<Integer, Integer> time = TimeUtils.parse24Hour(week.getToTime());
+                int hour = time != null ? time.getFirst() : Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+                int minute = time != null ? time.getSecond() : Calendar.getInstance().get(Calendar.MINUTE);
                 TimePickerDialog timePickerDialog = new TimePickerDialog(activity,
                         new TimePickerDialog.OnTimeSetListener() {
 
@@ -1080,9 +1080,9 @@ public class AlertDialogsHelper {
         time.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final Calendar c = Calendar.getInstance();
-                int mHour = c.get(Calendar.HOUR_OF_DAY);
-                int mMinute = c.get(Calendar.MINUTE);
+                kotlin.Pair<Integer, Integer> parsedTime = TimeUtils.parse24Hour(exam.getTime());
+                int mHour = parsedTime != null ? parsedTime.getFirst() : Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+                int mMinute = parsedTime != null ? parsedTime.getSecond() : Calendar.getInstance().get(Calendar.MINUTE);
                 TimePickerDialog timePickerDialog = new TimePickerDialog(activity,
                         new TimePickerDialog.OnTimeSetListener() {
 
@@ -1221,9 +1221,9 @@ public class AlertDialogsHelper {
         time.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final Calendar c = Calendar.getInstance();
-                int mHour = c.get(Calendar.HOUR_OF_DAY);
-                int mMinute = c.get(Calendar.MINUTE);
+                kotlin.Pair<Integer, Integer> parsedTime = TimeUtils.parse24Hour(exam.getTime());
+                int mHour = parsedTime != null ? parsedTime.getFirst() : Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+                int mMinute = parsedTime != null ? parsedTime.getSecond() : Calendar.getInstance().get(Calendar.MINUTE);
                 TimePickerDialog timePickerDialog = new TimePickerDialog(activity,
                         new TimePickerDialog.OnTimeSetListener() {
 

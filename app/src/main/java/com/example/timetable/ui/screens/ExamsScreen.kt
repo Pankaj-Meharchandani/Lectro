@@ -273,10 +273,12 @@ fun AddExamDialog(
                 }
 
                 Button(onClick = {
-                    val c = Calendar.getInstance()
+                    val parsedTime = TimeUtils.parse24Hour(time)
+                    val hour = parsedTime?.first ?: Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+                    val minute = parsedTime?.second ?: Calendar.getInstance().get(Calendar.MINUTE)
                     TimePickerDialog(context, { _, h, m ->
                         time = TimeUtils.get24HourString(h, m)
-                    }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show()
+                    }, hour, minute, false).show()
                 }) {
                     Text(if (time.isEmpty()) stringResource(R.string.select_time) else TimeUtils.formatTo12Hour(time))
                 }

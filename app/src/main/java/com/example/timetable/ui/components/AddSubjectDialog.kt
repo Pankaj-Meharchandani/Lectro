@@ -149,10 +149,12 @@ fun AddSubjectDialog(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = {
-                            val c = Calendar.getInstance()
+                            val time = TimeUtils.parse24Hour(fromTime)
+                            val hour = time?.first ?: Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+                            val minute = time?.second ?: Calendar.getInstance().get(Calendar.MINUTE)
                             TimePickerDialog(context, { _, h, m ->
                                 fromTime = TimeUtils.get24HourString(h, m)
-                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show()
+                            }, hour, minute, false).show()
                         },
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(horizontal = 4.dp)
@@ -161,10 +163,12 @@ fun AddSubjectDialog(
                     }
                     Button(
                         onClick = {
-                            val c = Calendar.getInstance()
+                            val time = TimeUtils.parse24Hour(toTime)
+                            val hour = time?.first ?: Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+                            val minute = time?.second ?: Calendar.getInstance().get(Calendar.MINUTE)
                             TimePickerDialog(context, { _, h, m ->
                                 toTime = TimeUtils.get24HourString(h, m)
-                            }, c.get(Calendar.HOUR_OF_DAY), c.get(Calendar.MINUTE), false).show()
+                            }, hour, minute, false).show()
                         },
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(horizontal = 4.dp)
