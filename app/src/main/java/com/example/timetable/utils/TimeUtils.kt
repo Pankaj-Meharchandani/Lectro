@@ -35,4 +35,17 @@ object TimeUtils {
             null
         }
     }
+
+    @JvmStatic
+    fun timeToMinutes(time: String?): Int {
+        if (time.isNullOrBlank()) return 0
+        return try {
+            val parts = time.split(":")
+            if (parts.size == 2) {
+                parts[0].toInt() * 60 + parts[1].toInt()
+            } else 0
+        } catch (e: Exception) {
+            0
+        }
+    }
 }

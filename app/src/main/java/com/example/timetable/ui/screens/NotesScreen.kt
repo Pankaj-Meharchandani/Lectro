@@ -22,6 +22,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.preference.PreferenceManager
 import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.utils.DbHelper
@@ -29,6 +32,7 @@ import com.example.timetable.utils.DbHelper
 import com.example.timetable.ui.components.NoteItem
 import com.example.timetable.ui.components.ColorPickerRow
 import com.example.timetable.ui.components.SubjectItem
+import com.example.timetable.ui.components.EditSubjectDialog
 import androidx.compose.ui.graphics.toArgb
 
 class NoteViewModel(application: Application) : AndroidViewModel(application) {
@@ -44,7 +48,14 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadSubjects() {
         allSubjects.clear()
-        allSubjects.addAll(db.getAllSubjects())
+        val subs = db.allSubjects
+        for (sub in subs) {
+            val combinedTeachers = db.getTeachersForSubject(sub.name)
+            if (!combinedTeachers.isNullOrBlank()) {
+                sub.teacher = combinedTeachers
+            }
+        }
+        allSubjects.addAll(subs)
         subjectNames.clear()
         subjectNames.addAll(db.getSubjectsList())
     }
@@ -71,6 +82,16 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
             loadSubjects()
         }
     }
+
+    fun updateSubject(subject: Subject) {
+        db.updateSubject(subject.id, subject.name, subject.color, subject.teacher, subject.room)
+        loadSubjects()
+    }
+
+    fun deleteSubject(id: Int) {
+        db.deleteSubjectById(id)
+        loadSubjects()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +105,21 @@ fun NotesScreen(
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     val minAttendance = remember { sharedPref.getInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, 75) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var subjectToEdit by remember { mutableStateOf<Subject?>(null) }
+    var subjectToDelete by remember { mutableStateOf<Subject?>(null) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadSubjects()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -109,33 +145,38 @@ fun NotesScreen(
         ) {
             itemsIndexed(viewModel.allSubjects) { index, subject ->
                 Box {
-                    var showMenu by remember { mutableStateOf(false) }
+                    var showReorderMenu by remember { mutableStateOf(false) }
                     SubjectItem(
                         subject = Week().apply {
                             this.subject = subject.name
                             this.color = subject.color
                             this.id = subject.id
+                            this.teacher = subject.teacher
+                            this.room = subject.room
                         },
                         attendanceEnabled = false,
                         minAttendance = minAttendance,
                         onClick = { onSubjectClick(subject.id) },
-                        onMarkAttendance = { _, _, _ -> }
+                        onMarkAttendance = { _: Int, _: String, _: String -> },
+                        onEdit = { subjectToEdit = subject },
+                        onDelete = { subjectToDelete = subject },
+                        showRoom = false
                     )
                     IconButton(
-                        onClick = { showMenu = true },
+                        onClick = { showReorderMenu = true },
                         modifier = Modifier.align(Alignment.CenterEnd).padding(end = 60.dp)
                     ) {
                         Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
                     }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    DropdownMenu(expanded = showReorderMenu, onDismissRequest = { showReorderMenu = false }) {
                         DropdownMenuItem(
                             text = { Text("Move Up") },
-                            onClick = { viewModel.moveSubject(index, true); showMenu = false },
+                            onClick = { viewModel.moveSubject(index, true); showReorderMenu = false },
                             enabled = index > 0
                         )
                         DropdownMenuItem(
                             text = { Text("Move Down") },
-                            onClick = { viewModel.moveSubject(index, false); showMenu = false },
+                            onClick = { viewModel.moveSubject(index, false); showReorderMenu = false },
                             enabled = index < viewModel.allSubjects.size - 1
                         )
                     }
@@ -151,6 +192,39 @@ fun NotesScreen(
                 viewModel.insertNote(note, subjectName)
             },
             subjectSuggestions = viewModel.subjectNames
+        )
+    }
+
+    subjectToEdit?.let { subject ->
+        EditSubjectDialog(
+            subject = subject,
+            onDismiss = { subjectToEdit = null },
+            onSave = { updated ->
+                viewModel.updateSubject(updated)
+                subjectToEdit = null
+            }
+        )
+    }
+
+    subjectToDelete?.let { subject ->
+        AlertDialog(
+            onDismissRequest = { subjectToDelete = null },
+            title = { Text("Delete Subject") },
+            text = { Text("Are you sure you want to delete '${subject.name}'? This will also remove all its schedule slots, notes and materials.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteSubject(subject.id)
+                        subjectToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { subjectToDelete = null }) { Text("Cancel") }
+            }
         )
     }
 }

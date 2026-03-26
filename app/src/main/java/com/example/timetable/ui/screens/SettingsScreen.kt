@@ -31,9 +31,13 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
+import android.widget.Toast
 import com.example.timetable.R
 import com.example.timetable.activities.SettingsActivity
+import com.example.timetable.model.Week
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.ScheduleExporter
+import com.example.timetable.utils.TimeUtils
 import com.example.timetable.utils.WakeUpAlarmReceiver
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -122,6 +126,96 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel()) {
     val context = LocalContext.current
     var resetType by remember { mutableStateOf<ResetType?>(null) }
+    var showConflictDialog by remember { mutableStateOf<List<Pair<Week, Week>>?>(null) }
+    var pendingImportWeeks by remember { mutableStateOf<List<Week>?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.openOutputStream(it)?.use { os ->
+                    ScheduleExporter.exportSchedule(context, os)
+                    Toast.makeText(context, "Schedule exported as .lec file", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.openInputStream(it)?.use { `is` ->
+                    val weeks = ScheduleExporter.parseLecFile(`is`)
+                    val conflicts = ScheduleExporter.findConflicts(context, weeks)
+                    if (conflicts.isNotEmpty()) {
+                        pendingImportWeeks = weeks
+                        showConflictDialog = conflicts
+                    } else {
+                        ScheduleExporter.importWeeks(context, weeks)
+                        Toast.makeText(context, "Schedule imported successfully", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    if (showConflictDialog != null && pendingImportWeeks != null) {
+        AlertDialog(
+            onDismissRequest = { 
+                showConflictDialog = null
+                pendingImportWeeks = null
+            },
+            title = { Text("Time Conflicts Found") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("The following classes clash with your existing schedule:")
+                    showConflictDialog!!.forEach { (newW: Week, existing: Week) ->
+                        Text("• ${newW.subject} (${newW.fragment} ${TimeUtils.formatTo12Hour(newW.fromTime)}) clashes with ${existing.subject}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("How would you like to proceed?")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    // Keep New: Replace existing clashing slots
+                    val db = DbHelper(context)
+                    val existingToReplace: List<Week> = showConflictDialog!!.map { it.second }
+                    existingToReplace.forEach { db.deleteWeekById(it) }
+                    ScheduleExporter.importWeeks(context, pendingImportWeeks!!)
+                    Toast.makeText(context, "Imported new schedule (replaced clashing slots)", Toast.LENGTH_SHORT).show()
+                    showConflictDialog = null
+                    pendingImportWeeks = null
+                }) {
+                    Text("Keep New")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    // Keep Existing: Import only non-clashing slots
+                    val clashingNew: List<Week> = showConflictDialog!!.map { it.first }
+                    val nonClashing = pendingImportWeeks!!.filter { it !in clashingNew }
+                    if (nonClashing.isNotEmpty()) {
+                        ScheduleExporter.importWeeks(context, nonClashing)
+                        Toast.makeText(context, "Imported non-clashing slots", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "All slots clashed, nothing imported", Toast.LENGTH_SHORT).show()
+                    }
+                    showConflictDialog = null
+                    pendingImportWeeks = null
+                }) {
+                    Text("Keep Existing")
+                }
+            }
+        )
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -297,6 +391,38 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                                     }
                                 )
                             }
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            SettingsSection(title = "Backup & Restore") {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Import or export your schedule as a .lec file to share with others or keep a backup.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { exportLauncher.launch("timetable.lec") },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Export Schedule")
+                        }
+                        Button(
+                            onClick = { importLauncher.launch(arrayOf("*/*")) },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Import Schedule")
                         }
                     }
                 }

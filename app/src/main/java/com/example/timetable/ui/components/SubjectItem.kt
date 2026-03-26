@@ -1,5 +1,8 @@
 package com.example.timetable.ui.components
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -10,11 +13,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timetable.model.Week
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.ui.viewmodel.MainViewModel
+import com.example.timetable.utils.ScheduleExporter
 import com.example.timetable.utils.TimeUtils
 import java.util.Calendar
 import com.example.timetable.ui.screens.getAttendanceColor
@@ -28,12 +33,30 @@ fun SubjectItem(
     onMarkAttendance: (Int, String, String) -> Unit,
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {},
+    showRoom: Boolean = true,
+    showTeacher: Boolean = true,
     viewModel: MainViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val subjectColor = if (subject.color != 0) Color(subject.color) else MaterialTheme.colorScheme.primary
     val containerColor = themedContainerColor(subjectColor)
     val contentColor = contentColorFor(containerColor)
     var showMenu by remember { mutableStateOf(false) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.openOutputStream(it)?.use { os ->
+                    ScheduleExporter.exportSubject(context, subject.subject ?: "", os)
+                    Toast.makeText(context, "Subject schedule exported", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     val subjectDetails = viewModel.allSubjects.find { it.name == subject.subject }
     val attendanceStatus = if (attendanceEnabled) viewModel.todayAttendance[subject.id] else null
@@ -91,11 +114,21 @@ fun SubjectItem(
                             .background(subjectColor, CircleShape)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = subject.subject ?: "",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = contentColor
-                    )
+                    Column {
+                        Text(
+                            text = subject.subject ?: "",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = contentColor
+                        )
+                        if (showTeacher && !subject.teacher.isNullOrBlank()) {
+                            Text(
+                                text = subject.teacher,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = contentColor.copy(alpha = 0.7f),
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
                 
                 Box {
@@ -107,7 +140,7 @@ fun SubjectItem(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Edit Slot") },
+                            text = { Text("Edit") },
                             onClick = {
                                 showMenu = false
                                 onEdit()
@@ -115,12 +148,20 @@ fun SubjectItem(
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete Slot") },
+                            text = { Text("Delete") },
                             onClick = {
                                 showMenu = false
                                 onDelete()
                             },
                             leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Share Subject") },
+                            onClick = {
+                                showMenu = false
+                                exportLauncher.launch("${subject.subject}.lec")
+                            },
+                            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) }
                         )
                         HorizontalDivider()
                         DropdownMenuItem(
@@ -135,7 +176,7 @@ fun SubjectItem(
                 }
             }
             if (!subject.fromTime.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(if (showTeacher && !subject.teacher.isNullOrBlank()) 4.dp else 8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.AccessTime,
@@ -151,7 +192,7 @@ fun SubjectItem(
                     )
                 }
             }
-            if (!subject.room.isNullOrBlank()) {
+            if (showRoom && !subject.room.isNullOrBlank()) {
                 if (subject.fromTime.isNullOrBlank()) Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
