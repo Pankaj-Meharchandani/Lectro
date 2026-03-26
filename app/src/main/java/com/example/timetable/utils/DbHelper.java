@@ -719,9 +719,62 @@ public class DbHelper extends SQLiteOpenHelper {
 
     public void updateSubjectName(int id, String newName) {
         SQLiteDatabase db = this.getWritableDatabase();
+        String oldName = null;
+        Cursor cursor = db.query(SUBJECTS, new String[]{SUBJECTS_NAME}, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+        if (cursor.moveToFirst()) {
+            oldName = getStringChecked(cursor, SUBJECTS_NAME);
+        }
+        cursor.close();
+
         ContentValues values = new ContentValues();
         values.put(SUBJECTS_NAME, newName);
         db.update(SUBJECTS, values, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)});
+
+        if (oldName != null && !oldName.equals(newName)) {
+            ContentValues cascade = new ContentValues();
+            cascade.put(WEEK_SUBJECT, newName);
+            db.update(TIMETABLE, cascade, WEEK_SUBJECT + "=?", new String[]{oldName});
+
+            cascade.clear();
+            cascade.put(HOMEWORKS_SUBJECT, newName);
+            db.update(HOMEWORKS, cascade, HOMEWORKS_SUBJECT + "=?", new String[]{oldName});
+
+            cascade.clear();
+            cascade.put(EXAMS_SUBJECT, newName);
+            db.update(EXAMS, cascade, EXAMS_SUBJECT + "=?", new String[]{oldName});
+        }
+        db.close();
+    }
+
+    public void updateSubject(int id, String name, int color, String teacher, String room) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        String oldName = null;
+        Cursor cursor = db.query(SUBJECTS, new String[]{SUBJECTS_NAME}, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+        if (cursor.moveToFirst()) {
+            oldName = getStringChecked(cursor, SUBJECTS_NAME);
+        }
+        cursor.close();
+
+        ContentValues values = new ContentValues();
+        values.put(SUBJECTS_NAME, name);
+        values.put(SUBJECTS_COLOR, color);
+        values.put(SUBJECTS_TEACHER, teacher);
+        values.put(SUBJECTS_ROOM, room);
+        db.update(SUBJECTS, values, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)});
+
+        if (oldName != null && !oldName.equals(name)) {
+            ContentValues cascade = new ContentValues();
+            cascade.put(WEEK_SUBJECT, name);
+            db.update(TIMETABLE, cascade, WEEK_SUBJECT + "=?", new String[]{oldName});
+
+            cascade.clear();
+            cascade.put(HOMEWORKS_SUBJECT, name);
+            db.update(HOMEWORKS, cascade, HOMEWORKS_SUBJECT + "=?", new String[]{oldName});
+
+            cascade.clear();
+            cascade.put(EXAMS_SUBJECT, name);
+            db.update(EXAMS, cascade, EXAMS_SUBJECT + "=?", new String[]{oldName});
+        }
         db.close();
     }
 
@@ -735,7 +788,21 @@ public class DbHelper extends SQLiteOpenHelper {
 
     public void deleteSubjectById(int id) {
         SQLiteDatabase db = this.getWritableDatabase();
+        String name = null;
+        Cursor cursor = db.query(SUBJECTS, new String[]{SUBJECTS_NAME}, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+        if (cursor.moveToFirst()) {
+            name = getStringChecked(cursor, SUBJECTS_NAME);
+        }
+        cursor.close();
+
         db.delete(SUBJECTS, SUBJECTS_ID + " = ?", new String[]{String.valueOf(id)});
+        db.delete(NOTES, NOTES_SUBJECT_ID + " = ?", new String[]{String.valueOf(id)});
+        db.delete(MATERIALS, MATERIALS_SUBJECT_ID + " = ?", new String[]{String.valueOf(id)});
+        if (name != null) {
+            db.delete(TIMETABLE, WEEK_SUBJECT + " = ?", new String[]{name});
+            db.delete(HOMEWORKS, HOMEWORKS_SUBJECT + " = ?", new String[]{name});
+            db.delete(EXAMS, EXAMS_SUBJECT + " = ?", new String[]{name});
+        }
         db.close();
     }
 

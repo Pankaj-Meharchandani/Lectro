@@ -187,15 +187,27 @@ fun AddSubjectDialog(
                     subject.isBlank() -> "Please enter Subject"
                     fromTime.isBlank() -> "Please select Start Time"
                     toTime.isBlank() -> "Please select End Time"
-                    fromTime >= toTime -> "Start Time must be before End Time"
+                    // fromTime >= toTime -> "Start Time must be before End Time"
                     existingSlots.any { existing ->
-                        existing.id != initialWeek.id &&
-                        fromTime < (existing.toTime ?: "") &&
-                        toTime > (existing.fromTime ?: "")
+                        val fromMin = TimeUtils.timeToMinutes(fromTime)
+                        var toMin = TimeUtils.timeToMinutes(toTime)
+                        if (toMin <= fromMin) toMin += 24 * 60 // Allow midnight crossing
+                        
+                        val exFrom = TimeUtils.timeToMinutes(existing.fromTime)
+                        var exTo = TimeUtils.timeToMinutes(existing.toTime)
+                        if (exTo <= exFrom) exTo += 24 * 60
+
+                        existing.id != initialWeek.id && fromMin < exTo && toMin > exFrom
                     } -> "Time clashes with another class: ${existingSlots.find { existing -> 
-                        existing.id != initialWeek.id &&
-                        fromTime < (existing.toTime ?: "") &&
-                        toTime > (existing.fromTime ?: "")
+                        val fromMin = TimeUtils.timeToMinutes(fromTime)
+                        var toMin = TimeUtils.timeToMinutes(toTime)
+                        if (toMin <= fromMin) toMin += 24 * 60
+                        
+                        val exFrom = TimeUtils.timeToMinutes(existing.fromTime)
+                        var exTo = TimeUtils.timeToMinutes(existing.toTime)
+                        if (exTo <= exFrom) exTo += 24 * 60
+
+                        existing.id != initialWeek.id && fromMin < exTo && toMin > exFrom
                     }?.subject}"
                     else -> null
                 }

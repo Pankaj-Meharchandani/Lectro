@@ -40,8 +40,10 @@ import com.example.timetable.model.Subject
 import com.example.timetable.model.Week
 import com.example.timetable.ui.components.ColorPickerRow
 import com.example.timetable.ui.components.NoteItem
+import com.example.timetable.ui.components.EditSubjectDialog
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.ScheduleExporter
 import java.text.SimpleDateFormat
 import java.util.*
 import com.example.timetable.ui.screens.getAttendanceColor
@@ -150,6 +152,11 @@ class SubjectDetailViewModel(application: Application) : AndroidViewModel(applic
             subject?.let { loadMaterials(it.id) }
         }
     }
+
+    fun updateSubject(updated: Subject) {
+        db.updateSubject(updated.id, updated.name, updated.color, updated.teacher, updated.room)
+        loadSubjectData(updated.id)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -165,6 +172,22 @@ fun SubjectDetailScreen(
     var materialToEdit by remember { mutableStateOf<Material?>(null) }
     var noteToDelete by remember { mutableStateOf<Note?>(null) }
     var materialToDelete by remember { mutableStateOf<Material?>(null) }
+    var showEditSubjectDialog by remember { mutableStateOf(false) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        uri?.let {
+            try {
+                context.contentResolver.openOutputStream(it)?.use { os ->
+                    ScheduleExporter.exportSubject(context, viewModel.subject?.name ?: "", os)
+                    android.widget.Toast.makeText(context, "Subject schedule exported", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Export failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     val openMaterial = { material: Material ->
         try {
@@ -223,6 +246,14 @@ fun SubjectDetailScreen(
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { exportLauncher.launch("${subject.name}.lec") }) {
+                            Icon(Icons.Default.Share, contentDescription = "Share")
+                        }
+                        IconButton(onClick = { showEditSubjectDialog = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -485,6 +516,17 @@ fun SubjectDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { materialToDelete = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showEditSubjectDialog) {
+        EditSubjectDialog(
+            subject = subject!!,
+            onDismiss = { showEditSubjectDialog = false },
+            onSave = { updated ->
+                viewModel.updateSubject(updated)
+                showEditSubjectDialog = false
             }
         )
     }

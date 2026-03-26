@@ -128,7 +128,7 @@ fun SubjectItem(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Edit Slot") },
+                            text = { Text("Edit") },
                             onClick = {
                                 showMenu = false
                                 onEdit()
@@ -136,7 +136,7 @@ fun SubjectItem(
                             leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete Slot") },
+                            text = { Text("Delete") },
                             onClick = {
                                 showMenu = false
                                 onDelete()
