@@ -387,6 +387,52 @@ public class DbHelper extends SQLiteOpenHelper {
         return weeklist;
     }
 
+    public ArrayList<Week> getAllWeeks() {
+        ArrayList<Week> weeklist = new ArrayList<>();
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM " + TIMETABLE + " ORDER BY " + WEEK_FRAGMENT + ", " + WEEK_FROM_TIME + " ASC", null);
+        if (cursor.moveToFirst()) {
+            do {
+                Week week = new Week();
+                week.setId(getIntChecked(cursor, WEEK_ID));
+                week.setSubject(getStringChecked(cursor, WEEK_SUBJECT));
+                week.setFragment(getStringChecked(cursor, WEEK_FRAGMENT));
+                week.setTeacher(getStringChecked(cursor, WEEK_TEACHER));
+                week.setRoom(getStringChecked(cursor, WEEK_ROOM));
+                week.setFromTime(getStringChecked(cursor, WEEK_FROM_TIME));
+                week.setToTime(getStringChecked(cursor, WEEK_TO_TIME));
+                week.setColor(getIntChecked(cursor, WEEK_COLOR));
+                weeklist.add(week);
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        db.close();
+        return weeklist;
+    }
+
+    public ArrayList<Week> getWeeksBySubject(String subject) {
+        ArrayList<Week> weeklist = new ArrayList<>();
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM " + TIMETABLE + " WHERE " + WEEK_SUBJECT + " = ? ORDER BY " + WEEK_FRAGMENT + ", " + WEEK_FROM_TIME + " ASC", new String[]{subject});
+        if (cursor.moveToFirst()) {
+            do {
+                Week week = new Week();
+                week.setId(getIntChecked(cursor, WEEK_ID));
+                week.setSubject(getStringChecked(cursor, WEEK_SUBJECT));
+                week.setFragment(getStringChecked(cursor, WEEK_FRAGMENT));
+                week.setTeacher(getStringChecked(cursor, WEEK_TEACHER));
+                week.setRoom(getStringChecked(cursor, WEEK_ROOM));
+                week.setFromTime(getStringChecked(cursor, WEEK_FROM_TIME));
+                week.setToTime(getStringChecked(cursor, WEEK_TO_TIME));
+                week.setColor(getIntChecked(cursor, WEEK_COLOR));
+                weeklist.add(week);
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        db.close();
+        return weeklist;
+    }
+
     /**
      * Methods for Assignments activity
      **/

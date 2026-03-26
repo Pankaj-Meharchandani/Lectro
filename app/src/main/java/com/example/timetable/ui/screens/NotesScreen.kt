@@ -119,7 +119,7 @@ fun NotesScreen(
                         attendanceEnabled = false,
                         minAttendance = minAttendance,
                         onClick = { onSubjectClick(subject.id) },
-                        onMarkAttendance = { _, _, _ -> }
+                        onMarkAttendance = { _: Int, _: String, _: String -> }
                     )
                     IconButton(
                         onClick = { showMenu = true },
