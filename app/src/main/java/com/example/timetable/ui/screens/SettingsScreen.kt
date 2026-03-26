@@ -15,8 +15,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
@@ -172,19 +175,74 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = viewModel(
                 showConflictDialog = null
                 pendingImportWeeks = null
             },
-            title = { Text("Time Conflicts Found") },
+            title = { Text("Schedule Conflicts") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("The following classes clash with your existing schedule:")
-                    showConflictDialog!!.forEach { (newW: Week, existing: Week) ->
-                        Text("• ${newW.subject} (${newW.fragment} ${TimeUtils.formatTo12Hour(newW.fromTime)}) clashes with ${existing.subject}", style = MaterialTheme.typography.bodySmall)
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "The following classes in the file overlap with your current schedule. Choose which version to keep.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    val conflictsByDay = showConflictDialog!!.groupBy { it.first.fragment }
+                    
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        conflictsByDay.forEach { (day, dayConflicts) ->
+                            Column {
+                                Text(
+                                    text = day ?: "Unknown Day",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                )
+                                dayConflicts.forEach { (newW, existing) ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                        )
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.outline, CircleShape))
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text("Current: ${existing.subject}", style = MaterialTheme.typography.bodySmall)
+                                            }
+                                            Text(
+                                                text = "${TimeUtils.formatTo12Hour(existing.fromTime)} - ${TimeUtils.formatTo12Hour(existing.toTime)}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(start = 16.dp)
+                                            )
+                                            
+                                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                                            
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(modifier = Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text("Importing: ${newW.subject}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                            }
+                                            Text(
+                                                text = "${TimeUtils.formatTo12Hour(newW.fromTime)} - ${TimeUtils.formatTo12Hour(newW.toTime)}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(start = 16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("How would you like to proceed?")
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     // Keep New: Replace existing clashing slots
                     val db = DbHelper(context)
                     val existingToReplace: List<Week> = showConflictDialog!!.map { it.second }
