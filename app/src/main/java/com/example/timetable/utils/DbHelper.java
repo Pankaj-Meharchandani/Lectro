@@ -776,6 +776,19 @@ public class DbHelper extends SQLiteOpenHelper {
         values.put(SUBJECTS_ROOM, room);
         db.update(SUBJECTS, values, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)});
 
+        String targetName = oldName != null ? oldName : name;
+        ContentValues colorCascade = new ContentValues();
+        colorCascade.put(WEEK_COLOR, color);
+        db.update(TIMETABLE, colorCascade, WEEK_SUBJECT + "=?", new String[]{targetName});
+
+        colorCascade.clear();
+        colorCascade.put(HOMEWORKS_COLOR, color);
+        db.update(HOMEWORKS, colorCascade, HOMEWORKS_SUBJECT + "=?", new String[]{targetName});
+
+        colorCascade.clear();
+        colorCascade.put(EXAMS_COLOR, color);
+        db.update(EXAMS, colorCascade, EXAMS_SUBJECT + "=?", new String[]{targetName});
+
         if (oldName != null && !oldName.equals(name)) {
             ContentValues cascade = new ContentValues();
             cascade.put(WEEK_SUBJECT, name);

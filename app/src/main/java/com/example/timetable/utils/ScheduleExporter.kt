@@ -25,54 +25,98 @@ object ScheduleExporter {
 
     private fun exportData(subjects: List<com.example.timetable.model.Subject>, weeks: List<Week>, outputStream: OutputStream) {
         val root = JSONObject()
-        
         val subjectsArray = JSONArray()
+        
         for (s in subjects) {
-            subjectsArray.put(JSONObject().apply {
-                put("name", s.name)
-                put("color", s.color)
-                put("teacher", s.teacher)
-                put("room", s.room)
-            })
+            val subjectObj = JSONObject()
+            subjectObj.put("n", s.name)
+            subjectObj.put("c", s.color)
+            
+            // Find unique teachers for this subject in the exported weeks
+            val subjectWeeks = weeks.filter { it.subject == s.name }
+            val uniqueTeachers = subjectWeeks.mapNotNull { it.teacher }.filter { it.isNotBlank() }.distinct()
+            
+            val teacherMap = JSONObject()
+            val teacherVarMap = mutableMapOf<String, String>()
+            uniqueTeachers.forEachIndexed { index, name ->
+                val varName = getVarName(index)
+                teacherMap.put(varName, name)
+                teacherVarMap[name] = varName
+            }
+            subjectObj.put("t", teacherMap)
+            
+            val slotsArray = JSONArray()
+            for (week in subjectWeeks) {
+                slotsArray.put(JSONObject().apply {
+                    put("d", week.fragment)
+                    put("f", week.fromTime)
+                    put("t", week.toTime)
+                    put("r", week.room)
+                    put("v", teacherVarMap[week.teacher] ?: "")
+                })
+            }
+            subjectObj.put("s", slotsArray)
+            subjectsArray.put(subjectObj)
         }
         root.put("subjects", subjectsArray)
-
-        val scheduleArray = JSONArray()
-        for (week in weeks) {
-            scheduleArray.put(JSONObject().apply {
-                put("subject", week.subject)
-                put("fragment", week.fragment)
-                put("teacher", week.teacher)
-                put("room", week.room)
-                put("fromtime", week.fromTime)
-                put("totime", week.toTime)
-                put("color", week.color)
-            })
-        }
-        root.put("schedule", scheduleArray)
-
         outputStream.use { it.write(root.toString(2).toByteArray()) }
+    }
+
+    private fun getVarName(index: Int): String {
+        var n = index
+        var name = ""
+        do {
+            name = ('a' + (n % 26)).toString() + name
+            n = n / 26 - 1
+        } while (n >= 0)
+        return name
     }
 
     fun parseLecFile(inputStream: InputStream): List<Week> {
         val jsonString = inputStream.bufferedReader().use { it.readText() }
         val root = try { JSONObject(jsonString) } catch (e: Exception) { null }
-        
         val weeks = mutableListOf<Week>()
         
-        if (root != null && root.has("schedule")) {
-            // New optimized format
+        if (root != null && root.has("subjects")) {
+            // Optimized format
+            val subjectsArray = root.getJSONArray("subjects")
+            for (i in 0 until subjectsArray.length()) {
+                val sObj = subjectsArray.getJSONObject(i)
+                val name = sObj.optString("n")
+                val color = sObj.optInt("c")
+                val tMap = sObj.optJSONObject("t") ?: JSONObject()
+                val slots = sObj.optJSONArray("s") ?: JSONArray()
+                
+                for (j in 0 until slots.length()) {
+                    val slot = slots.getJSONObject(j)
+                    val teacherVar = slot.optString("v")
+                    val teacherName = tMap.optString(teacherVar, "")
+                    
+                    weeks.add(Week().apply {
+                        subject = name
+                        fragment = slot.optString("d")
+                        teacher = teacherName
+                        room = slot.optString("r")
+                        setFromTime(slot.optString("f"))
+                        setToTime(slot.optString("t"))
+                        this.color = color
+                    })
+                }
+            }
+        } else if (root != null && root.has("schedule")) {
+            // Middle format
             val scheduleArray = root.getJSONArray("schedule")
             for (i in 0 until scheduleArray.length()) {
-                val jsonObject = scheduleArray.getJSONObject(i)
-                weeks.add(parseWeek(jsonObject))
+                weeks.add(parseWeek(scheduleArray.getJSONObject(i)))
             }
         } else {
-            // Legacy/Simple format (just an array of weeks)
-            val jsonArray = JSONArray(jsonString)
-            for (i in 0 until jsonArray.length()) {
-                weeks.add(parseWeek(jsonArray.getJSONObject(i)))
-            }
+            // Legacy/Simple format (array of weeks)
+            try {
+                val jsonArray = JSONArray(jsonString)
+                for (i in 0 until jsonArray.length()) {
+                    weeks.add(parseWeek(jsonArray.getJSONObject(i)))
+                }
+            } catch (e: Exception) {}
         }
         return weeks
     }
@@ -92,8 +136,6 @@ object ScheduleExporter {
     fun findConflicts(context: Context, newWeeks: List<Week>): List<Pair<Week, Week>> {
         val dbHelper = DbHelper(context)
         val conflicts = mutableListOf<Pair<Week, Week>>()
-        
-        // Group new weeks by fragment for easier lookup
         val newByDay = newWeeks.groupBy { it.fragment }
         
         for ((day, weeks) in newByDay) {
