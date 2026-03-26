@@ -45,7 +45,14 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadSubjects() {
         allSubjects.clear()
-        allSubjects.addAll(db.getAllSubjects())
+        val subs = db.allSubjects
+        for (sub in subs) {
+            val combinedTeachers = db.getTeachersForSubject(sub.name)
+            if (!combinedTeachers.isNullOrBlank()) {
+                sub.teacher = combinedTeachers
+            }
+        }
+        allSubjects.addAll(subs)
         subjectNames.clear()
         subjectNames.addAll(db.getSubjectsList())
     }
@@ -136,7 +143,8 @@ fun NotesScreen(
                         onClick = { onSubjectClick(subject.id) },
                         onMarkAttendance = { _: Int, _: String, _: String -> },
                         onEdit = { subjectToEdit = subject },
-                        onDelete = { subjectToDelete = subject }
+                        onDelete = { subjectToDelete = subject },
+                        showRoom = false
                     )
                     IconButton(
                         onClick = { showReorderMenu = true },

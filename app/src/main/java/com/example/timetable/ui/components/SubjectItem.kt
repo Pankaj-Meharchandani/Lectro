@@ -33,6 +33,8 @@ fun SubjectItem(
     onMarkAttendance: (Int, String, String) -> Unit,
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {},
+    showRoom: Boolean = true,
+    showTeacher: Boolean = true,
     viewModel: MainViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -112,11 +114,21 @@ fun SubjectItem(
                             .background(subjectColor, CircleShape)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = subject.subject ?: "",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = contentColor
-                    )
+                    Column {
+                        Text(
+                            text = subject.subject ?: "",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = contentColor
+                        )
+                        if (showTeacher && !subject.teacher.isNullOrBlank()) {
+                            Text(
+                                text = subject.teacher,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = contentColor.copy(alpha = 0.7f),
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
                 
                 Box {
@@ -164,7 +176,7 @@ fun SubjectItem(
                 }
             }
             if (!subject.fromTime.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(if (showTeacher && !subject.teacher.isNullOrBlank()) 4.dp else 8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.AccessTime,
@@ -180,7 +192,7 @@ fun SubjectItem(
                     )
                 }
             }
-            if (!subject.room.isNullOrBlank()) {
+            if (showRoom && !subject.room.isNullOrBlank()) {
                 if (subject.fromTime.isNullOrBlank()) Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(

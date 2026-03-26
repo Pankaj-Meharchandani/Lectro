@@ -717,6 +717,20 @@ public class DbHelper extends SQLiteOpenHelper {
         return subjects;
     }
 
+    public String getTeachersForSubject(String subjectName) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(true, TIMETABLE, new String[]{WEEK_TEACHER}, WEEK_SUBJECT + "=?", new String[]{subjectName}, null, null, null, null);
+        ArrayList<String> teachers = new ArrayList<>();
+        while (cursor.moveToNext()) {
+            String t = cursor.getString(0);
+            if (t != null && !t.isEmpty()) teachers.add(t);
+        }
+        cursor.close();
+        db.close();
+        if (teachers.isEmpty()) return null;
+        return android.text.TextUtils.join(", ", teachers);
+    }
+
     public void updateSubjectName(int id, String newName) {
         SQLiteDatabase db = this.getWritableDatabase();
         String oldName = null;
