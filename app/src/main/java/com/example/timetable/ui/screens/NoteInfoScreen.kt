@@ -120,7 +120,7 @@ private fun getFormattingState(textValue: TextFieldValue): FormattingState {
     if (text.isEmpty()) return FormattingState()
     
     val cursor = selection.start
-    val lineStart = text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)) + 1
+    val lineStart = if (cursor == 0) 0 else text.substring(0, cursor).lastIndexOf('\n') + 1
     val lineEnd = text.indexOf('\n', cursor).let { if (it == -1) text.length else it }
     val line = text.substring(lineStart, lineEnd)
     

@@ -73,6 +73,7 @@ object PdfGenerator {
             textSize = 12f
             color = Color.BLACK
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            isAntiAlias = true
         }
 
         val pageWidth = 595
@@ -100,23 +101,25 @@ object PdfGenerator {
                 textSize = 10f
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                 textAlign = Paint.Align.RIGHT
+                isAntiAlias = true
             }
             canvas.drawText(subjectName, pageWidth - margin, currentY, subPaint)
         }
 
-        currentY += 20f
+        currentY += 25f
 
         // Draw Note Color indicator
         if (note.color != 0) {
             paint.color = note.color
-            canvas.drawRect(margin, currentY, margin + 10f, currentY + 30f, paint)
+            canvas.drawRect(margin, currentY, margin + 10f, currentY + 35f, paint)
         }
 
         // Draw Title
-        val titleLayout = StaticLayout.Builder.obtain(note.title, 0, note.title.length, textPaint.apply { 
-            textSize = 24f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        }, (contentWidth - 20f).toInt())
+        val titleBuilder = SpannableStringBuilder(note.title)
+        titleBuilder.setSpan(StyleSpan(Typeface.BOLD), 0, titleBuilder.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        titleBuilder.setSpan(AbsoluteSizeSpan(24, true), 0, titleBuilder.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        
+        val titleLayout = StaticLayout.Builder.obtain(titleBuilder, 0, titleBuilder.length, textPaint, (contentWidth - 20f).toInt())
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .build()
         
@@ -124,32 +127,28 @@ object PdfGenerator {
         canvas.translate(margin + 20f, currentY)
         titleLayout.draw(canvas)
         canvas.restore()
-        currentY += titleLayout.height + 30f
+        currentY += titleLayout.height + 25f
 
         // Draw Divider
         paint.color = Color.LTGRAY
         canvas.drawLine(margin, currentY, pageWidth - margin, currentY, paint)
-        currentY += 20f
+        currentY += 25f
 
         // Process content (Text and Images)
-        textPaint.textSize = 12f
-        textPaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-        
         val contentLines = note.text.split('\n')
         for (line in contentLines) {
-            if (line.contains("[img:")) {
+            val trimmedLine = line.trim()
+            if (trimmedLine.startsWith("[img:")) {
                 val regex = Regex("\\[img:(.*?)]")
-                val match = regex.find(line)
+                val match = regex.find(trimmedLine)
                 if (match != null) {
                     val uriString = match.groupValues[1]
                     val bitmap = loadBitmapFromUri(context, uriString)
                     if (bitmap != null) {
-                        // Calculate width-preserving scale
                         val scale = contentWidth / bitmap.width.toFloat()
                         val scaledHeight = bitmap.height * scale
                         
-                        // New page if image doesn't fit
-                        if (currentY + scaledHeight > pageHeight - margin - 30f) {
+                        if (currentY + scaledHeight > pageHeight - margin - 40f) {
                             drawFooter(canvas, pageWidth, pageHeight, pageNumber, margin)
                             pdfDocument.finishPage(myPage)
                             pageNumber++
@@ -161,73 +160,76 @@ object PdfGenerator {
                         
                         val destRect = RectF(margin, currentY, margin + contentWidth, currentY + scaledHeight)
                         canvas.drawBitmap(bitmap, null, destRect, null)
-                        currentY += scaledHeight + 15f
+                        currentY += scaledHeight + 20f
                         bitmap.recycle()
+                        continue
                     }
                 }
-            } else if (line.trim() == "---") {
-                // Horizontal Rule
+            }
+            
+            if (trimmedLine == "---") {
                 paint.color = Color.LTGRAY
                 canvas.drawLine(margin, currentY + 10f, pageWidth - margin, currentY + 10f, paint)
-                currentY += 20f
-            } else {
-                val spannable = parseMarkdownLine(line)
-                if (spannable.isEmpty()) {
-                    currentY += 12f // Spacing for empty lines (Enter)
+                currentY += 25f
+                continue
+            }
+
+            val spannable = parseMarkdownLine(line)
+            if (spannable.isEmpty()) {
+                currentY += 15f // Gap for empty lines
+                continue
+            }
+
+            val lineLayout = StaticLayout.Builder.obtain(spannable, 0, spannable.length, textPaint, contentWidth.toInt())
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setLineSpacing(6f, 1.2f)
+                .build()
+
+            var startL = 0
+            while (startL < lineLayout.lineCount) {
+                val availH = pageHeight - margin - currentY - 40f
+                var linesInPage = 0
+                var heightInPage = 0f
+                
+                while (startL + linesInPage < lineLayout.lineCount) {
+                    val h = lineLayout.getLineBottom(startL + linesInPage) - lineLayout.getLineTop(startL + linesInPage)
+                    if (availH < heightInPage + h) break
+                    heightInPage += h
+                    linesInPage++
+                }
+
+                if (linesInPage == 0) {
+                    drawFooter(canvas, pageWidth, pageHeight, pageNumber, margin)
+                    pdfDocument.finishPage(myPage)
+                    pageNumber++
+                    myPageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create()
+                    myPage = pdfDocument.startPage(myPageInfo)
+                    canvas = myPage.canvas
+                    currentY = margin
                     continue
                 }
 
-                val lineLayout = StaticLayout.Builder.obtain(spannable, 0, spannable.length, textPaint, contentWidth.toInt())
-                    .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                    .setLineSpacing(6f, 1.2f)
-                    .build()
+                canvas.save()
+                canvas.translate(margin, currentY)
+                canvas.clipRect(0f, 0f, contentWidth, heightInPage)
+                canvas.translate(0f, -lineLayout.getLineTop(startL).toFloat())
+                lineLayout.draw(canvas)
+                canvas.restore()
 
-                var startL = 0
-                while (startL < lineLayout.lineCount) {
-                    val availH = pageHeight - margin - currentY - 30f
-                    var linesInPage = 0
-                    var heightInPage = 0f
-                    
-                    while (startL + linesInPage < lineLayout.lineCount) {
-                        val h = lineLayout.getLineBottom(startL + linesInPage) - lineLayout.getLineTop(startL + linesInPage)
-                        if (availH < heightInPage + h) break
-                        heightInPage += h
-                        linesInPage++
-                    }
+                startL += linesInPage
+                currentY += heightInPage
 
-                    if (linesInPage == 0) {
-                        drawFooter(canvas, pageWidth, pageHeight, pageNumber, margin)
-                        pdfDocument.finishPage(myPage)
-                        pageNumber++
-                        myPageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create()
-                        myPage = pdfDocument.startPage(myPageInfo)
-                        canvas = myPage.canvas
-                        currentY = margin
-                        continue
-                    }
-
-                    canvas.save()
-                    canvas.translate(margin, currentY)
-                    canvas.clipRect(0f, 0f, contentWidth, heightInPage)
-                    canvas.translate(0f, -lineLayout.getLineTop(startL).toFloat())
-                    lineLayout.draw(canvas)
-                    canvas.restore()
-
-                    startL += linesInPage
-                    currentY += heightInPage
-
-                    if (startL < lineLayout.lineCount) {
-                        drawFooter(canvas, pageWidth, pageHeight, pageNumber, margin)
-                        pdfDocument.finishPage(myPage)
-                        pageNumber++
-                        myPageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create()
-                        myPage = pdfDocument.startPage(myPageInfo)
-                        canvas = myPage.canvas
-                        currentY = margin
-                    }
+                if (startL < lineLayout.lineCount) {
+                    drawFooter(canvas, pageWidth, pageHeight, pageNumber, margin)
+                    pdfDocument.finishPage(myPage)
+                    pageNumber++
+                    myPageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create()
+                    myPage = pdfDocument.startPage(myPageInfo)
+                    canvas = myPage.canvas
+                    currentY = margin
                 }
-                currentY += 2f // Extra gap after each newline processed
             }
+            currentY += 4f // Extra paragraph gap
         }
 
         drawFooter(canvas, pageWidth, pageHeight, pageNumber, margin)
@@ -237,35 +239,35 @@ object PdfGenerator {
 
     private fun parseMarkdownLine(line: String): SpannableStringBuilder {
         val builder = SpannableStringBuilder()
-        val current = line
+        val trimmed = line.trimStart()
 
         when {
-            current.startsWith("# ") -> {
-                appendStyled(builder, current.substring(2), AbsoluteSizeSpan(20, true), StyleSpan(Typeface.BOLD))
+            trimmed.startsWith("# ") -> {
+                appendStyled(builder, trimmed.substring(2), AbsoluteSizeSpan(20, true), StyleSpan(Typeface.BOLD))
             }
-            current.startsWith("## ") -> {
-                appendStyled(builder, current.substring(3), AbsoluteSizeSpan(18, true), StyleSpan(Typeface.BOLD))
+            trimmed.startsWith("## ") -> {
+                appendStyled(builder, trimmed.substring(3), AbsoluteSizeSpan(18, true), StyleSpan(Typeface.BOLD))
             }
-            current.startsWith("### ") -> {
-                appendStyled(builder, current.substring(4), AbsoluteSizeSpan(16, true), StyleSpan(Typeface.BOLD))
+            trimmed.startsWith("### ") -> {
+                appendStyled(builder, trimmed.substring(4), AbsoluteSizeSpan(16, true), StyleSpan(Typeface.BOLD))
             }
-            current.startsWith("> ") -> {
+            trimmed.startsWith("> ") -> {
                 appendStyled(builder, "│ ", ForegroundColorSpan(Color.parseColor("#9575CD")))
-                appendStyled(builder, current.substring(2), StyleSpan(Typeface.ITALIC), ForegroundColorSpan(Color.DKGRAY))
+                appendStyled(builder, trimmed.substring(2), StyleSpan(Typeface.ITALIC), ForegroundColorSpan(Color.DKGRAY))
             }
-            current.startsWith("- [ ] ") -> {
+            trimmed.startsWith("- [ ] ") -> {
                 builder.append("☐ ")
-                parseInlineMarkdown(builder, current.substring(6))
+                parseInlineMarkdown(builder, trimmed.substring(6))
             }
-            current.startsWith("- [x] ") || current.startsWith("- [X] ") -> {
+            trimmed.startsWith("- [x] ") || trimmed.startsWith("- [X] ") -> {
                 builder.append("☑ ")
                 val start = builder.length
-                parseInlineMarkdown(builder, current.substring(6))
+                parseInlineMarkdown(builder, trimmed.substring(6))
                 builder.setSpan(StrikethroughSpan(), start, builder.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 builder.setSpan(ForegroundColorSpan(Color.GRAY), start, builder.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             else -> {
-                parseInlineMarkdown(builder, current)
+                parseInlineMarkdown(builder, line)
             }
         }
         return builder
@@ -329,6 +331,10 @@ object PdfGenerator {
                         i = cp + 1
                     } else { builder.append(text[i]); i++ }
                 }
+                remaining.startsWith("<center>") -> { i += 8 }
+                remaining.startsWith("</center>") -> { i += 9 }
+                remaining.startsWith("<right>") -> { i += 7 }
+                remaining.startsWith("</right>") -> { i += 8 }
                 else -> {
                     builder.append(text[i])
                     i++
@@ -354,6 +360,7 @@ object PdfGenerator {
             color = Color.GRAY
             textSize = 10f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
+            isAntiAlias = true
         }
         canvas.drawText("Page $pageNum", width / 2f - 20f, height - margin / 2f, paint)
         canvas.drawText("Generated by Lectro", margin, height - margin / 2f, paint)
