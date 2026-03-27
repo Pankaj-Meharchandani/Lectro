@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -179,7 +181,16 @@ fun AddTeacherDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.name)) })
                 OutlinedTextField(value = post, onValueChange = { post = it }, label = { Text(stringResource(R.string.post)) })
-                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(stringResource(R.string.phone_number)) })
+                OutlinedTextField(
+                    value = phone, 
+                    onValueChange = { input ->
+                        if (input.all { it.isDigit() || it == ' ' || it == '+' || it == '-' }) {
+                            phone = input
+                        }
+                    }, 
+                    label = { Text(stringResource(R.string.phone_number)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                )
                 OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text(stringResource(R.string.email)) })
                 OutlinedTextField(value = cabinNumber, onValueChange = { cabinNumber = it }, label = { Text(stringResource(R.string.cabin_number)) })
             }
