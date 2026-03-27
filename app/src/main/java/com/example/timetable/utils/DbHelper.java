@@ -836,6 +836,18 @@ public class DbHelper extends SQLiteOpenHelper {
         db.close();
     }
 
+    public String getSubjectName(int id) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(SUBJECTS, new String[]{SUBJECTS_NAME}, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+        String name = null;
+        if (cursor.moveToFirst()) {
+            name = getStringChecked(cursor, SUBJECTS_NAME);
+        }
+        cursor.close();
+        db.close();
+        return name;
+    }
+
     public Week getSubjectDetails(String name) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(SUBJECTS, new String[]{SUBJECTS_COLOR, SUBJECTS_TEACHER, SUBJECTS_ROOM}, SUBJECTS_NAME + "=?", new String[]{name}, null, null, null);
