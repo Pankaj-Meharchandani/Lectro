@@ -131,7 +131,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onNavigateToAbout: () -> Unit,
     viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -489,36 +488,6 @@ fun SettingsScreen(
                         ) {
                             Text("Import Schedule")
                         }
-                    }
-                }
-            }
-
-            HorizontalDivider()
-
-            SettingsSection(title = "About") {
-                Surface(
-                    onClick = onNavigateToAbout,
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(16.dp))
-                            Text("About Lectro", style = MaterialTheme.typography.bodyLarge)
-                        }
-                        Icon(
-                            Icons.AutoMirrored.Filled.Launch,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
                     }
                 }
             }

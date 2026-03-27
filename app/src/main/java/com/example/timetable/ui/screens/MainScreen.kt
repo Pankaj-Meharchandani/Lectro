@@ -1,6 +1,8 @@
 package com.example.timetable.ui.screens
 
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.text.TextUtils
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -28,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -60,6 +63,7 @@ fun MainScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPersonalDetails: () -> Unit,
     onNavigateToAttendance: () -> Unit,
+    onNavigateToAbout: () -> Unit,
     onNavigateToSubjectDetail: (Int) -> Unit,
     viewModel: MainViewModel = viewModel()
 ) {
@@ -238,6 +242,7 @@ fun MainScreen(
                     onNotesClick = onNavigateToNotes,
                     onAttendanceClick = onNavigateToAttendance,
                     onSettingsClick = onNavigateToSettings,
+                    onAboutClick = onNavigateToAbout,
                     personalDetailsEnabled = personalDetailsEnabled,
                     onPersonalDetailsClick = onNavigateToPersonalDetails,
                     onSchoolWebsiteClick = {
@@ -569,60 +574,88 @@ fun NavigationDrawerContent(
     onNotesClick: () -> Unit,
     onAttendanceClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onAboutClick: () -> Unit,
     personalDetailsEnabled: Boolean,
     onPersonalDetailsClick: () -> Unit,
     onSchoolWebsiteClick: () -> Unit,
     onItemClick: () -> Unit
 ) {
-    if (personalDetailsEnabled) {
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.personal_details_files)) },
-            selected = false,
-            onClick = { onPersonalDetailsClick(); onItemClick() },
-            icon = { Icon(Icons.Default.Badge, contentDescription = null) }
-        )
+    val context = LocalContext.current
+    
+    Column(modifier = Modifier.fillMaxHeight()) {
+        Column(modifier = Modifier.weight(1f)) {
+            if (personalDetailsEnabled) {
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.personal_details_files)) },
+                    selected = false,
+                    onClick = { onPersonalDetailsClick(); onItemClick() },
+                    icon = { Icon(Icons.Default.Badge, contentDescription = null) }
+                )
+            }
+            NavigationDrawerItem(
+                label = { Text("Attendance") },
+                selected = false,
+                onClick = { onAttendanceClick(); onItemClick() },
+                icon = { Icon(Icons.Default.DoneAll, contentDescription = null) }
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(id = R.string.school_website)) },
+                selected = false,
+                onClick = { onSchoolWebsiteClick(); onItemClick() },
+                icon = { Icon(Icons.Default.Language, contentDescription = null) }
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(id = R.string.exams)) },
+                selected = false,
+                onClick = { onExamsClick(); onItemClick() },
+                icon = { Icon(Icons.Default.Assignment, contentDescription = null) }
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(id = R.string.teachers)) },
+                selected = false,
+                onClick = { onTeachersClick(); onItemClick() },
+                icon = { Icon(Icons.Default.Person, contentDescription = null) }
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(id = R.string.homeworks)) },
+                selected = false,
+                onClick = { onAssignmentsClick(); onItemClick() },
+                icon = { Icon(Icons.Default.Assignment, contentDescription = null) }
+            )
+            NavigationDrawerItem(
+                label = { Text(stringResource(id = R.string.notes)) },
+                selected = false,
+                onClick = { onNotesClick(); onItemClick() },
+                icon = { Icon(Icons.Default.Note, contentDescription = null) }
+            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            NavigationDrawerItem(
+                label = { Text(stringResource(id = R.string.action_settings)) },
+                selected = false,
+                onClick = { onSettingsClick(); onItemClick() },
+                icon = { Icon(Icons.Default.Settings, contentDescription = null) }
+            )
+        }
+
+        // Bottom Section
+        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            NavigationDrawerItem(
+                label = { Text("Report Issue") },
+                selected = false,
+                onClick = { 
+                    val intent = Intent(Intent.ACTION_VIEW, "https://github.com/Pankaj-Meharchandani/Lectro/issues/new".toUri())
+                    context.startActivity(intent)
+                    onItemClick() 
+                },
+                icon = { Icon(Icons.Default.BugReport, contentDescription = null) }
+            )
+            NavigationDrawerItem(
+                label = { Text("About") },
+                selected = false,
+                onClick = { onAboutClick(); onItemClick() },
+                icon = { Icon(Icons.Default.Info, contentDescription = null) }
+            )
+        }
     }
-    NavigationDrawerItem(
-        label = { Text("Attendance") },
-        selected = false,
-        onClick = { onAttendanceClick(); onItemClick() },
-        icon = { Icon(Icons.Default.DoneAll, contentDescription = null) }
-    )
-    NavigationDrawerItem(
-        label = { Text(stringResource(id = R.string.school_website)) },
-        selected = false,
-        onClick = { onSchoolWebsiteClick(); onItemClick() },
-        icon = { Icon(Icons.Default.Language, contentDescription = null) }
-    )
-    NavigationDrawerItem(
-        label = { Text(stringResource(id = R.string.exams)) },
-        selected = false,
-        onClick = { onExamsClick(); onItemClick() },
-        icon = { Icon(Icons.Default.Assignment, contentDescription = null) }
-    )
-    NavigationDrawerItem(
-        label = { Text(stringResource(id = R.string.teachers)) },
-        selected = false,
-        onClick = { onTeachersClick(); onItemClick() },
-        icon = { Icon(Icons.Default.Person, contentDescription = null) }
-    )
-    NavigationDrawerItem(
-        label = { Text(stringResource(id = R.string.homeworks)) },
-        selected = false,
-        onClick = { onAssignmentsClick(); onItemClick() },
-        icon = { Icon(Icons.Default.Assignment, contentDescription = null) }
-    )
-    NavigationDrawerItem(
-        label = { Text(stringResource(id = R.string.notes)) },
-        selected = false,
-        onClick = { onNotesClick(); onItemClick() },
-        icon = { Icon(Icons.Default.Note, contentDescription = null) }
-    )
-    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-    NavigationDrawerItem(
-        label = { Text(stringResource(id = R.string.action_settings)) },
-        selected = false,
-        onClick = { onSettingsClick(); onItemClick() },
-        icon = { Icon(Icons.Default.Settings, contentDescription = null) }
-    )
 }
