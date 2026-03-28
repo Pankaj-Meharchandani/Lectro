@@ -457,13 +457,13 @@ fun MainScreen(
         AlertDialog(
             onDismissRequest = { showReportIssueDialog = false },
             title = { Text("Report Issue") },
-            text = { Text("Would you like to include app logs from the past few minutes to help us diagnose the issue?") },
+            text = { Text("To help us fix the problem faster, you can include app logs from the past few minutes. Device information will also be included.") },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     showReportIssueDialog = false
                     showLogDurationDialog = true
                 }) {
-                    Text("With logs")
+                    Text("Attach Logs")
                 }
             },
             dismissButton = {
@@ -472,7 +472,7 @@ fun MainScreen(
                     val intent = Intent(Intent.ACTION_VIEW, "https://github.com/Pankaj-Meharchandani/Lectro/issues/new".toUri())
                     context.startActivity(intent)
                 }) {
-                    Text("Without logs")
+                    Text("Just Report Issue")
                 }
             }
         )
@@ -481,31 +481,44 @@ fun MainScreen(
     if (showLogDurationDialog) {
         AlertDialog(
             onDismissRequest = { showLogDurationDialog = false },
-            title = { Text("Select Log Duration") },
+            title = { Text("Log Duration") },
             text = {
                 Column {
-                    listOf(5, 10, 15, 30).forEach { mins ->
+                    Text("Select how far back to collect logs:", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(16.dp))
+                    listOf(1, 5, 10, 15).forEach { mins ->
+                        val durationText = if (mins == 1) "1 Minute" else "$mins Minutes"
                         TextButton(
                             onClick = {
                                 showLogDurationDialog = false
                                 scope.launch(Dispatchers.IO) {
+                                    val deviceInfo = getDeviceInfo(context)
                                     val logs = getAppLogs(mins)
                                     withContext(Dispatchers.Main) {
+                                        val fullBody = "\n\n$deviceInfo\n\n--- APP LOGS (Past $durationText) ---\n$logs"
+                                        
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        val clip = android.content.ClipData.newPlainText("App Logs", logs)
+                                        val clip = android.content.ClipData.newPlainText("App Logs", fullBody)
                                         clipboard.setPrimaryClip(clip)
-                                        Toast.makeText(context, "Logs copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Issue details copied to clipboard", Toast.LENGTH_SHORT).show()
 
-                                        val body = "\n\n--- APP LOGS (Past $mins mins) ---\n$logs"
-                                        val encodedBody = Uri.encode(body)
-                                        val intent = Intent(Intent.ACTION_VIEW, "https://github.com/Pankaj-Meharchandani/Lectro/issues/new?body=$encodedBody".toUri())
-                                        context.startActivity(intent)
+                                        val intent = Intent(Intent.ACTION_VIEW, 
+                                            "https://github.com/Pankaj-Meharchandani/Lectro/issues/new?body=${Uri.encode(fullBody)}".toUri()
+                                        )
+                                        try {
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            // Fallback if the body is too long for the URL
+                                            val shortIntent = Intent(Intent.ACTION_VIEW, "https://github.com/Pankaj-Meharchandani/Lectro/issues/new".toUri())
+                                            context.startActivity(shortIntent)
+                                            Toast.makeText(context, "Body too large, please paste from clipboard", Toast.LENGTH_LONG).show()
+                                        }
                                     }
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("$mins Minutes")
+                            Text(durationText)
                         }
                     }
                 }
@@ -717,10 +730,27 @@ fun NavigationDrawerContent(
     }
 }
 
+private fun getDeviceInfo(context: Context): String {
+    val packageInfo = try {
+        context.packageManager.getPackageInfo(context.packageName, 0)
+    } catch (e: Exception) {
+        null
+    }
+    val appVersion = packageInfo?.versionName ?: "Unknown"
+    return """
+        --- DEVICE INFO ---
+        App Version: $appVersion
+        Android Version: ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})
+        Device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}
+        -------------------
+    """.trimIndent()
+}
+
 private fun getAppLogs(minutes: Int): String {
     val log = StringBuilder()
     try {
-        val process = Runtime.getRuntime().exec("logcat -d -v time")
+        val pid = android.os.Process.myPid().toString()
+        val process = Runtime.getRuntime().exec("logcat -d -v threadtime")
         val reader = BufferedReader(InputStreamReader(process.inputStream))
         val startTime = Calendar.getInstance().apply {
             add(Calendar.MINUTE, -minutes)
@@ -732,6 +762,7 @@ private fun getAppLogs(minutes: Int): String {
         var line: String?
         while (reader.readLine().also { line = it } != null) {
             val currentLine = line ?: continue
+            // Basic logcat time format check: MM-dd HH:mm:ss.SSS
             if (currentLine.length > 18 && currentLine[2] == '-' && currentLine[5] == ' ' && currentLine[8] == ':') {
                 try {
                     val dateStr = currentLine.substring(0, 18)
@@ -740,7 +771,10 @@ private fun getAppLogs(minutes: Int): String {
                     logTime.set(Calendar.YEAR, currentYear)
                     
                     if (logTime.after(startTime)) {
-                        log.append(currentLine).append("\n")
+                        // Filter by the current PID (often appears after the timestamp in threadtime)
+                        if (currentLine.contains(pid) || currentLine.contains("com.example.timetable")) {
+                            log.append(currentLine).append("\n")
+                        }
                     }
                 } catch (_: Exception) {
                     // ignore
@@ -750,5 +784,12 @@ private fun getAppLogs(minutes: Int): String {
     } catch (e: Exception) {
         log.append("Error collecting logs: ${e.message}")
     }
-    return log.toString()
+    
+    // Limit log size to stay within safe URL limits (GitHub + Intent limits)
+    val logStr = log.toString()
+    return if (logStr.length > 3000) {
+        "(Older logs truncated for length...)\n" + logStr.takeLast(3000)
+    } else {
+        logStr
+    }
 }
