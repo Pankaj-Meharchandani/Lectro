@@ -187,4 +187,47 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun getSubjectByName(name: String) = db.getSubjectByName(name)
 
     fun getAllSubjects() = db.allSubjects
+
+    fun getOngoingClass(): Week? {
+        val now = Calendar.getInstance()
+        val dayNames = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+        val today = dayNames[now.get(Calendar.DAY_OF_WEEK) - 1]
+        
+        val nowMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+        
+        return db.getWeek(today).find { slot ->
+            val partsFrom = slot.fromTime?.split(":")
+            val partsTo = slot.toTime?.split(":")
+            if (partsFrom?.size == 2 && partsTo?.size == 2) {
+                val start = partsFrom[0].toInt() * 60 + partsFrom[1].toInt()
+                var end = partsTo[0].toInt() * 60 + partsTo[1].toInt()
+                
+                // Handle midnight (e.g., 11:30 PM to 12:00 AM)
+                if (end <= start) {
+                    end += 24 * 60
+                }
+
+                nowMinutes in start until end
+            } else false
+        }
+    }
+
+    fun createQuickNote(subjectName: String): Int {
+        val subject = db.getSubjectByName(subjectName)
+        val subjectId = if (subject != null) {
+            subject.id
+        } else {
+            // Subject doesn't exist, we could create it but for now just default to -1 or similar
+            // Actually, let's just use the subject name to find it in the subjects table
+            db.getAllSubjects().find { it.name == subjectName }?.id ?: -1
+        }
+        
+        val note = Note().apply {
+            this.title = "Quick Note: $subjectName"
+            this.text = ""
+            this.subjectId = subjectId
+            this.color = subject?.color ?: 0
+        }
+        return db.insertNote(note).toInt()
+    }
 }

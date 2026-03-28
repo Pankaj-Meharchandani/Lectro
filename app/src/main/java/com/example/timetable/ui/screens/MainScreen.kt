@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.automirrored.filled.EventNote
@@ -132,7 +133,16 @@ fun MainScreen(
         if (switchSevenDays) dayNames else dayNames.take(5)
     }
     
-    val pagerState = rememberPagerState(pageCount = { days.size })
+    val initialDayIndex = remember(days) {
+        val calendar = Calendar.getInstance()
+        val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) // Sunday = 1, Monday = 2, ...
+        // Convert to 0-indexed where Monday = 0
+        val mondayIndexed = if (dayOfWeek == Calendar.SUNDAY) 6 else dayOfWeek - 2
+        
+        if (mondayIndexed < days.size) mondayIndexed else 0
+    }
+    
+    val pagerState = rememberPagerState(initialPage = initialDayIndex) { days.size }
     var showAddDialog by remember { mutableStateOf(false) }
     var weekToEdit by remember { mutableStateOf<Week?>(null) }
     var weekToDelete by remember { mutableStateOf<Week?>(null) }
@@ -143,6 +153,18 @@ fun MainScreen(
     var isSearchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     val searchResults = remember(searchQuery) { viewModel.searchAcrossApp(searchQuery) }
+
+    // Reactive time for Ongoing Class FAB
+    var currentTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(30_000) // Update every 30 seconds
+            currentTimeMillis = System.currentTimeMillis()
+        }
+    }
+    val ongoingClass by remember(currentTimeMillis) { 
+        derivedStateOf { viewModel.getOngoingClass() } 
+    }
 
     BackHandler(enabled = isSearchActive) {
         isSearchActive = false
@@ -334,8 +356,22 @@ fun MainScreen(
             },
             floatingActionButton = {
                 if (!isSearchActive) {
-                    FloatingActionButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add")
+                    Column(horizontalAlignment = Alignment.End) {
+                        ongoingClass?.let { ongoing ->
+                            ExtendedFloatingActionButton(
+                                onClick = {
+                                    val noteId = viewModel.createQuickNote(ongoing.subject ?: "")
+                                    onNavigateToNoteInfo(noteId)
+                                },
+                                icon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, contentDescription = null) },
+                                text = { Text("Note: ${ongoing.subject}") },
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                        }
+                        FloatingActionButton(onClick = { showAddDialog = true }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add")
+                        }
                     }
                 }
             }
