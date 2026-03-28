@@ -1,18 +1,36 @@
 package com.example.timetable.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.preference.PreferenceManager
+import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.ui.screens.*
 
 @Composable
 fun TimetableApp() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val onboardingCompleted = sharedPref.getBoolean(SettingsActivity.KEY_ONBOARDING_COMPLETED, false)
     
-    NavHost(navController = navController, startDestination = "main") {
+    NavHost(
+        navController = navController, 
+        startDestination = if (onboardingCompleted) "main" else "onboarding"
+    ) {
+        composable("onboarding") {
+            OnboardingScreen(onFinished = {
+                sharedPref.edit().putBoolean(SettingsActivity.KEY_ONBOARDING_COMPLETED, true).apply()
+                navController.navigate("main") {
+                    popUpTo("onboarding") { inclusive = true }
+                }
+            })
+        }
         composable("main") {
             MainScreen(
                 onNavigateToExams = { navController.navigate("exams") },
