@@ -7,6 +7,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import com.example.timetable.model.Homework
+import com.example.timetable.model.Note
 import com.example.timetable.model.Subject
 import com.example.timetable.model.UserDetail
 import com.example.timetable.model.Week
@@ -25,6 +27,85 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var teachers = mutableStateListOf<String>()
     var userDetail by mutableStateOf(UserDetail())
     val todayAttendance = mutableStateMapOf<Int, String?>()
+
+    // Search related
+    var searchQuery by mutableStateOf("")
+    
+    data class SearchResult(
+        val type: SearchResultType,
+        val title: String,
+        val subtitle: String? = null,
+        val originalObject: Any,
+        val id: Int
+    )
+    
+    enum class SearchResultType { SUBJECT, NOTE, ASSIGNMENT, TEACHER }
+
+    fun searchAcrossApp(query: String): List<SearchResult> {
+        if (query.isBlank()) return emptyList()
+        val results = mutableListOf<SearchResult>()
+        val lowercaseQuery = query.lowercase()
+
+        // 1. Search Subjects (Timetable slots)
+        db.getAllWeeks().forEach { week ->
+            if (week.subject.lowercase().contains(lowercaseQuery) || 
+                (week.teacher?.lowercase()?.contains(lowercaseQuery) == true)) {
+                results.add(SearchResult(
+                    SearchResultType.SUBJECT,
+                    week.subject,
+                    "Timetable • ${week.fragment} • ${week.fromTime}",
+                    week,
+                    week.id
+                ))
+            }
+        }
+
+        // 2. Search Notes
+        db.getNote().forEach { note ->
+            if (note.title.lowercase().contains(lowercaseQuery) || 
+                note.text.lowercase().contains(lowercaseQuery)) {
+                results.add(SearchResult(
+                    SearchResultType.NOTE,
+                    note.title,
+                    "Note • ${note.text.take(30)}...",
+                    note,
+                    note.id
+                ))
+            }
+        }
+
+        // 3. Search Assignments (Homework)
+        db.getHomework().forEach { hw ->
+            if (hw.title.lowercase().contains(lowercaseQuery) || 
+                hw.subject.lowercase().contains(lowercaseQuery) || 
+                hw.description.lowercase().contains(lowercaseQuery)) {
+                results.add(SearchResult(
+                    SearchResultType.ASSIGNMENT,
+                    hw.title ?: "Untitled",
+                    "Assignment • ${hw.subject} • Due: ${hw.date}",
+                    hw,
+                    hw.id
+                ))
+            }
+        }
+
+        // 4. Search Teachers
+        db.getTeacher().forEach { teacher ->
+            if (teacher.name.lowercase().contains(lowercaseQuery) ||
+                teacher.post.lowercase().contains(lowercaseQuery) ||
+                (teacher.email?.lowercase()?.contains(lowercaseQuery) == true)) {
+                results.add(SearchResult(
+                    SearchResultType.TEACHER,
+                    teacher.name,
+                    "Teacher • ${teacher.post}",
+                    teacher,
+                    teacher.id
+                ))
+            }
+        }
+
+        return results.distinctBy { it.type.name + it.id }
+    }
 
     fun loadWeekData(day: String) {
         weekData[day] = db.getWeek(day)

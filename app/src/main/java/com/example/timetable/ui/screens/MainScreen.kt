@@ -7,6 +7,8 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.text.TextUtils
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,7 +19,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.FactCheck
+import androidx.compose.material.icons.automirrored.filled.Note
+import androidx.compose.material.icons.automirrored.filled.EventNote
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -25,6 +31,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -73,6 +80,8 @@ fun MainScreen(
     onNavigateToAttendance: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToSubjectDetail: (Int) -> Unit,
+    onNavigateToNoteInfo: (Int) -> Unit,
+    onNavigateToEditTeacher: (Int) -> Unit,
     viewModel: MainViewModel = viewModel()
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -130,6 +139,15 @@ fun MainScreen(
     
     var showReportIssueDialog by remember { mutableStateOf(false) }
     var showLogDurationDialog by remember { mutableStateOf(false) }
+    
+    var isSearchActive by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val searchResults = remember(searchQuery) { viewModel.searchAcrossApp(searchQuery) }
+
+    BackHandler(enabled = isSearchActive) {
+        isSearchActive = false
+        searchQuery = ""
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -228,83 +246,187 @@ fun MainScreen(
             topBar = {
                 Column {
                     TopAppBar(
-                        title = { Text(stringResource(id = R.string.app_name)) },
+                        title = { 
+                            if (isSearchActive) {
+                                TextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    placeholder = { Text("Search...") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    colors = TextFieldDefaults.colors(
+                                        focusedContainerColor = Color.Transparent,
+                                        unfocusedContainerColor = Color.Transparent
+                                    )
+                                )
+                            } else {
+                                Text(stringResource(id = R.string.app_name))
+                            }
+                        },
                         navigationIcon = {
-                            IconButton(onClick = {
-                                scope.launch { drawerState.open() }
-                            }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            if (isSearchActive) {
+                                IconButton(onClick = { 
+                                    isSearchActive = false
+                                    searchQuery = ""
+                                }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
+                            } else {
+                                IconButton(onClick = {
+                                    scope.launch { drawerState.open() }
+                                }) {
+                                    Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                }
                             }
                         },
                         actions = {
-                            IconButton(onClick = {
-                                PdfExportUtil.exportScheduleToPdf(context, days, viewModel.weekData)
-                            }) {
-                                Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF")
+                            if (isSearchActive) {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                    }
+                                }
+                            } else {
+                                IconButton(onClick = { isSearchActive = true }) {
+                                    Icon(Icons.Default.Search, contentDescription = "Search")
+                                }
+                                IconButton(onClick = {
+                                    PdfExportUtil.exportScheduleToPdf(context, days, viewModel.weekData)
+                                }) {
+                                    Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF")
+                                }
                             }
                         }
                     )
-                    ScrollableTabRow(
-                        selectedTabIndex = pagerState.currentPage,
-                        edgePadding = 0.dp,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        indicator = { tabPositions ->
-                            if (pagerState.currentPage < tabPositions.size) {
-                                TabRowDefaults.SecondaryIndicator(
-                                    modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                                    height = 4.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary
+                    if (!isSearchActive) {
+                        ScrollableTabRow(
+                            selectedTabIndex = pagerState.currentPage,
+                            edgePadding = 0.dp,
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            indicator = { tabPositions ->
+                                if (pagerState.currentPage < tabPositions.size) {
+                                    TabRowDefaults.SecondaryIndicator(
+                                        modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                                        height = 4.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                            }
+                        ) {
+                            days.forEachIndexed { index, title ->
+                                Tab(
+                                    selected = pagerState.currentPage == index,
+                                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                                    text = { 
+                                        Text(
+                                            text = title,
+                                            fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal
+                                        ) 
+                                    },
+                                    selectedContentColor = MaterialTheme.colorScheme.onPrimary,
+                                    unselectedContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
                                 )
                             }
-                        }
-                    ) {
-                        days.forEachIndexed { index, title ->
-                            Tab(
-                                selected = pagerState.currentPage == index,
-                                onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                                text = { 
-                                    Text(
-                                        text = title,
-                                        fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal
-                                    ) 
-                                },
-                                selectedContentColor = MaterialTheme.colorScheme.onPrimary,
-                                unselectedContentColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f)
-                            )
                         }
                     }
                 }
             },
             floatingActionButton = {
-                FloatingActionButton(onClick = { showAddDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Add")
+                if (!isSearchActive) {
+                    FloatingActionButton(onClick = { showAddDialog = true }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add")
+                    }
                 }
             }
         ) { padding ->
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-            ) { page ->
-                val dayData = viewModel.weekData[days[page]] ?: emptyList()
-                DayList(
-                    subjects = dayData, 
-                    attendanceEnabled = attendanceEnabled,
-                    minAttendance = minAttendance,
-                    onSubjectClick = { week ->
-                        val subjectId = viewModel.getSubjectIdByName(week.subject)
-                        if (subjectId != -1) {
-                            onNavigateToSubjectDetail(subjectId)
+            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+                if (isSearchActive) {
+                    if (searchQuery.isBlank()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Search, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                                Text("Search Subjects, Notes, Assignments", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                    },
-                    onMarkAttendance = { weekId, subjectName, type ->
-                        viewModel.updateAttendance(weekId, subjectName, type)
-                    },
-                    onEditClick = { weekToEdit = it },
-                    onDeleteClick = { weekToDelete = it }
-                )
+                    } else if (searchResults.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No results found for \"$searchQuery\"", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    } else {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(searchResults) { result ->
+                                ListItem(
+                                    headlineContent = { Text(result.title) },
+                                    overlineContent = { 
+                                        Text(
+                                            when (result.type) {
+                                                MainViewModel.SearchResultType.SUBJECT -> "TIMETABLE"
+                                                MainViewModel.SearchResultType.NOTE -> "NOTE"
+                                                MainViewModel.SearchResultType.ASSIGNMENT -> "ASSIGNMENT"
+                                                MainViewModel.SearchResultType.TEACHER -> "TEACHER"
+                                            }
+                                        )
+                                    },
+                                    supportingContent = { result.subtitle?.let { Text(it) } },
+                                    leadingContent = {
+                                        Icon(
+                                            when (result.type) {
+                                                MainViewModel.SearchResultType.SUBJECT -> Icons.Default.Schedule
+                                                MainViewModel.SearchResultType.NOTE -> Icons.AutoMirrored.Filled.Note
+                                                MainViewModel.SearchResultType.ASSIGNMENT -> Icons.AutoMirrored.Filled.Assignment
+                                                MainViewModel.SearchResultType.TEACHER -> Icons.Default.Person
+                                            },
+                                            contentDescription = null
+                                        )
+                                    },
+                                    modifier = Modifier.clickable {
+                                        val original = result.originalObject
+                                        isSearchActive = false
+                                        searchQuery = ""
+                                        when (result.type) {
+                                            MainViewModel.SearchResultType.SUBJECT -> {
+                                                if (original is Week) {
+                                                    val dayIndex = days.indexOf(original.fragment)
+                                                    if (dayIndex != -1) {
+                                                        scope.launch { pagerState.scrollToPage(dayIndex) }
+                                                    }
+                                                }
+                                            }
+                                            MainViewModel.SearchResultType.NOTE -> onNavigateToNoteInfo(result.id)
+                                            MainViewModel.SearchResultType.ASSIGNMENT -> onNavigateToAssignments()
+                                            MainViewModel.SearchResultType.TEACHER -> onNavigateToEditTeacher(result.id)
+                                        }
+                                    }
+                                )
+                                HorizontalDivider()
+                            }
+                        }
+                    }
+                } else {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { page ->
+                        val dayData = viewModel.weekData[days[page]] ?: emptyList()
+                        DayList(
+                            subjects = dayData, 
+                            attendanceEnabled = attendanceEnabled,
+                            minAttendance = minAttendance,
+                            onSubjectClick = { week ->
+                                val subjectId = viewModel.getSubjectIdByName(week.subject)
+                                if (subjectId != -1) {
+                                    onNavigateToSubjectDetail(subjectId)
+                                }
+                            },
+                            onMarkAttendance = { weekId, subjectName, type ->
+                                viewModel.updateAttendance(weekId, subjectName, type)
+                            },
+                            onEditClick = { weekToEdit = it },
+                            onDeleteClick = { weekToDelete = it }
+                        )
+                    }
+                }
             }
         }
     }
@@ -630,7 +752,7 @@ fun DayList(
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
-                    Icons.Default.EventNote,
+                    Icons.AutoMirrored.Filled.EventNote,
                     contentDescription = null,
                     modifier = Modifier.size(64.dp),
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -706,7 +828,7 @@ fun NavigationDrawerContent(
                 label = { Text(stringResource(id = R.string.exams)) },
                 selected = false,
                 onClick = { onExamsClick(); onItemClick() },
-                icon = { Icon(Icons.Default.Assignment, contentDescription = null) }
+                icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null) }
             )
             NavigationDrawerItem(
                 label = { Text(stringResource(id = R.string.teachers)) },

@@ -66,10 +66,20 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()) {
+fun TeachersScreen(
+    onBack: () -> Unit, 
+    editTeacherId: Int? = null,
+    viewModel: TeacherViewModel = viewModel()
+) {
     var showAddDialog by remember { mutableStateOf(false) }
     var teacherToEdit by remember { mutableStateOf<Teacher?>(null) }
     var teacherToDelete by remember { mutableStateOf<Teacher?>(null) }
+
+    LaunchedEffect(editTeacherId) {
+        if (editTeacherId != null) {
+            teacherToEdit = viewModel.teachers.find { it.id == editTeacherId }
+        }
+    }
 
     Scaffold(
         topBar = {
