@@ -130,6 +130,10 @@
     <string name="other_label">Other (e.g. Course)</string>
     <string name="my_files">My Files</string>
     <string name="upload_file">Upload File</string>
+
+    <string name="widget_schedule_description">View your daily class schedule at a glance.</string>
+    <string name="widget_deadlines_description">Keep track of upcoming assignments and exams.</string>
+    <string name="widget_attendance_description">Quickly mark attendance for your current class.</string>
 </resources>
 
 
