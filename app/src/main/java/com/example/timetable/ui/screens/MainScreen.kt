@@ -410,21 +410,22 @@ fun MainScreen(
                     ) { page ->
                         val dayData = viewModel.weekData[days[page]] ?: emptyList()
                         DayList(
-                            subjects = dayData, 
-                            attendanceEnabled = attendanceEnabled,
-                            minAttendance = minAttendance,
-                            onSubjectClick = { week ->
-                                val subjectId = viewModel.getSubjectIdByName(week.subject)
-                                if (subjectId != -1) {
-                                    onNavigateToSubjectDetail(subjectId)
-                                }
-                            },
-                            onMarkAttendance = { weekId, subjectName, type ->
-                                viewModel.updateAttendance(weekId, subjectName, type)
-                            },
-                            onEditClick = { weekToEdit = it },
-                            onDeleteClick = { weekToDelete = it }
-                        )
+                        subjects = dayData, 
+                        attendanceEnabled = attendanceEnabled,
+                        minAttendance = minAttendance,
+                        onSubjectClick = { week ->
+                            val subjectId = viewModel.getSubjectIdByName(week.subject)
+                            if (subjectId != -1) {
+                                onNavigateToSubjectDetail(subjectId)
+                            }
+                        },
+                        onMarkAttendance = { weekId, subjectName, type ->
+                            viewModel.updateAttendance(weekId, subjectName, type)
+                        },
+                        onEditClick = { weekToEdit = it },
+                        onDeleteClick = { weekToDelete = it },
+                        viewModel = viewModel
+                    )
                     }
                 }
             }
@@ -743,7 +744,8 @@ fun DayList(
     onSubjectClick: (Week) -> Unit,
     onMarkAttendance: (Int, String, String) -> Unit,
     onEditClick: (Week) -> Unit,
-    onDeleteClick: (Week) -> Unit
+    onDeleteClick: (Week) -> Unit,
+    viewModel: MainViewModel
 ) {
     if (subjects.isEmpty()) {
         Box(
@@ -780,7 +782,8 @@ fun DayList(
                     onClick = { onSubjectClick(subject) },
                     onMarkAttendance = onMarkAttendance,
                     onEdit = { onEditClick(subject) },
-                    onDelete = { onDeleteClick(subject) }
+                    onDelete = { onDeleteClick(subject) },
+                    viewModel = viewModel
                 )
             }
         }
@@ -840,13 +843,13 @@ fun NavigationDrawerContent(
                 label = { Text(stringResource(id = R.string.homeworks)) },
                 selected = false,
                 onClick = { onAssignmentsClick(); onItemClick() },
-                icon = { Icon(Icons.Default.Assignment, contentDescription = null) }
+                icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null) }
             )
             NavigationDrawerItem(
                 label = { Text(stringResource(id = R.string.notes)) },
                 selected = false,
                 onClick = { onNotesClick(); onItemClick() },
-                icon = { Icon(Icons.Default.Note, contentDescription = null) }
+                icon = { Icon(Icons.AutoMirrored.Filled.Note, contentDescription = null) }
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
             NavigationDrawerItem(

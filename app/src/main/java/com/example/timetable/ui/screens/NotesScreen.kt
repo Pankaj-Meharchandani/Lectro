@@ -18,6 +18,7 @@ import com.example.timetable.R
 import com.example.timetable.model.Note
 import com.example.timetable.model.Subject
 import com.example.timetable.model.Week
+import com.example.timetable.ui.viewmodel.MainViewModel
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Alignment
@@ -99,7 +100,8 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 fun NotesScreen(
     onBack: () -> Unit, 
     onSubjectClick: (Int) -> Unit,
-    viewModel: NoteViewModel = viewModel()
+    viewModel: NoteViewModel = viewModel(),
+    mainViewModel: MainViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
@@ -188,7 +190,8 @@ fun NotesScreen(
                             onMarkAttendance = { _: Int, _: String, _: String -> },
                             onEdit = { subjectToEdit = subject },
                             onDelete = { subjectToDelete = subject },
-                            showRoom = false
+                            showRoom = false,
+                            viewModel = mainViewModel
                         )
                         IconButton(
                             onClick = { showReorderMenu = true },

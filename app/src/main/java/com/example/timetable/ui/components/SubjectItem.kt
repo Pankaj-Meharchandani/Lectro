@@ -35,10 +35,12 @@ fun SubjectItem(
     onDelete: () -> Unit = {},
     showRoom: Boolean = true,
     showTeacher: Boolean = true,
-    viewModel: MainViewModel = viewModel()
+    viewModel: MainViewModel
 ) {
     val context = LocalContext.current
-    val subjectColor = if (subject.color != 0) Color(subject.color) else MaterialTheme.colorScheme.primary
+    val subjectColor = remember(subject.color) { 
+        if (subject.color != 0) Color(subject.color) else Color.Gray 
+    }
     val containerColor = themedContainerColor(subjectColor)
     val contentColor = contentColorFor(containerColor)
     var showMenu by remember { mutableStateOf(false) }
@@ -58,8 +60,15 @@ fun SubjectItem(
         }
     }
 
-    val subjectDetails = viewModel.allSubjects.find { it.name == subject.subject }
+    val subjectDetails = remember(subject.subject, viewModel.allSubjects.size) {
+        viewModel.allSubjects.find { it.name == subject.subject }
+    }
     val attendanceStatus = if (attendanceEnabled) viewModel.todayAttendance[subject.id] else null
+
+    val formattedTime = remember(subject.fromTime, subject.toTime) {
+        if (subject.fromTime.isNullOrBlank()) "" 
+        else "${TimeUtils.formatTo12Hour(subject.fromTime)} - ${TimeUtils.formatTo12Hour(subject.toTime)}"
+    }
 
     val isAfterStartTime = remember(subject.fromTime) {
         if (subject.fromTime.isNullOrBlank()) false
@@ -186,7 +195,7 @@ fun SubjectItem(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${TimeUtils.formatTo12Hour(subject.fromTime)} - ${TimeUtils.formatTo12Hour(subject.toTime)}",
+                        text = formattedTime,
                         style = MaterialTheme.typography.bodyMedium,
                         color = contentColor
                     )
