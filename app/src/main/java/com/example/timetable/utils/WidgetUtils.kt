@@ -19,6 +19,19 @@ object WidgetUtils {
         return db.getWeek(todayName).sortedBy { it.fromTime }
     }
 
+    fun getUnmarkedClasses(context: Context): List<Week> {
+        val db = DbHelper(context)
+        val todayClasses = getTodaySchedule(context)
+        val todayDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val nowMinutes = Calendar.getInstance().let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
+
+        return todayClasses.filter { slot ->
+            val startMinutes = TimeUtils.timeToMinutes(slot.fromTime)
+            // Show if class has started AND hasn't been marked yet
+            nowMinutes >= startMinutes && db.getAttendanceStatus(slot.id, todayDate) == null
+        }
+    }
+
     fun getUpcomingDeadlines(context: Context): List<DeadlineItem> {
         val db = DbHelper(context)
         val deadlines = mutableListOf<DeadlineItem>()
@@ -55,6 +68,7 @@ object WidgetUtils {
     suspend fun refreshAllWidgets(context: Context) {
         com.example.timetable.widget.ScheduleWidget().updateAll(context)
         com.example.timetable.widget.DeadlinesWidget().updateAll(context)
+        com.example.timetable.widget.AttendanceWidget().updateAll(context)
     }
 
     data class DeadlineItem(
