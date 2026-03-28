@@ -14,6 +14,9 @@ import com.example.timetable.model.UserDetail
 import com.example.timetable.model.Week
 import com.example.timetable.utils.DbHelper
 import com.example.timetable.utils.NotificationHelper
+import com.example.timetable.utils.WidgetUtils
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -141,6 +144,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         db.deleteWeekById(week)
         loadWeekData(week.fragment)
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
     
     fun insertWeek(week: Week) {
@@ -148,6 +152,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadWeekData(week.fragment)
         loadSuggestions()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 
     fun updateWeek(week: Week) {
@@ -155,6 +160,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadWeekData(week.fragment)
         loadSuggestions()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 
     fun updateAttendance(weekId: Int, subjectName: String, type: String) {
@@ -162,6 +168,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         db.updateAttendance(weekId, subjectName, type, date)
         todayAttendance[weekId] = type
         loadSuggestions()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 
     fun getAttendanceStatus(weekId: Int): String? {

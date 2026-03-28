@@ -33,6 +33,9 @@ import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
 import com.example.timetable.utils.NotificationHelper
 import com.example.timetable.utils.TimeUtils
+import com.example.timetable.utils.WidgetUtils
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -71,6 +74,7 @@ class ExamViewModel(application: Application) : AndroidViewModel(application) {
         db.deleteExamById(exam)
         loadExams()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 
     fun insertExam(exam: Exam) {
@@ -78,6 +82,7 @@ class ExamViewModel(application: Application) : AndroidViewModel(application) {
         loadExams()
         loadSuggestions()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 }
 

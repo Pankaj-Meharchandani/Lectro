@@ -31,6 +31,9 @@ import com.example.timetable.model.Homework
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
 import com.example.timetable.utils.NotificationHelper
+import com.example.timetable.utils.WidgetUtils
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -65,6 +68,7 @@ class AssignmentsViewModel(application: Application) : AndroidViewModel(applicat
         db.deleteHomeworkById(assignment)
         loadAssignments()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 
     fun insertAssignment(assignment: Homework) {
@@ -72,12 +76,14 @@ class AssignmentsViewModel(application: Application) : AndroidViewModel(applicat
         loadAssignments()
         loadSuggestions()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 
     fun updateAssignment(assignment: Homework) {
         db.updateHomework(assignment)
         loadAssignments()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 
     fun toggleComplete(assignment: Homework) {
@@ -85,6 +91,7 @@ class AssignmentsViewModel(application: Application) : AndroidViewModel(applicat
         db.updateHomework(assignment)
         loadAssignments()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 }
 
