@@ -297,7 +297,15 @@ fun HistoricalAttendanceDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(record.date, style = MaterialTheme.typography.bodyMedium)
-                                StatusIcon(record.status)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    StatusIcon(record.status)
+                                    IconButton(onClick = {
+                                        viewModel.deleteAttendanceRecord(record.weekId, subject.name ?: "", record.date)
+                                        refreshTrigger++
+                                    }, modifier = Modifier.size(24.dp)) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
+                                    }
+                                }
                             }
                         }
                     }

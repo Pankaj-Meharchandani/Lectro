@@ -184,6 +184,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         loadAttendance()
     }
 
+    fun deleteAttendanceRecord(weekId: Int, subjectName: String, date: String) {
+        db.deleteAttendanceRecord(weekId, subjectName, date)
+        loadSuggestions()
+        loadAttendance()
+    }
+
     fun getSubjectByName(name: String) = db.getSubjectByName(name)
 
     fun getAllSubjects() = db.allSubjects

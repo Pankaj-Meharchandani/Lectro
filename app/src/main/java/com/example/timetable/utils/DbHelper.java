@@ -1175,6 +1175,31 @@ public class DbHelper extends SQLiteOpenHelper {
         return records;
     }
 
+    public void deleteAttendanceRecord(int weekId, String subjectName, String date) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        Cursor cursor = db.query(ATTENDANCE, new String[]{ATTENDANCE_STATUS},
+                ATTENDANCE_SUBJECT_NAME + " = ? AND " + ATTENDANCE_DATE + " = ? AND " + ATTENDANCE_WEEK_ID + " = ?",
+                new String[]{subjectName, date, String.valueOf(weekId)}, null, null, null);
+
+        String status = null;
+        if (cursor.moveToFirst()) {
+            status = cursor.getString(0);
+        }
+        cursor.close();
+
+        if (status != null) {
+            String column = getColumnNameForType(status);
+            if (column != null) {
+                db.execSQL("UPDATE " + SUBJECTS + " SET " + column + " = " + column + " - 1 WHERE " + SUBJECTS_NAME + " = ?", new String[]{subjectName});
+            }
+        }
+
+        db.delete(ATTENDANCE, ATTENDANCE_SUBJECT_NAME + " = ? AND " + ATTENDANCE_DATE + " = ? AND " + ATTENDANCE_WEEK_ID + " = ?",
+                new String[]{subjectName, date, String.valueOf(weekId)});
+        db.close();
+    }
+
     public static class AttendanceRecord {
         public String date;
         public String status;
