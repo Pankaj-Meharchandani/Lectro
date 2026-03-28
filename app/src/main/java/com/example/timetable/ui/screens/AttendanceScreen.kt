@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import kotlin.math.roundToInt
@@ -99,10 +100,37 @@ fun AttendanceScreen(
 
             HorizontalDivider()
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(subjects) { subject ->
-                    AttendanceSubjectItem(subject, minAttendance) {
-                        selectedSubject = it
+            if (subjects.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.FactCheck,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "No subjects found.",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Add subjects in the Timetable or Notes.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(subjects) { subject ->
+                        AttendanceSubjectItem(subject, minAttendance) {
+                            selectedSubject = it
+                        }
                     }
                 }
             }
@@ -123,6 +151,47 @@ fun AttendanceSubjectItem(subject: Subject, goal: Int, onClick: (Subject) -> Uni
     val total = subject.attended + subject.missed
     val percentage = if (total > 0) (subject.attended.toFloat() / total * 100).toInt() else 0
     val color = getAttendanceColor(percentage, goal)
+
+    // Advanced Attendance Logic
+    val statusText = remember(subject.attended, subject.missed, goal) {
+        if (total == 0) {
+            "Attend your first class to see stats!"
+        } else if (percentage >= goal) {
+            // How many can they skip?
+            // (Present) / (Total + X) >= Goal / 100
+            // 100 * Present / Goal >= Total + X
+            // X <= (100 * Present / Goal) - Total
+            val p = subject.attended.toDouble()
+            val t = total.toDouble()
+            val g = goal.toDouble()
+            val canSkip = kotlin.math.floor((100.0 * p / g) - t).toInt()
+            if (canSkip > 0) {
+                "You can skip $canSkip more ${if (canSkip == 1) "class" else "classes"}."
+            } else {
+                "On the edge! Don't miss the next class."
+            }
+        } else {
+            // How many must they attend?
+            // (Present + Y) / (Total + Y) >= Goal / 100
+            // 100 * (Present + Y) >= Goal * (Total + Y)
+            // 100P + 100Y >= Goal*Total + Goal*Y
+            // Y * (100 - Goal) >= Goal*Total - 100P
+            // Y >= (Goal*Total - 100P) / (100 - Goal)
+            if (goal < 100) {
+                val p = subject.attended.toDouble()
+                val t = total.toDouble()
+                val g = goal.toDouble()
+                val mustAttend = kotlin.math.ceil((g * t - 100.0 * p) / (100.0 - g)).toInt()
+                if (mustAttend > 0) {
+                    "Attend $mustAttend more ${if (mustAttend == 1) "class" else "classes"} to reach $goal%."
+                } else {
+                    "Just 1 more class to reach your goal!"
+                }
+            } else {
+                "Goal is 100%! Attend all remaining classes."
+            }
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -156,15 +225,24 @@ fun AttendanceSubjectItem(subject: Subject, goal: Int, onClick: (Subject) -> Uni
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = color
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Present: ${subject.attended}")
-                Text("Absent: ${subject.missed}")
-                Text("Cancelled: ${subject.skipped}")
+                Text("Present: ${subject.attended}", style = MaterialTheme.typography.bodySmall)
+                Text("Absent: ${subject.missed}", style = MaterialTheme.typography.bodySmall)
+                Text("Cancelled: ${subject.skipped}", style = MaterialTheme.typography.bodySmall)
             }
             Text(
                 text = "Total classes: ${total + subject.skipped}",

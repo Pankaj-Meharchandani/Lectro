@@ -88,36 +88,65 @@ fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            itemsIndexed(viewModel.teachers) { index, teacher ->
-                Box {
-                    var showMenu by remember { mutableStateOf(false) }
-                    TeacherItem(
-                        teacher = teacher, 
-                        onDelete = { teacherToDelete = teacher },
-                        onEdit = { teacherToEdit = it }
+        if (viewModel.teachers.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.Group,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 60.dp)
-                    ) {
-                        Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
-                    }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Move Up") },
-                            onClick = { viewModel.moveTeacher(index, true); showMenu = false },
-                            enabled = index > 0
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "No teachers added yet.",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Tap + to add your first contact.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                itemsIndexed(viewModel.teachers) { index, teacher ->
+                    Box {
+                        var showMenu by remember { mutableStateOf(false) }
+                        TeacherItem(
+                            teacher = teacher, 
+                            onDelete = { teacherToDelete = teacher },
+                            onEdit = { teacherToEdit = it }
                         )
-                        DropdownMenuItem(
-                            text = { Text("Move Down") },
-                            onClick = { viewModel.moveTeacher(index, false); showMenu = false },
-                            enabled = index < viewModel.teachers.size - 1
-                        )
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 60.dp)
+                        ) {
+                            Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Move Up") },
+                                onClick = { viewModel.moveTeacher(index, true); showMenu = false },
+                                enabled = index > 0
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Move Down") },
+                                onClick = { viewModel.moveTeacher(index, false); showMenu = false },
+                                enabled = index < viewModel.teachers.size - 1
+                            )
+                        }
                     }
                 }
             }

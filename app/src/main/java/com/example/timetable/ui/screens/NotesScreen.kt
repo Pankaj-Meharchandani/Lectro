@@ -138,47 +138,76 @@ fun NotesScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            itemsIndexed(viewModel.allSubjects) { index, subject ->
-                Box {
-                    var showReorderMenu by remember { mutableStateOf(false) }
-                    SubjectItem(
-                        subject = Week().apply {
-                            this.subject = subject.name
-                            this.color = subject.color
-                            this.id = subject.id
-                            this.teacher = subject.teacher
-                            this.room = subject.room
-                        },
-                        attendanceEnabled = false,
-                        minAttendance = minAttendance,
-                        onClick = { onSubjectClick(subject.id) },
-                        onMarkAttendance = { _: Int, _: String, _: String -> },
-                        onEdit = { subjectToEdit = subject },
-                        onDelete = { subjectToDelete = subject },
-                        showRoom = false
+        if (viewModel.allSubjects.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.Notes,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
-                    IconButton(
-                        onClick = { showReorderMenu = true },
-                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 60.dp)
-                    ) {
-                        Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
-                    }
-                    DropdownMenu(expanded = showReorderMenu, onDismissRequest = { showReorderMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Move Up") },
-                            onClick = { viewModel.moveSubject(index, true); showReorderMenu = false },
-                            enabled = index > 0
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "No subjects added yet.",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Tap + to add your first subject.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                itemsIndexed(viewModel.allSubjects) { index, subject ->
+                    Box {
+                        var showReorderMenu by remember { mutableStateOf(false) }
+                        SubjectItem(
+                            subject = Week().apply {
+                                this.subject = subject.name
+                                this.color = subject.color
+                                this.id = subject.id
+                                this.teacher = subject.teacher
+                                this.room = subject.room
+                            },
+                            attendanceEnabled = false,
+                            minAttendance = minAttendance,
+                            onClick = { onSubjectClick(subject.id) },
+                            onMarkAttendance = { _: Int, _: String, _: String -> },
+                            onEdit = { subjectToEdit = subject },
+                            onDelete = { subjectToDelete = subject },
+                            showRoom = false
                         )
-                        DropdownMenuItem(
-                            text = { Text("Move Down") },
-                            onClick = { viewModel.moveSubject(index, false); showReorderMenu = false },
-                            enabled = index < viewModel.allSubjects.size - 1
-                        )
+                        IconButton(
+                            onClick = { showReorderMenu = true },
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 60.dp)
+                        ) {
+                            Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
+                        }
+                        DropdownMenu(expanded = showReorderMenu, onDismissRequest = { showReorderMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Move Up") },
+                                onClick = { viewModel.moveSubject(index, true); showReorderMenu = false },
+                                enabled = index > 0
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Move Down") },
+                                onClick = { viewModel.moveSubject(index, false); showReorderMenu = false },
+                                enabled = index < viewModel.allSubjects.size - 1
+                            )
+                        }
                     }
                 }
             }

@@ -7,9 +7,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -151,18 +154,57 @@ fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel = view
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            items(filteredAssignments) { assignment ->
-                AssignmentItem(
-                    assignment = assignment, 
-                    onDelete = { assignmentToDelete = assignment },
-                    onToggleComplete = { viewModel.toggleComplete(assignment) },
-                    onEdit = { assignmentToEdit = it }
-                )
+        if (filteredAssignments.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        when (selectedTab) {
+                            0 -> Icons.AutoMirrored.Filled.Assignment
+                            1 -> Icons.Default.EventBusy
+                            else -> Icons.Default.AssignmentTurnedIn
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        when (selectedTab) {
+                            0 -> "No pending assignments!"
+                            1 -> "No overdue assignments!"
+                            else -> "No completed assignments yet."
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (selectedTab == 0) {
+                        Text(
+                            "Tap + to stay on top of your work.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                items(filteredAssignments) { assignment ->
+                    AssignmentItem(
+                        assignment = assignment, 
+                        onDelete = { assignmentToDelete = assignment },
+                        onToggleComplete = { viewModel.toggleComplete(assignment) },
+                        onEdit = { assignmentToEdit = it }
+                    )
+                }
             }
         }
     }
