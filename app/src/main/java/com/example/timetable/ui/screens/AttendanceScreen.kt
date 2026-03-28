@@ -154,41 +154,38 @@ fun AttendanceSubjectItem(subject: Subject, goal: Int, onClick: (Subject) -> Uni
 
     // Advanced Attendance Logic
     val statusText = remember(subject.attended, subject.missed, goal) {
-        if (total == 0) {
+        val p = subject.attended.toDouble()
+        val t = (subject.attended + subject.missed).toDouble()
+        val g = goal.toDouble()
+
+        if (t == 0.0) {
             "Attend your first class to see stats!"
-        } else if (percentage >= goal) {
-            // How many can they skip?
-            // (Present) / (Total + X) >= Goal / 100
-            // 100 * Present / Goal >= Total + X
-            // X <= (100 * Present / Goal) - Total
-            val p = subject.attended.toDouble()
-            val t = total.toDouble()
-            val g = goal.toDouble()
-            val canSkip = kotlin.math.floor((100.0 * p / g) - t).toInt()
-            if (canSkip > 0) {
-                "You can skip $canSkip more ${if (canSkip == 1) "class" else "classes"}."
-            } else {
-                "On the edge! Don't miss the next class."
-            }
         } else {
-            // How many must they attend?
-            // (Present + Y) / (Total + Y) >= Goal / 100
-            // 100 * (Present + Y) >= Goal * (Total + Y)
-            // 100P + 100Y >= Goal*Total + Goal*Y
-            // Y * (100 - Goal) >= Goal*Total - 100P
-            // Y >= (Goal*Total - 100P) / (100 - Goal)
-            if (goal < 100) {
-                val p = subject.attended.toDouble()
-                val t = total.toDouble()
-                val g = goal.toDouble()
-                val mustAttend = kotlin.math.ceil((g * t - 100.0 * p) / (100.0 - g)).toInt()
-                if (mustAttend > 0) {
-                    "Attend $mustAttend more ${if (mustAttend == 1) "class" else "classes"} to reach $goal%."
+            val currentPercent = (p / t) * 100.0
+            if (currentPercent >= g) {
+                // How many can they skip?
+                // (Present) / (Total + X) >= Goal / 100
+                // 100 * Present / Goal >= Total + X
+                // X <= (100 * Present / Goal) - Total
+                val canSkip = kotlin.math.floor((100.0 * p / g) - t).toInt()
+                if (canSkip > 0) {
+                    "Safe! You can skip $canSkip more ${if (canSkip == 1) "class" else "classes"}."
                 } else {
-                    "Just 1 more class to reach your goal!"
+                    "On the edge! Don't miss the next class."
                 }
             } else {
-                "Goal is 100%! Attend all remaining classes."
+                // How many must they attend?
+                // (Present + Y) / (Total + Y) >= Goal / 100
+                // 100 * (Present + Y) >= Goal * (Total + Y)
+                // 100P + 100Y >= Goal*Total + Goal*Y
+                // Y * (100 - Goal) >= Goal*Total - 100P
+                // Y >= (Goal*Total - 100P) / (100 - Goal)
+                if (g < 100.0) {
+                    val mustAttend = kotlin.math.ceil((g * t - 100.0 * p) / (100.0 - g)).toInt()
+                    "Attend $mustAttend more classes consecutively to reach $goal%."
+                } else {
+                    "Goal is 100%! Attend all remaining classes."
+                }
             }
         }
     }
