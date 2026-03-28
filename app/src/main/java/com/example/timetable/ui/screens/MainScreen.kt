@@ -1,5 +1,7 @@
 package com.example.timetable.ui.screens
 
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.Uri
@@ -50,7 +52,13 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import com.example.timetable.ui.viewmodel.MainViewModel
 import com.example.timetable.utils.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,6 +127,9 @@ fun MainScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var weekToEdit by remember { mutableStateOf<Week?>(null) }
     var weekToDelete by remember { mutableStateOf<Week?>(null) }
+    
+    var showReportIssueDialog by remember { mutableStateOf(false) }
+    var showLogDurationDialog by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -150,84 +161,36 @@ fun MainScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        val calendar = Calendar.getInstance()
-        val day = calendar.get(Calendar.DAY_OF_WEEK)
-        val targetPage = when(day) {
-            Calendar.SUNDAY -> if (switchSevenDays) 6 else 0
-            else -> (day - 2).coerceIn(0, 4)
-        }.coerceIn(0, days.size - 1)
-        pagerState.scrollToPage(targetPage)
-    }
-
-    if (showAddDialog || weekToEdit != null) {
-        val currentDay = if (weekToEdit != null) weekToEdit!!.getFragment() else days[pagerState.currentPage]
-        AddSubjectDialog(
-            onDismiss = { 
-                showAddDialog = false
-                weekToEdit = null
-            },
-            onSave = { week: Week ->
-                if (weekToEdit != null) {
-                    viewModel.updateWeek(week)
-                } else {
-                    week.setFragment(currentDay)
-                    viewModel.insertWeek(week)
-                }
-                weekToEdit = null
-            },
-            onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
-            initialWeek = weekToEdit ?: Week(),
-            subjectSuggestions = viewModel.subjects,
-            teacherSuggestions = viewModel.teachers,
-            existingSlots = viewModel.weekData[currentDay] ?: emptyList()
-        )
-    }
+    val userDetail = viewModel.userDetail
 
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                if (personalDetailsEnabled) {
-                    val userDetail = viewModel.userDetail
-                    Column(
+                userDetail.let { user ->
+                    Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .padding(24.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (!userDetail.photoPath.isNullOrBlank()) {
-                            AsyncImage(
-                                model = userDetail.photoPath,
-                                contentDescription = "Profile Photo",
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.AccountCircle,
-                                contentDescription = null,
-                                modifier = Modifier.size(80.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = userDetail.name?.ifBlank { "User Name" } ?: "User Name",
-                            style = MaterialTheme.typography.titleLarge
+                        AsyncImage(
+                            model = user.photoPath ?: R.drawable.ic_launcher_foreground,
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
-                        if (!userDetail.email.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
                             Text(
-                                text = userDetail.email ?: "",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = user.name ?: "User Name",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
                             )
-                        }
-                        if (!userDetail.rollNumber.isNullOrBlank()) {
                             Text(
-                                text = "Roll: ${userDetail.rollNumber ?: ""}",
+                                text = "Roll: ${user.rollNumber ?: ""}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -255,7 +218,8 @@ fun MainScreen(
                     },
                     onItemClick = {
                         scope.launch { drawerState.close() }
-                    }
+                    },
+                    onReportIssueClick = { showReportIssueDialog = true }
                 )
             }
         }
@@ -343,6 +307,36 @@ fun MainScreen(
                 )
             }
         }
+    }
+
+    if (showAddDialog) {
+        AddSubjectDialog(
+            onDismiss = { showAddDialog = false },
+            onSave = { week ->
+                viewModel.insertWeek(week)
+                showAddDialog = false
+            },
+            onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
+            initialWeek = Week().apply { fragment = days[pagerState.currentPage] },
+            subjectSuggestions = viewModel.subjects,
+            teacherSuggestions = viewModel.teachers,
+            existingSlots = viewModel.weekData[days[pagerState.currentPage]] ?: emptyList()
+        )
+    }
+
+    weekToEdit?.let { week ->
+        AddSubjectDialog(
+            onDismiss = { weekToEdit = null },
+            onSave = { updatedWeek ->
+                viewModel.updateWeek(updatedWeek)
+                weekToEdit = null
+            },
+            onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
+            initialWeek = week,
+            subjectSuggestions = viewModel.subjects,
+            teacherSuggestions = viewModel.teachers,
+            existingSlots = viewModel.weekData[week.fragment] ?: emptyList()
+        )
     }
 
     weekToDelete?.let { week ->
@@ -457,6 +451,71 @@ fun MainScreen(
                 }
             }
         }
+    }
+
+    if (showReportIssueDialog) {
+        AlertDialog(
+            onDismissRequest = { showReportIssueDialog = false },
+            title = { Text("Report Issue") },
+            text = { Text("Would you like to include app logs from the past few minutes to help us diagnose the issue?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showReportIssueDialog = false
+                    showLogDurationDialog = true
+                }) {
+                    Text("With logs")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showReportIssueDialog = false
+                    val intent = Intent(Intent.ACTION_VIEW, "https://github.com/Pankaj-Meharchandani/Lectro/issues/new".toUri())
+                    context.startActivity(intent)
+                }) {
+                    Text("Without logs")
+                }
+            }
+        )
+    }
+
+    if (showLogDurationDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogDurationDialog = false },
+            title = { Text("Select Log Duration") },
+            text = {
+                Column {
+                    listOf(5, 10, 15, 30).forEach { mins ->
+                        TextButton(
+                            onClick = {
+                                showLogDurationDialog = false
+                                scope.launch(Dispatchers.IO) {
+                                    val logs = getAppLogs(mins)
+                                    withContext(Dispatchers.Main) {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        val clip = android.content.ClipData.newPlainText("App Logs", logs)
+                                        clipboard.setPrimaryClip(clip)
+                                        Toast.makeText(context, "Logs copied to clipboard", Toast.LENGTH_SHORT).show()
+
+                                        val body = "\n\n--- APP LOGS (Past $mins mins) ---\n$logs"
+                                        val encodedBody = Uri.encode(body)
+                                        val intent = Intent(Intent.ACTION_VIEW, "https://github.com/Pankaj-Meharchandani/Lectro/issues/new?body=$encodedBody".toUri())
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("$mins Minutes")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLogDurationDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -578,10 +637,9 @@ fun NavigationDrawerContent(
     personalDetailsEnabled: Boolean,
     onPersonalDetailsClick: () -> Unit,
     onSchoolWebsiteClick: () -> Unit,
-    onItemClick: () -> Unit
+    onItemClick: () -> Unit,
+    onReportIssueClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    
     Column(modifier = Modifier.fillMaxHeight()) {
         Column(modifier = Modifier.weight(1f)) {
             if (personalDetailsEnabled) {
@@ -644,8 +702,7 @@ fun NavigationDrawerContent(
                 label = { Text("Report Issue") },
                 selected = false,
                 onClick = { 
-                    val intent = Intent(Intent.ACTION_VIEW, "https://github.com/Pankaj-Meharchandani/Lectro/issues/new".toUri())
-                    context.startActivity(intent)
+                    onReportIssueClick()
                     onItemClick() 
                 },
                 icon = { Icon(Icons.Default.BugReport, contentDescription = null) }
@@ -658,4 +715,40 @@ fun NavigationDrawerContent(
             )
         }
     }
+}
+
+private fun getAppLogs(minutes: Int): String {
+    val log = StringBuilder()
+    try {
+        val process = Runtime.getRuntime().exec("logcat -d -v time")
+        val reader = BufferedReader(InputStreamReader(process.inputStream))
+        val startTime = Calendar.getInstance().apply {
+            add(Calendar.MINUTE, -minutes)
+        }
+        
+        val logTimeFormat = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US)
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+
+        var line: String?
+        while (reader.readLine().also { line = it } != null) {
+            val currentLine = line ?: continue
+            if (currentLine.length > 18 && currentLine[2] == '-' && currentLine[5] == ' ' && currentLine[8] == ':') {
+                try {
+                    val dateStr = currentLine.substring(0, 18)
+                    val logTime = Calendar.getInstance()
+                    logTime.time = logTimeFormat.parse(dateStr) ?: continue
+                    logTime.set(Calendar.YEAR, currentYear)
+                    
+                    if (logTime.after(startTime)) {
+                        log.append(currentLine).append("\n")
+                    }
+                } catch (_: Exception) {
+                    // ignore
+                }
+            }
+        }
+    } catch (e: Exception) {
+        log.append("Error collecting logs: ${e.message}")
+    }
+    return log.toString()
 }
