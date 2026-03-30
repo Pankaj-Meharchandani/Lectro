@@ -37,6 +37,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -119,7 +120,7 @@ private fun getFormattingState(textValue: TextFieldValue): FormattingState {
     if (text.isEmpty()) return FormattingState()
     
     val cursor = selection.start
-    val lineStart = text.lastIndexOf('\n', (cursor - 1).coerceAtLeast(0)) + 1
+    val lineStart = if (cursor == 0) 0 else text.substring(0, cursor).lastIndexOf('\n') + 1
     val lineEnd = text.indexOf('\n', cursor).let { if (it == -1) text.length else it }
     val line = text.substring(lineStart, lineEnd)
     
@@ -376,6 +377,13 @@ fun NoteInfoScreen(
                             putExtra(android.content.Intent.EXTRA_TEXT, "$title\n\n${textValue.text}"); type = "text/plain"
                         }, "Share Note"))
                 },
+                onSharePdf    = {
+                    viewModel.note?.let { n ->
+                        // Use current edited values
+                        val tempNote = Note(title, textValue.text, n.color, n.subjectId)
+                        com.example.timetable.utils.PdfGenerator.generateAndShareNote(context, tempNote)
+                    }
+                },
                 titleFocusRequester = titleFocus, containerColor = containerColor
             )
         },
@@ -439,7 +447,7 @@ private fun NoteTopBar(
     isSaved: Boolean, accentColor: Color,
     onBack: () -> Unit, onSave: () -> Unit,
     onColorPicker: () -> Unit, onFindReplace: () -> Unit,
-    onOutline: () -> Unit, onStats: () -> Unit, onShare: () -> Unit,
+    onOutline: () -> Unit, onStats: () -> Unit, onShare: () -> Unit, onSharePdf: () -> Unit,
     titleFocusRequester: FocusRequester, containerColor: Color
 ) {
     var showOverflow by remember { mutableStateOf(false) }
@@ -475,11 +483,12 @@ private fun NoteTopBar(
                 Box {
                     IconButton(onClick = { showOverflow = true }) { Icon(Icons.Default.MoreVert, "More") }
                     DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
-                        DropdownMenuItem(text = { Text("Color") },      leadingIcon = { Icon(Icons.Default.Palette,       null, Modifier.size(18.dp)) }, onClick = { showOverflow = false; onColorPicker() })
-                        DropdownMenuItem(text = { Text("Save") },       leadingIcon = { Icon(Icons.Default.Done,          null, Modifier.size(18.dp)) }, onClick = { showOverflow = false; onSave() })
-                        DropdownMenuItem(text = { Text("Share") },      leadingIcon = { Icon(Icons.Default.Share,         null, Modifier.size(18.dp)) }, onClick = { showOverflow = false; onShare() })
+                        MenuItem(text = "Color", icon = Icons.Default.Palette, onClick = { showOverflow = false; onColorPicker() })
+                        MenuItem(text = "Save", icon = Icons.Default.Done, onClick = { showOverflow = false; onSave() })
+                        MenuItem(text = "Share as Text", icon = Icons.Default.Share, onClick = { showOverflow = false; onShare() })
+                        MenuItem(text = "Share as PDF", icon = Icons.Default.PictureAsPdf, onClick = { showOverflow = false; onSharePdf() })
                         HorizontalDivider()
-                        DropdownMenuItem(text = { Text("Statistics") }, leadingIcon = { Icon(Icons.Outlined.Analytics,    null, Modifier.size(18.dp)) }, onClick = { showOverflow = false; onStats() })
+                        MenuItem(text = "Statistics", icon = Icons.Outlined.Analytics, onClick = { showOverflow = false; onStats() })
                     }
                 }
             },
@@ -487,6 +496,15 @@ private fun NoteTopBar(
         )
         HorizontalDivider(color = accentColor.copy(alpha = 0.15f), thickness = 1.dp)
     }
+}
+
+@Composable
+private fun MenuItem(text: String, icon: ImageVector, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(text) },
+        leadingIcon = { Icon(icon, null, Modifier.size(18.dp)) },
+        onClick = onClick
+    )
 }
 
 // ─────────────────────────────────────────────
@@ -698,7 +716,7 @@ private fun EnhancedFormattingToolbar(
 
 @Composable
 private fun FmtBtn(
-    icon: androidx.compose.ui.graphics.vector.ImageVector?,
+    icon: ImageVector?,
     desc: String,
     labelText: String? = null,
     labelSize: TextUnit = 14.sp,

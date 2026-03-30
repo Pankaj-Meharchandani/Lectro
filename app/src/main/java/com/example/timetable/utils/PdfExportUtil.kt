@@ -19,6 +19,33 @@ import java.util.*
 object PdfExportUtil {
 
     fun exportScheduleToPdf(context: Context, days: List<String>, scheduleData: Map<String, List<Week>>) {
+        val allWeeks = scheduleData.values.flatten()
+        if (allWeeks.isEmpty()) {
+            Toast.makeText(context, "No schedule data to export", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Calculate time range
+        var minMinutes = 24 * 60
+        var maxMinutes = 0
+        
+        for (week in allWeeks) {
+            val from = timeToMinutes(week.fromTime)
+            val to = timeToMinutes(week.toTime)
+            if (from < minMinutes) minMinutes = from
+            if (to > maxMinutes) maxMinutes = to
+        }
+
+        // Round minMinutes down to hour, maxMinutes up to hour
+        minMinutes = (minMinutes / 60) * 60
+        maxMinutes = ((maxMinutes + 59) / 60) * 60
+        
+        val totalMinutes = maxMinutes - minMinutes
+        if (totalMinutes <= 0) {
+            Toast.makeText(context, "Invalid time range", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val pdfDocument = PdfDocument()
         
         // A4 size in points (72 dpi)
@@ -50,35 +77,6 @@ object PdfExportUtil {
         // Title
         canvas.drawText("Weekly Schedule", margin, currentY, titlePaint)
         currentY += 30f
-
-        // Calculate time range
-        var minMinutes = 24 * 60
-        var maxMinutes = 0
-        
-        val allWeeks = scheduleData.values.flatten()
-        if (allWeeks.isEmpty()) {
-            Toast.makeText(context, "No schedule data to export", Toast.LENGTH_SHORT).show()
-            pdfDocument.close()
-            return
-        }
-
-        for (week in allWeeks) {
-            val from = timeToMinutes(week.fromTime)
-            val to = timeToMinutes(week.toTime)
-            if (from < minMinutes) minMinutes = from
-            if (to > maxMinutes) maxMinutes = to
-        }
-
-        // Round minMinutes down to hour, maxMinutes up to hour
-        minMinutes = (minMinutes / 60) * 60
-        maxMinutes = ((maxMinutes + 59) / 60) * 60
-        
-        val totalMinutes = maxMinutes - minMinutes
-        if (totalMinutes <= 0) {
-            Toast.makeText(context, "Invalid time range", Toast.LENGTH_SHORT).show()
-            pdfDocument.close()
-            return
-        }
 
         val tableWidth = pageWidth - 2 * margin
         val tableHeight = pageHeight - currentY - margin

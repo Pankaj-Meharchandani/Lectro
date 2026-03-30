@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -64,10 +66,20 @@ class TeacherViewModel(application: Application) : AndroidViewModel(application)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()) {
+fun TeachersScreen(
+    onBack: () -> Unit, 
+    editTeacherId: Int? = null,
+    viewModel: TeacherViewModel = viewModel()
+) {
     var showAddDialog by remember { mutableStateOf(false) }
     var teacherToEdit by remember { mutableStateOf<Teacher?>(null) }
     var teacherToDelete by remember { mutableStateOf<Teacher?>(null) }
+
+    LaunchedEffect(editTeacherId) {
+        if (editTeacherId != null) {
+            teacherToEdit = viewModel.teachers.find { it.id == editTeacherId }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -86,36 +98,65 @@ fun TeachersScreen(onBack: () -> Unit, viewModel: TeacherViewModel = viewModel()
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            itemsIndexed(viewModel.teachers) { index, teacher ->
-                Box {
-                    var showMenu by remember { mutableStateOf(false) }
-                    TeacherItem(
-                        teacher = teacher, 
-                        onDelete = { teacherToDelete = teacher },
-                        onEdit = { teacherToEdit = it }
+        if (viewModel.teachers.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.Group,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 60.dp)
-                    ) {
-                        Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
-                    }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Move Up") },
-                            onClick = { viewModel.moveTeacher(index, true); showMenu = false },
-                            enabled = index > 0
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "No teachers added yet.",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "Tap + to add your first contact.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                itemsIndexed(viewModel.teachers) { index, teacher ->
+                    Box {
+                        var showMenu by remember { mutableStateOf(false) }
+                        TeacherItem(
+                            teacher = teacher, 
+                            onDelete = { teacherToDelete = teacher },
+                            onEdit = { teacherToEdit = it }
                         )
-                        DropdownMenuItem(
-                            text = { Text("Move Down") },
-                            onClick = { viewModel.moveTeacher(index, false); showMenu = false },
-                            enabled = index < viewModel.teachers.size - 1
-                        )
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 60.dp)
+                        ) {
+                            Icon(Icons.Default.SwapVert, contentDescription = "Reorder")
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Move Up") },
+                                onClick = { viewModel.moveTeacher(index, true); showMenu = false },
+                                enabled = index > 0
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Move Down") },
+                                onClick = { viewModel.moveTeacher(index, false); showMenu = false },
+                                enabled = index < viewModel.teachers.size - 1
+                            )
+                        }
                     }
                 }
             }
@@ -179,7 +220,16 @@ fun AddTeacherDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.name)) })
                 OutlinedTextField(value = post, onValueChange = { post = it }, label = { Text(stringResource(R.string.post)) })
-                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text(stringResource(R.string.phone_number)) })
+                OutlinedTextField(
+                    value = phone, 
+                    onValueChange = { input ->
+                        if (input.all { it.isDigit() || it == ' ' || it == '+' || it == '-' }) {
+                            phone = input
+                        }
+                    }, 
+                    label = { Text(stringResource(R.string.phone_number)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                )
                 OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text(stringResource(R.string.email)) })
                 OutlinedTextField(value = cabinNumber, onValueChange = { cabinNumber = it }, label = { Text(stringResource(R.string.cabin_number)) })
             }

@@ -43,6 +43,7 @@ import com.example.timetable.ui.components.NoteItem
 import com.example.timetable.ui.components.EditSubjectDialog
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.PdfGenerator
 import com.example.timetable.utils.ScheduleExporter
 import java.text.SimpleDateFormat
 import java.util.*
@@ -250,7 +251,12 @@ fun SubjectDetailScreen(
                     },
                     actions = {
                         IconButton(onClick = { exportLauncher.launch("${subject.name}.lec") }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share")
+                            Icon(Icons.Default.Share, contentDescription = "Share Schedule")
+                        }
+                        IconButton(onClick = { 
+                            PdfGenerator.generateAndShareSubjectNotes(context, subject.name, viewModel.notes)
+                        }) {
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = "Share Notes as PDF")
                         }
                         IconButton(onClick = { showEditSubjectDialog = true }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit")

@@ -20,6 +20,7 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String KEY_ASSIGNMENT_REMINDER = "assignment_reminder";
     public static final String KEY_EXAM_REMINDER = "exam_reminder";
     public static final String KEY_ATTENDANCE_ALERT = "attendance_alert";
+    public static final String KEY_ONBOARDING_COMPLETED = "onboarding_completed";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

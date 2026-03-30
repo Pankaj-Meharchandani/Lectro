@@ -836,6 +836,18 @@ public class DbHelper extends SQLiteOpenHelper {
         db.close();
     }
 
+    public String getSubjectName(int id) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(SUBJECTS, new String[]{SUBJECTS_NAME}, SUBJECTS_ID + "=?", new String[]{String.valueOf(id)}, null, null, null);
+        String name = null;
+        if (cursor.moveToFirst()) {
+            name = getStringChecked(cursor, SUBJECTS_NAME);
+        }
+        cursor.close();
+        db.close();
+        return name;
+    }
+
     public Week getSubjectDetails(String name) {
         SQLiteDatabase db = this.getReadableDatabase();
         Cursor cursor = db.query(SUBJECTS, new String[]{SUBJECTS_COLOR, SUBJECTS_TEACHER, SUBJECTS_ROOM}, SUBJECTS_NAME + "=?", new String[]{name}, null, null, null);
@@ -1161,6 +1173,31 @@ public class DbHelper extends SQLiteOpenHelper {
         cursor.close();
         db.close();
         return records;
+    }
+
+    public void deleteAttendanceRecord(int weekId, String subjectName, String date) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        Cursor cursor = db.query(ATTENDANCE, new String[]{ATTENDANCE_STATUS},
+                ATTENDANCE_SUBJECT_NAME + " = ? AND " + ATTENDANCE_DATE + " = ? AND " + ATTENDANCE_WEEK_ID + " = ?",
+                new String[]{subjectName, date, String.valueOf(weekId)}, null, null, null);
+
+        String status = null;
+        if (cursor.moveToFirst()) {
+            status = cursor.getString(0);
+        }
+        cursor.close();
+
+        if (status != null) {
+            String column = getColumnNameForType(status);
+            if (column != null) {
+                db.execSQL("UPDATE " + SUBJECTS + " SET " + column + " = " + column + " - 1 WHERE " + SUBJECTS_NAME + " = ?", new String[]{subjectName});
+            }
+        }
+
+        db.delete(ATTENDANCE, ATTENDANCE_SUBJECT_NAME + " = ? AND " + ATTENDANCE_DATE + " = ? AND " + ATTENDANCE_WEEK_ID + " = ?",
+                new String[]{subjectName, date, String.valueOf(weekId)});
+        db.close();
     }
 
     public static class AttendanceRecord {

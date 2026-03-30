@@ -225,22 +225,44 @@ fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewMode
             }
 
             // File List (Manual rendering since we are inside verticalScroll)
-            viewModel.userFiles.forEach { file ->
-                FileItem(
-                    file = file,
-                    onDelete = { viewModel.deleteFile(file.id) },
-                    onClick = {
-                        try {
-                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                                data = Uri.parse(file.path)
-                                flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                            }
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            // Handle error opening file
-                        }
+            if (viewModel.userFiles.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.UploadFile,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "No files uploaded yet.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                )
+                }
+            } else {
+                viewModel.userFiles.forEach { file ->
+                    FileItem(
+                        file = file,
+                        onDelete = { viewModel.deleteFile(file.id) },
+                        onClick = {
+                            try {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                    data = Uri.parse(file.path)
+                                    flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                // Handle error opening file
+                            }
+                        }
+                    )
+                }
             }
         }
     }

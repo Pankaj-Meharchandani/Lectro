@@ -10,8 +10,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +33,9 @@ import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.DbHelper
 import com.example.timetable.utils.NotificationHelper
 import com.example.timetable.utils.TimeUtils
+import com.example.timetable.utils.WidgetUtils
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -69,6 +74,7 @@ class ExamViewModel(application: Application) : AndroidViewModel(application) {
         db.deleteExamById(exam)
         loadExams()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 
     fun insertExam(exam: Exam) {
@@ -76,6 +82,7 @@ class ExamViewModel(application: Application) : AndroidViewModel(application) {
         loadExams()
         loadSuggestions()
         notificationHelper.scheduleEventsForToday()
+        viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 }
 
@@ -143,13 +150,44 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
             }
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            items(filteredExams) { exam ->
-                ExamItem(exam = exam, onDelete = { examToDelete = exam })
+        if (filteredExams.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        if (selectedTab == 0) Icons.AutoMirrored.Filled.Assignment else Icons.Default.EventAvailable,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        if (selectedTab == 0) "No upcoming exams!" else "No completed exams yet.",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (selectedTab == 0) {
+                        Text(
+                            "Tap + to add an exam.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                items(filteredExams) { exam ->
+                    ExamItem(exam = exam, onDelete = { examToDelete = exam })
+                }
             }
         }
     }

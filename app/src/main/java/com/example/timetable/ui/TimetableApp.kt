@@ -1,18 +1,36 @@
 package com.example.timetable.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.preference.PreferenceManager
+import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.ui.screens.*
 
 @Composable
 fun TimetableApp() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val onboardingCompleted = sharedPref.getBoolean(SettingsActivity.KEY_ONBOARDING_COMPLETED, false)
     
-    NavHost(navController = navController, startDestination = "main") {
+    NavHost(
+        navController = navController, 
+        startDestination = if (onboardingCompleted) "main" else "onboarding"
+    ) {
+        composable("onboarding") {
+            OnboardingScreen(onFinished = {
+                sharedPref.edit().putBoolean(SettingsActivity.KEY_ONBOARDING_COMPLETED, true).apply()
+                navController.navigate("main") {
+                    popUpTo("onboarding") { inclusive = true }
+                }
+            })
+        }
         composable("main") {
             MainScreen(
                 onNavigateToExams = { navController.navigate("exams") },
@@ -22,7 +40,10 @@ fun TimetableApp() {
                 onNavigateToSettings = { navController.navigate("settings") },
                 onNavigateToPersonalDetails = { navController.navigate("personal_details") },
                 onNavigateToAttendance = { navController.navigate("attendance") },
-                onNavigateToSubjectDetail = { subjectId -> navController.navigate("subject_detail/$subjectId") }
+                onNavigateToAbout = { navController.navigate("about") },
+                onNavigateToSubjectDetail = { subjectId -> navController.navigate("subject_detail/$subjectId") },
+                onNavigateToNoteInfo = { noteId -> navController.navigate("note_info/$noteId") },
+                onNavigateToEditTeacher = { teacherId -> navController.navigate("teachers?editTeacherId=$teacherId") }
             )
         }
         composable("attendance") {
@@ -34,8 +55,18 @@ fun TimetableApp() {
         composable("exams") {
             ExamsScreen(onBack = { navController.popBackStack() })
         }
-        composable("teachers") {
-            TeachersScreen(onBack = { navController.popBackStack() })
+        composable(
+            route = "teachers?editTeacherId={teacherId}",
+            arguments = listOf(navArgument("teacherId") { 
+                type = NavType.IntType
+                defaultValue = -1
+            })
+        ) { backStackEntry ->
+            val teacherId = backStackEntry.arguments?.getInt("teacherId") ?: -1
+            TeachersScreen(
+                onBack = { navController.popBackStack() },
+                editTeacherId = if (teacherId != -1) teacherId else null
+            )
         }
         composable("assignments") {
             AssignmentsScreen(onBack = { navController.popBackStack() })
@@ -65,7 +96,12 @@ fun TimetableApp() {
             )
         }
         composable("settings") {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable("about") {
+            AboutScreen(onBack = { navController.popBackStack() })
         }
     }
 }
