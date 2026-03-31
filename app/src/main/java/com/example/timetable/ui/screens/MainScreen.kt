@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -166,6 +167,9 @@ fun MainScreen(
         derivedStateOf { viewModel.getOngoingClass() } 
     }
 
+    val configuration = LocalConfiguration.current
+    val isSmallScreen = configuration.screenHeightDp < 650
+
     BackHandler(enabled = isSearchActive) {
         isSearchActive = false
         searchQuery = ""
@@ -207,37 +211,71 @@ fun MainScreen(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
-                userDetail.let { user ->
+                val headerPadding = if (isSmallScreen) 16.dp else 24.dp
+                val iconSize = if (isSmallScreen) 48.dp else 64.dp
+
+                if (personalDetailsEnabled) {
+                    userDetail.let { user ->
+                        Row(
+                            modifier = Modifier
+                                .padding(headerPadding)
+                                .fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage(
+                                model = user.photoPath ?: R.drawable.ic_launcher_foreground,
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier
+                                    .size(iconSize)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = user.name ?: "User Name",
+                                    style = if (isSmallScreen) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Roll: ${user.rollNumber ?: ""}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                } else {
                     Row(
                         modifier = Modifier
-                            .padding(24.dp)
+                            .padding(headerPadding)
                             .fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
-                            model = user.photoPath ?: R.drawable.ic_launcher_foreground,
-                            contentDescription = "Profile Picture",
+                            model = R.mipmap.ic_launcher,
+                            contentDescription = "App Icon",
                             modifier = Modifier
-                                .size(64.dp)
+                                .size(iconSize)
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
-                                text = user.name ?: "User Name",
-                                style = MaterialTheme.typography.titleLarge,
+                                text = stringResource(id = R.string.app_name),
+                                style = if (isSmallScreen) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Roll: ${user.rollNumber ?: ""}",
+                                text = stringResource(id = R.string.app_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
-                    HorizontalDivider()
                 }
+                HorizontalDivider()
                 NavigationDrawerContent(
                     onExamsClick = onNavigateToExams,
                     onTeachersClick = onNavigateToTeachers,
@@ -259,7 +297,8 @@ fun MainScreen(
                     onItemClick = {
                         scope.launch { drawerState.close() }
                     },
-                    onReportIssueClick = { showReportIssueDialog = true }
+                    onReportIssueClick = { showReportIssueDialog = true },
+                    isSmallScreen = isSmallScreen
                 )
             }
         }
@@ -839,66 +878,80 @@ fun NavigationDrawerContent(
     onPersonalDetailsClick: () -> Unit,
     onSchoolWebsiteClick: () -> Unit,
     onItemClick: () -> Unit,
-    onReportIssueClick: () -> Unit
+    onReportIssueClick: () -> Unit,
+    isSmallScreen: Boolean
 ) {
+    val itemModifier = if (isSmallScreen) Modifier.height(48.dp) else Modifier
     Column(modifier = Modifier.fillMaxHeight()) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
             if (personalDetailsEnabled) {
                 NavigationDrawerItem(
                     label = { Text(stringResource(R.string.personal_details_files)) },
                     selected = false,
                     onClick = { onPersonalDetailsClick(); onItemClick() },
-                    icon = { Icon(Icons.Default.Badge, contentDescription = null) }
+                    icon = { Icon(Icons.Default.Badge, contentDescription = null) },
+                    modifier = itemModifier
                 )
             }
             NavigationDrawerItem(
                 label = { Text("Attendance") },
                 selected = false,
                 onClick = { onAttendanceClick(); onItemClick() },
-                icon = { Icon(Icons.Default.DoneAll, contentDescription = null) }
+                icon = { Icon(Icons.Default.DoneAll, contentDescription = null) },
+                modifier = itemModifier
             )
             NavigationDrawerItem(
                 label = { Text(stringResource(id = R.string.school_website)) },
                 selected = false,
                 onClick = { onSchoolWebsiteClick(); onItemClick() },
-                icon = { Icon(Icons.Default.Language, contentDescription = null) }
+                icon = { Icon(Icons.Default.Language, contentDescription = null) },
+                modifier = itemModifier
             )
             NavigationDrawerItem(
                 label = { Text(stringResource(id = R.string.exams)) },
                 selected = false,
                 onClick = { onExamsClick(); onItemClick() },
-                icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null) }
+                icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null) },
+                modifier = itemModifier
             )
             NavigationDrawerItem(
                 label = { Text(stringResource(id = R.string.teachers)) },
                 selected = false,
                 onClick = { onTeachersClick(); onItemClick() },
-                icon = { Icon(Icons.Default.Person, contentDescription = null) }
+                icon = { Icon(Icons.Default.Person, contentDescription = null) },
+                modifier = itemModifier
             )
             NavigationDrawerItem(
                 label = { Text(stringResource(id = R.string.homeworks)) },
                 selected = false,
                 onClick = { onAssignmentsClick(); onItemClick() },
-                icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null) }
+                icon = { Icon(Icons.AutoMirrored.Filled.Assignment, contentDescription = null) },
+                modifier = itemModifier
             )
             NavigationDrawerItem(
                 label = { Text(stringResource(id = R.string.notes)) },
                 selected = false,
                 onClick = { onNotesClick(); onItemClick() },
-                icon = { Icon(Icons.AutoMirrored.Filled.Note, contentDescription = null) }
+                icon = { Icon(Icons.AutoMirrored.Filled.Note, contentDescription = null) },
+                modifier = itemModifier
             )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = if (isSmallScreen) 4.dp else 8.dp))
             NavigationDrawerItem(
                 label = { Text(stringResource(id = R.string.action_settings)) },
                 selected = false,
                 onClick = { onSettingsClick(); onItemClick() },
-                icon = { Icon(Icons.Default.Settings, contentDescription = null) }
+                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                modifier = itemModifier
             )
         }
 
         // Bottom Section
-        Column(modifier = Modifier.padding(bottom = 16.dp)) {
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Column(modifier = Modifier.padding(bottom = if (isSmallScreen) 8.dp else 16.dp)) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = if (isSmallScreen) 4.dp else 8.dp))
             NavigationDrawerItem(
                 label = { Text("Report Issue") },
                 selected = false,
@@ -906,13 +959,15 @@ fun NavigationDrawerContent(
                     onReportIssueClick()
                     onItemClick() 
                 },
-                icon = { Icon(Icons.Default.BugReport, contentDescription = null) }
+                icon = { Icon(Icons.Default.BugReport, contentDescription = null) },
+                modifier = itemModifier
             )
             NavigationDrawerItem(
                 label = { Text("About") },
                 selected = false,
                 onClick = { onAboutClick(); onItemClick() },
-                icon = { Icon(Icons.Default.Info, contentDescription = null) }
+                icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                modifier = itemModifier
             )
         }
     }
