@@ -233,15 +233,17 @@ fun MainScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = user.name ?: "User Name",
+                                    text = if (user.name.isNullOrBlank()) "Student Name" else user.name!!,
                                     style = if (isSmallScreen) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Text(
-                                    text = "Roll: ${user.rollNumber ?: ""}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                if (!user.rollNumber.isNullOrBlank()) {
+                                    Text(
+                                        text = "Roll: ${user.rollNumber}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
