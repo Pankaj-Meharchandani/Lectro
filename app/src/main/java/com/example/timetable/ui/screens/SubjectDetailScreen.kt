@@ -33,7 +33,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
 import com.example.timetable.R
-import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.model.Material
 import com.example.timetable.model.Note
 import com.example.timetable.model.Subject
@@ -42,6 +41,7 @@ import com.example.timetable.ui.components.ColorPickerRow
 import com.example.timetable.ui.components.NoteItem
 import com.example.timetable.ui.components.EditSubjectDialog
 import com.example.timetable.ui.theme.themedContainerColor
+import com.example.timetable.utils.AppConstants
 import com.example.timetable.utils.DbHelper
 import com.example.timetable.utils.PdfGenerator
 import com.example.timetable.utils.ScheduleExporter
@@ -235,7 +235,7 @@ fun SubjectDetailScreen(
 
     val subject = viewModel.subject
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val minAttendance = remember { sharedPref.getInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, 75) }
+    val minAttendance = remember { sharedPref.getInt(AppConstants.KEY_MIN_ATTENDANCE_SETTING, 75) }
 
     if (subject != null) {
         val headerColor = themedContainerColor(if (subject.color != 0) Color(subject.color) else MaterialTheme.colorScheme.primary)

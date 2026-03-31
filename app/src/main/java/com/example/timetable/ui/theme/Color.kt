@@ -2,9 +2,9 @@ package com.example.timetable.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Primary = Color(0xFFF88103)
-val PrimaryDark = Color(0xFFFF9900)
-val Accent = Color(0xFFFF0000)
+val Primary = Color(0xFF6750A4)
+val PrimaryDark = Color(0xFF6750A4)
+val Accent = Color(0xFF6750A4)
 
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)

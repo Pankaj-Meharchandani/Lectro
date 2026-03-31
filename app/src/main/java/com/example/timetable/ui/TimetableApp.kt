@@ -9,7 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.preference.PreferenceManager
-import com.example.timetable.activities.SettingsActivity
+import com.example.timetable.utils.AppConstants
 import com.example.timetable.ui.screens.*
 
 @Composable
@@ -17,7 +17,7 @@ fun TimetableApp() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val onboardingCompleted = sharedPref.getBoolean(SettingsActivity.KEY_ONBOARDING_COMPLETED, false)
+    val onboardingCompleted = sharedPref.getBoolean(AppConstants.KEY_ONBOARDING_COMPLETED, false)
     
     NavHost(
         navController = navController, 
@@ -25,7 +25,7 @@ fun TimetableApp() {
     ) {
         composable("onboarding") {
             OnboardingScreen(onFinished = {
-                sharedPref.edit().putBoolean(SettingsActivity.KEY_ONBOARDING_COMPLETED, true).apply()
+                sharedPref.edit().putBoolean(AppConstants.KEY_ONBOARDING_COMPLETED, true).apply()
                 navController.navigate("main") {
                     popUpTo("onboarding") { inclusive = true }
                 }

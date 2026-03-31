@@ -16,7 +16,6 @@ import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.example.timetable.R
 import com.example.timetable.activities.MainActivity
-import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.model.Exam
 import com.example.timetable.model.Homework
 import com.example.timetable.model.Week
@@ -75,11 +74,11 @@ class NotificationHelper(private val context: Context) {
                 return false
             }
         }
-        return sharedPref.getBoolean(SettingsActivity.KEY_NOTIFICATIONS_ENABLED, false)
+        return sharedPref.getBoolean(AppConstants.KEY_NOTIFICATIONS_ENABLED, false)
     }
 
     fun showScheduleNotification(message: String) {
-        if (!areNotificationsEnabled() || !sharedPref.getBoolean(SettingsActivity.KEY_SCHEDULE_REMINDER, true)) return
+        if (!areNotificationsEnabled() || !sharedPref.getBoolean(AppConstants.KEY_SCHEDULE_REMINDER, true)) return
 
         showNotification(
             CHANNEL_ID_SCHEDULE,
@@ -90,7 +89,7 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showAssignmentNotification(assignments: List<Homework>) {
-        if (!areNotificationsEnabled() || !sharedPref.getBoolean(SettingsActivity.KEY_ASSIGNMENT_REMINDER, true) || assignments.isEmpty()) return
+        if (!areNotificationsEnabled() || !sharedPref.getBoolean(AppConstants.KEY_ASSIGNMENT_REMINDER, true) || assignments.isEmpty()) return
 
         val message = "You have ${assignments.size} upcoming assignments."
         val bigText = assignments.joinToString("\n") { "${it.subject}: ${it.title} (Due: ${it.date})" }
@@ -105,7 +104,7 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showExamNotification(exams: List<Exam>) {
-        if (!areNotificationsEnabled() || !sharedPref.getBoolean(SettingsActivity.KEY_EXAM_REMINDER, true) || exams.isEmpty()) return
+        if (!areNotificationsEnabled() || !sharedPref.getBoolean(AppConstants.KEY_EXAM_REMINDER, true) || exams.isEmpty()) return
 
         val message = "You have ${exams.size} upcoming exams."
         val bigText = exams.joinToString("\n") { "${it.subject}: ${it.date} at ${it.time}" }
@@ -120,7 +119,7 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun showAttendanceAlert(subjectName: String, attendance: Double) {
-        if (!areNotificationsEnabled() || !sharedPref.getBoolean(SettingsActivity.KEY_ATTENDANCE_ALERT, true)) return
+        if (!areNotificationsEnabled() || !sharedPref.getBoolean(AppConstants.KEY_ATTENDANCE_ALERT, true)) return
 
         showNotification(
             CHANNEL_ID_ATTENDANCE,
@@ -202,7 +201,7 @@ class NotificationHelper(private val context: Context) {
         val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(today.time)
 
         // Class Reminders (15 mins before)
-        if (sharedPref.getBoolean(SettingsActivity.KEY_SCHEDULE_REMINDER, true)) {
+        if (sharedPref.getBoolean(AppConstants.KEY_SCHEDULE_REMINDER, true)) {
             db.getWeek(dayName).forEach { week ->
                 val classTime = parseTimeToday(week.fromTime) ?: return@forEach
                 val alarmTime = classTime.timeInMillis - 15 * 60 * 1000
@@ -215,7 +214,7 @@ class NotificationHelper(private val context: Context) {
         val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(today.time)
 
         // Exam Reminders (1 hr before)
-        if (sharedPref.getBoolean(SettingsActivity.KEY_EXAM_REMINDER, true)) {
+        if (sharedPref.getBoolean(AppConstants.KEY_EXAM_REMINDER, true)) {
             db.exam.filter { it.date == dateStr }.forEach { exam ->
                 val examTime = parseDateTime(exam.date, exam.time) ?: return@forEach
                 val alarmTime = examTime.timeInMillis - 60 * 60 * 1000
@@ -226,7 +225,7 @@ class NotificationHelper(private val context: Context) {
         }
 
         // Assignment Reminders (8 AM on due date)
-        if (sharedPref.getBoolean(SettingsActivity.KEY_ASSIGNMENT_REMINDER, true)) {
+        if (sharedPref.getBoolean(AppConstants.KEY_ASSIGNMENT_REMINDER, true)) {
             db.homework.filter { it.date == dateStr && it.completed == 0 }.forEach { homework ->
                 val alarmTime = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 8)
@@ -317,7 +316,7 @@ class NotificationHelper(private val context: Context) {
 
     fun checkAttendanceAndNotify() {
         val db = DbHelper(context)
-        val minAttendanceStr = sharedPref.getString(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, "75")
+        val minAttendanceStr = sharedPref.getString(AppConstants.KEY_MIN_ATTENDANCE_SETTING, "75")
         val minAttendance = minAttendanceStr?.toDoubleOrNull() ?: 75.0
         val subjects = db.allSubjects
         subjects.forEach { subject ->
