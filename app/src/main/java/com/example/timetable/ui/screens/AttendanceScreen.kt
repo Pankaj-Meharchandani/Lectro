@@ -14,9 +14,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
-import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.model.Subject
 import com.example.timetable.ui.viewmodel.MainViewModel
+import com.example.timetable.utils.AppConstants
 import com.example.timetable.utils.DbHelper
 import java.text.SimpleDateFormat
 import java.util.*
@@ -41,10 +41,10 @@ fun AttendanceScreen(
     val context = LocalContext.current
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     var attendanceEnabled by remember {
-        mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_ATTENDANCE_SETTING, true))
+        mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_ATTENDANCE_SETTING, true))
     }
     var minAttendance by remember {
-        mutableIntStateOf(sharedPref.getInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, 75))
+        mutableIntStateOf(sharedPref.getInt(AppConstants.KEY_MIN_ATTENDANCE_SETTING, 75))
     }
     var selectedSubject by remember { mutableStateOf<Subject?>(null) }
 
@@ -78,7 +78,7 @@ fun AttendanceScreen(
                         checked = attendanceEnabled,
                         onCheckedChange = {
                             attendanceEnabled = it
-                            sharedPref.edit().putBoolean(SettingsActivity.KEY_ATTENDANCE_SETTING, it).apply()
+                            sharedPref.edit().putBoolean(AppConstants.KEY_ATTENDANCE_SETTING, it).apply()
                         }
                     )
                 }
@@ -91,7 +91,7 @@ fun AttendanceScreen(
                     onValueChange = {
                         val newValue = (it / 5f).roundToInt() * 5
                         minAttendance = newValue
-                        sharedPref.edit().putInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, minAttendance).apply()
+                        sharedPref.edit().putInt(AppConstants.KEY_MIN_ATTENDANCE_SETTING, minAttendance).apply()
                     },
                     valueRange = 0f..100f,
                     steps = 19

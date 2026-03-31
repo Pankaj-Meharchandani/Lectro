@@ -27,7 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.preference.PreferenceManager
-import com.example.timetable.activities.SettingsActivity
+import com.example.timetable.utils.AppConstants
 import com.example.timetable.utils.DbHelper
 
 import com.example.timetable.ui.components.NoteItem
@@ -105,7 +105,7 @@ fun NotesScreen(
 ) {
     val context = LocalContext.current
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val minAttendance = remember { sharedPref.getInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, 75) }
+    val minAttendance = remember { sharedPref.getInt(AppConstants.KEY_MIN_ATTENDANCE_SETTING, 75) }
     var showAddDialog by remember { mutableStateOf(false) }
     var subjectToEdit by remember { mutableStateOf<Subject?>(null) }
     var subjectToDelete by remember { mutableStateOf<Subject?>(null) }

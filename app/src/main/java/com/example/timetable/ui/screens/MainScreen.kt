@@ -48,10 +48,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
 import coil.compose.AsyncImage
 import com.example.timetable.R
-import com.example.timetable.activities.SettingsActivity
 import com.example.timetable.model.Week
 import com.example.timetable.ui.components.AddSubjectDialog
 import com.example.timetable.ui.components.SubjectItem
+import com.example.timetable.utils.AppConstants
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -93,31 +93,31 @@ fun MainScreen(
     
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     var switchSevenDays by remember { 
-        mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_SEVEN_DAYS_SETTING, false)) 
+        mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_SEVEN_DAYS_SETTING, false)) 
     }
     var personalDetailsEnabled by remember {
-        mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_PERSONAL_DETAILS_SETTING, true))
+        mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_PERSONAL_DETAILS_SETTING, true))
     }
     var attendanceEnabled by remember {
-        mutableStateOf(sharedPref.getBoolean(SettingsActivity.KEY_ATTENDANCE_SETTING, true))
+        mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_ATTENDANCE_SETTING, true))
     }
     var minAttendance by remember {
-        mutableIntStateOf(sharedPref.getInt(SettingsActivity.KEY_MIN_ATTENDANCE_SETTING, 75))
+        mutableIntStateOf(sharedPref.getInt(AppConstants.KEY_MIN_ATTENDANCE_SETTING, 75))
     }
 
     DisposableEffect(sharedPref) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
             when (key) {
-                SettingsActivity.KEY_SEVEN_DAYS_SETTING -> {
+                AppConstants.KEY_SEVEN_DAYS_SETTING -> {
                     switchSevenDays = prefs.getBoolean(key, false)
                 }
-                SettingsActivity.KEY_PERSONAL_DETAILS_SETTING -> {
+                AppConstants.KEY_PERSONAL_DETAILS_SETTING -> {
                     personalDetailsEnabled = prefs.getBoolean(key, true)
                 }
-                SettingsActivity.KEY_ATTENDANCE_SETTING -> {
+                AppConstants.KEY_ATTENDANCE_SETTING -> {
                     attendanceEnabled = prefs.getBoolean(key, true)
                 }
-                SettingsActivity.KEY_MIN_ATTENDANCE_SETTING -> {
+                AppConstants.KEY_MIN_ATTENDANCE_SETTING -> {
                     minAttendance = prefs.getInt(key, 75)
                 }
             }
@@ -249,7 +249,7 @@ fun MainScreen(
                     personalDetailsEnabled = personalDetailsEnabled,
                     onPersonalDetailsClick = onNavigateToPersonalDetails,
                     onSchoolWebsiteClick = {
-                        val url = sharedPref.getString(SettingsActivity.KEY_SCHOOL_WEBSITE_SETTING, null)
+                        val url = sharedPref.getString(AppConstants.KEY_SCHOOL_WEBSITE_SETTING, null)
                         if (!TextUtils.isEmpty(url)) {
                             BrowserUtil.openUrlInChromeCustomTab(context, url)
                         } else {
