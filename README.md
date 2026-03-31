@@ -5,13 +5,14 @@
 </p>
 
 <p align="center">
-  A modern Android app to manage your class schedule, track attendance, organize notes, and stay on top of assignments and exams — all in one place.
+  A modern, single-activity Android app to manage your class schedule, track attendance, organize rich notes, and stay on top of assignments and exams — all in one place.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white" />
   <img src="https://img.shields.io/badge/Language-Kotlin%20%2F%20Java-orange" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4" />
+  <img src="https://img.shields.io/badge/Architecture-Single%20Activity-blueviolet" />
   <img src="https://img.shields.io/badge/License-GNU-blue" />
 </p>
 
@@ -39,206 +40,122 @@
   <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125159.jpg" width="180" alt="Screen 8" />
 </p>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125254.jpg" width="180" alt="Screen 9" />
-  &nbsp;&nbsp;
-  <img src="https://raw.githubusercontent.com/Pankaj-Meharchandani/Lectro/master/screenshots/Screenshot_20260326_125738.jpg" width="180" alt="Screen 10" />
-</p>
+---
+
+## 🚀 Features
+
+### 📅 Smart Timetable
+- **Flexible View:** Toggle between 5-day (Mon–Fri) or 7-day (Mon–Sun) schedules.
+- **Conflict Detection:** Intelligent conflict resolution when importing shared schedules.
+- **Ongoing Class FAB:** Quick access to create a note for the class currently in progress.
+- **Export to PDF:** Generate a clean, printable PDF of your entire weekly schedule.
+- **Global Search:** Instant search across subjects, notes, assignments, and teachers.
+
+### ✅ Attendance Tracking (Bunk Predictor)
+- **Status tracking:** Mark classes as Present, Absent, or Cancelled.
+- **Goal Management:** Set a custom goal (e.g., 75%) and get real-time "Safe/Unsafe" insights.
+- **Predictive Logic:** Tells you exactly how many more classes you can skip or must attend to reach your goal.
+- **History & Calendar:** Full historical log per subject with an interactive monthly calendar view.
+
+### 📝 Pro Note Editor
+- **WYSIWYG Markdown:** Real-time formatting for headings, bold, italic, underline, strikethrough, and code.
+- **Intelligent Lists:** Checklists, bullet points, and numbered lists with auto-continuation.
+- **Advanced Tools:** Inline image embedding, Find & Replace, and a Document Outline for quick navigation.
+- **Statistics:** Real-time word count, character count, and reading time estimation.
+- **PDF Export:** Share your notes as professional PDFs with preserved formatting.
+
+### 📁 Subject & Material Management
+- **Centralized Hub:** View all notes, materials, and attendance records for a specific subject.
+- **File Attachments:** Upload and manage lecture slides, PDFs, and documents per subject.
+- **Quick-Share:** Export individual subject schedules to share with classmates.
+
+### 📋 Assignments & Exams
+- **Deadline Tracking:** Organized tabs for Pending, Overdue, and Completed tasks.
+- **Priority Reminders:** Automated notifications to ensure you never miss a deadline.
+- **Inherited Theming:** Automatically color-coded based on the parent subject.
+
+### 👤 Personal Details & Vault
+- **Identity Profile:** Store your name, roll number, and student photo.
+- **Secure File Storage:** Manage essential documents like admit cards or ID cards with custom labels.
+
+### 📱 Home Screen Widgets (Glance)
+- **Today's Schedule:** See your upcoming classes at a glance.
+- **Deadlines Widget:** Keep track of approaching assignments and exams.
+- **Attendance Widget:** Quick overview of your attendance standing across all subjects.
+
+### 🔔 Smart Notifications
+- **Class Reminders:** Triggered 15 minutes before every lecture.
+- **Exam Alerts:** High-priority reminders 1 hour before the start.
+- **Assignment Summary:** Morning digest at 8:00 AM for tasks due that day.
+- **Weekly Report:** Every Sunday at 10:00 AM to review your attendance health.
 
 ---
 
-## Features
+## 🛠 Tech Stack
 
-### 📅 Timetable
-- Weekly schedule view with swipeable day tabs (Mon–Fri or Mon–Sun)
-- Add, edit, and delete class slots with subject, teacher, room, and time
-- Auto-scrolls to today's day on launch
-- Color-coded subject cards for quick visual identification
-- Export your full weekly schedule to a **PDF** saved to Downloads
-
-### ✅ Attendance Tracking
-- Mark each class slot as **Present**, **Absent**, or **Cancelled** directly from the timetable
-- Per-subject attendance percentage with color-coded progress bars (green / amber / red)
-- Set a custom minimum attendance goal (e.g. 75%)
-- Full attendance history per subject with a **monthly calendar view**
-- Add older attendance records manually by picking a past date
-
-### 📝 Rich Notes
-- Organize notes by subject
-- Full **Markdown-style WYSIWYG editor** with live preview:
-  - Headings (`#`, `##`, `###`), bold, italic, underline, strikethrough
-  - Bullet lists, numbered lists, checklists with tap-to-toggle
-  - Blockquotes, inline code, horizontal rules, tables, links
-  - Center / right text alignment
-- Embed images inline within notes
-- Find & Replace panel
-- Document outline panel (jump to headings)
-- Note statistics (word count, character count, estimated reading time)
-- Auto-save with 30-second idle timer; manual save also available
-- Per-note color theming
-- Share notes as plain text
-
-### 📚 Subject Detail
-- Tap any subject to see its full profile: teacher, room, attendance summary
-- View and manage all notes and uploaded materials for that subject
-- Mark today's attendance from within the subject detail page
-
-### 📁 Study Materials
-- Attach any file (PDF, images, documents, etc.) to a subject
-- Open materials with the appropriate app on your device
-- Rename and reorder materials
-
-### 🧑‍🏫 Teachers Directory
-- Store teacher profiles: name, designation, phone, email, cabin number
-- Color-coded teacher cards
-- Reorder teachers via drag-up / drag-down
-
-### 📋 Assignments (Homeworks)
-- Track assignments per subject with a title, description, and deadline
-- Tabs for **Pending**, **Overdue**, and **Completed**
-- Mark assignments complete with one tap
-- Color inherits from the subject automatically
-
-### 🎓 Exams
-- Schedule exams with subject, teacher, room, date, and time
-- Tabs for **Upcoming** and **Completed** exams
-
-### 👤 Personal Details & Files
-- Store your name, email, roll number, and profile photo
-- Upload and manage personal files (admit cards, ID cards, etc.) with custom labels
-
-### ⚙️ Settings
-- Toggle 5-day vs 7-day week view
-- Enable / disable personal details section
-- Set your school / college website (opens in Chrome Custom Tab)
-- Toggle attendance tracking globally
-- Set minimum attendance percentage goal
-- Full data reset option
-
-### 🔔 Daily Notifications
-- Optional daily notification at 8:30 AM listing today's classes
-
----
-
-## Tech Stack
-
-| Layer | Technology |
+| Component | Technology |
 |---|---|
-| Language | Kotlin (primary), Java (legacy utilities) |
-| UI | Jetpack Compose (Material 3) |
-| Navigation | Compose Navigation |
-| Architecture | ViewModel + State hoisting |
-| Database | SQLite via custom `DbHelper` (SQLiteOpenHelper) |
-| PDF Export | Android `PdfDocument` API |
-| Image Loading | Coil |
-| Browser | Chrome Custom Tabs |
+| **Language** | Kotlin (100% UI), Java (Legacy Database/Utils) |
+| **UI Framework** | Jetpack Compose (Material 3) |
+| **Navigation** | Compose Navigation (Single Activity) |
+| **Widgets** | Jetpack Glance (Material 3) |
+| **Persistence** | SQLite (via `SQLiteOpenHelper`) |
+| **Image Loading** | Coil |
+| **Reporting** | Android `PdfDocument` API |
+| **Notifications** | AlarmManager + NotificationManager |
 
 ---
 
-## Project Structure
+## 📂 Project Structure
 
 ```
 app/src/main/java/com/example/timetable/
 │
-├── activities/          # Legacy Java activities (Notes, Exams, Teachers, etc.)
-├── adapters/            # Java ListView adapters
-├── fragments/           # Java day-of-week fragments + settings fragment
-├── model/               # Data models (Week, Note, Subject, Teacher, Exam, ...)
+├── activities/          # MainActivity.kt (Entry point for Compose)
+├── model/               # Data Models (Note, Subject, Exam, Homework, etc.)
 │
 ├── ui/
-│   ├── screens/         # Compose screens (Main, Notes, Exams, Attendance, ...)
-│   ├── components/      # Reusable Compose components (SubjectItem, NoteItem, ...)
-│   ├── theme/           # Material 3 theme
-│   └── viewmodel/       # Shared MainViewModel
+│   ├── screens/         # Compose Screens (Main, Attendance, NoteInfo, ...)
+│   ├── components/      # Reusable Compose Components (SubjectItem, NoteItem, ...)
+│   ├── theme/           # Material 3 Color, Type, and Theme definitions
+│   └── viewmodel/       # Shared State Management (MainViewModel)
 │
-└── utils/
-    ├── DbHelper.java    # Full SQLite database layer
-    ├── AlertDialogsHelper.java
-    ├── TimeUtils.kt
-    ├── PdfExportUtil.kt
-    ├── BrowserUtil.java
-    ├── FragmentHelper.java
-    ├── DailyReceiver.java
-    └── WakeUpAlarmReceiver.java
+├── utils/               # Logic (DbHelper, NotificationHelper, PdfGenerator, ...)
+└── widget/              # Home Screen Widget Definitions (Glance)
 ```
 
 ---
 
-## Getting Started
+## ⚙️ Getting Started
 
 ### Prerequisites
 - Android Studio Hedgehog or later
-- Android SDK 26+
-- Kotlin 1.9+
+- Android SDK 30+ (Target SDK 35)
+- Kotlin 2.0+
 
 ### Build & Run
+1. Clone the repo: `git clone https://github.com/your-username/lectro.git`
+2. Open in Android Studio.
+3. Sync Gradle and Run on a device with API 30+.
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/lectro.git
-   cd lectro
-   ```
-
-2. Open the project in Android Studio.
-
-3. Sync Gradle and let dependencies download.
-
-4. Run on a physical device or emulator (API 26+).
-
-> No API keys or external services are required. All data is stored locally on-device.
+> **Note:** Lectro is fully offline. All your data, notes, and files stay securely on your device.
 
 ---
 
-## Database
+## 🛡 Permissions
 
-Lectro uses a local SQLite database (`timetabledb`, version 16) with the following tables:
-
-| Table | Purpose |
+| Permission | Usage |
 |---|---|
-| `timetable` | Weekly class slots |
-| `subjects` | Subject profiles with attendance totals |
-| `notes` | Notes linked to subjects |
-| `materials` | Files attached to subjects |
-| `teachers` | Teacher directory |
-| `homeworks` | Assignments |
-| `exams` | Exam schedule |
-| `attendance_records` | Per-day attendance log |
-| `user_details` | Personal profile |
-| `user_files` | Personal uploaded files |
-
-The database handles migrations incrementally from version 6 through 16.
+| `POST_NOTIFICATIONS` | Sending class, exam, and assignment reminders. |
+| `SCHEDULE_EXACT_ALARM` | Ensuring reminders trigger precisely on time. |
+| `RECEIVE_BOOT_COMPLETED` | Rescheduling alarms automatically after a phone restart. |
+| `VIBRATE` | Haptic feedback for notifications. |
 
 ---
 
-## Permissions
-
-| Permission | Reason |
-|---|---|
-| `READ_EXTERNAL_STORAGE` / `READ_MEDIA_*` | Attach files and images to notes/materials |
-| `WRITE_EXTERNAL_STORAGE` | Export PDF to Downloads folder |
-| `RECEIVE_BOOT_COMPLETED` | Reschedule daily notification after reboot |
-| `POST_NOTIFICATIONS` | Daily class reminder notification |
-| `INTERNET` | Open school website in Chrome Custom Tab |
+## 🙏 Acknowledgements
+This project was initially inspired by [ulan17/TimeTable](https://github.com/ulan17/TimeTable). It provided the base ideas that Lectro was developed and expanded on — including the timetable, day fragments, and the SQLite database approach.
+## 📄 License
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
 
 ---
-
-## Contributing
-
-Contributions are welcome! Please open an issue first to discuss what you'd like to change.
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit your changes: `git commit -m "Add my feature"`
-4. Push and open a pull request
-
----
-
-## Acknowledgements
-
-This project was initially inspired by [ulan17/TimeTable](https://github.com/ulan17/TimeTable). It provided the base ideas that Lectro was developed on — including the timetable, day fragments, and the SQLite database approach.
-
----
-
-## License
-
-This project is licensed under the GNU-v3.0 License. See [LICENSE](LICENSE) for details.
