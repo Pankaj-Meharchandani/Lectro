@@ -235,7 +235,7 @@ Contributions are welcome! Please open an issue first to discuss what you'd like
 
 ## Acknowledgements
 
-This project was initially inspired by and built upon the foundation of [ulan17/TimeTable](https://github.com/ulan17/TimeTable). The original repository provided the base architecture and ideas that Lectro was developed and expanded from — including the timetable structure, day fragments, and the SQLite database approach. Significant additions were made on top, including the Jetpack Compose UI, the rich note editor, attendance tracking, materials management, personal details, PDF export, and more.
+This project was initially inspired by [ulan17/TimeTable](https://github.com/ulan17/TimeTable). It provided the base ideas that Lectro was developed on — including the timetable, day fragments, and the SQLite database approach.
 
 ---
 
