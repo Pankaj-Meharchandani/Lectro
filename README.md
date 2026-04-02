@@ -10,7 +10,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white" />
-  <img src="https://img.shields.io/badge/Language-Kotlin%20%2F%20Java-orange" />
+  <img src="https://img.shields.io/badge/Language-Kotlin-orange" />
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4" />
   <img src="https://img.shields.io/badge/Architecture-Single%20Activity-blueviolet" />
   <img src="https://img.shields.io/badge/License-GNU-blue" />
