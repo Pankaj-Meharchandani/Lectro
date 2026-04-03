@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.timetable.model.Week
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.ui.viewmodel.MainViewModel
@@ -60,7 +59,9 @@ fun SubjectItem(
         }
     }
 
-    val subjectDetails = viewModel.allSubjects.find { it.name == subject.subject }
+    val subjectDetails by remember(subject.subject) {
+        derivedStateOf { viewModel.allSubjects.find { it.name == subject.subject } }
+    }
     val attendanceStatus = if (attendanceEnabled) viewModel.todayAttendance[subject.id] else null
 
     val formattedTime = remember(subject.fromTime, subject.toTime) {
@@ -217,9 +218,10 @@ fun SubjectItem(
                 }
             }
 
-            if (attendanceEnabled && subjectDetails != null) {
-                val total = subjectDetails.attended + subjectDetails.missed
-                val progress = if (total > 0) subjectDetails.attended.toFloat() / total else 0f
+            val details = subjectDetails
+            if (attendanceEnabled && details != null) {
+                val total = details.attended + details.missed
+                val progress = if (total > 0) details.attended.toFloat() / total else 0f
                 val percentage = (progress * 100).toInt()
                 val color = getAttendanceColor(percentage, minAttendance)
 
