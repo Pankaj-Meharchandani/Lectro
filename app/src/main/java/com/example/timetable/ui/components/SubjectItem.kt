@@ -60,9 +60,7 @@ fun SubjectItem(
         }
     }
 
-    val subjectDetails = remember(subject.subject, viewModel.allSubjects.size) {
-        viewModel.allSubjects.find { it.name == subject.subject }
-    }
+    val subjectDetails = viewModel.allSubjects.find { it.name == subject.subject }
     val attendanceStatus = if (attendanceEnabled) viewModel.todayAttendance[subject.id] else null
 
     val formattedTime = remember(subject.fromTime, subject.toTime) {

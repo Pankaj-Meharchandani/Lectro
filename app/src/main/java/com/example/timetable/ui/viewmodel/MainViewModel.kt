@@ -168,6 +168,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         db.updateAttendance(weekId, subjectName, type, date)
         todayAttendance[weekId] = type
         loadSuggestions()
+        
+        // Refresh week data to ensure UI recomposition in MainScreen
+        weekData.keys.forEach { day ->
+            weekData[day] = db.getWeek(day)
+        }
+
         viewModelScope.launch { WidgetUtils.refreshAllWidgets(getApplication()) }
     }
 
