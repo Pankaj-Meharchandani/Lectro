@@ -97,8 +97,22 @@ fun TimetableApp() {
         }
         composable("settings") {
             SettingsScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigateToArchives = { navController.navigate("archives") }
             )
+        }
+        composable("archives") {
+            ArchivesScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToArchiveDetail = { fileName -> navController.navigate("archive_detail/$fileName") }
+            )
+        }
+        composable(
+            route = "archive_detail/{fileName}",
+            arguments = listOf(navArgument("fileName") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val fileName = backStackEntry.arguments?.getString("fileName") ?: ""
+            ArchiveDetailScreen(fileName = fileName, onBack = { navController.popBackStack() })
         }
         composable("about") {
             AboutScreen(onBack = { navController.popBackStack() })

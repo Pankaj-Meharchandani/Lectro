@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Launch
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,8 +44,11 @@ import com.example.timetable.model.Week
 import com.example.timetable.utils.AppConstants
 import com.example.timetable.utils.DbHelper
 import com.example.timetable.utils.ScheduleExporter
+import com.example.timetable.utils.SemesterArchiveManager
 import com.example.timetable.utils.TimeUtils
 import com.example.timetable.utils.WakeUpAlarmReceiver
+import java.text.SimpleDateFormat
+import java.util.*
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)
@@ -114,16 +118,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         schoolWebsite = url
     }
 
-    fun resetData() {
-        db.resetAllData()
-    }
-
-    fun removeFullSchedule() {
+    fun archiveSemester() {
         db.removeFullSchedule()
     }
 
-    fun removeAllSubjects() {
-        db.removeAllSubjects()
+    fun resetData() {
+        db.resetAllData()
     }
 }
 
@@ -131,13 +131,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onNavigateToArchives: () -> Unit,
     viewModel: SettingsViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var resetType by remember { mutableStateOf<ResetType?>(null) }
+    var archiveName by remember { mutableStateOf("") }
     var showConflictDialog by remember { mutableStateOf<List<Pair<Week, Week>>?>(null) }
     var pendingImportWeeks by remember { mutableStateOf<List<Week>?>(null) }
 
+    var shouldClearAfterExport by remember { mutableStateOf(false) }
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
@@ -146,10 +149,17 @@ fun SettingsScreen(
                 context.contentResolver.openOutputStream(it)?.use { os ->
                     ScheduleExporter.exportSchedule(context, os)
                     Toast.makeText(context, "Schedule exported as .lec file", Toast.LENGTH_SHORT).show()
+                    if (shouldClearAfterExport) {
+                        viewModel.archiveSemester()
+                        shouldClearAfterExport = false
+                    }
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                shouldClearAfterExport = false
             }
+        } ?: run {
+            shouldClearAfterExport = false
         }
     }
 
@@ -496,21 +506,29 @@ fun SettingsScreen(
 
             SettingsSection(title = "Danger Zone") {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Remove Full Schedule
+                    // Archive Semester
                     DangerCard(
-                        title = "Remove Full Schedule",
-                        description = "Wipes all timetable slots but keeps subjects, homeworks, and notes.",
-                        buttonText = "Remove Schedule",
-                        onClick = { resetType = ResetType.SCHEDULE }
+                        title = "Archive Current Semester",
+                        description = "Saves everything (schedule, subjects, notes, exams, assignments, attendance) to the app's history and starts a fresh semester.",
+                        buttonText = "Archive Semester",
+                        onClick = { 
+                            val sdf = SimpleDateFormat("MMM yyyy", Locale.getDefault())
+                            archiveName = "Semester ending ${sdf.format(Date())}"
+                            resetType = ResetType.ARCHIVE 
+                        }
                     )
 
-                    // Remove All Subjects
-                    DangerCard(
-                        title = "Remove All Subjects",
-                        description = "Deletes all subjects, which also clears the schedule and associated materials.",
-                        buttonText = "Remove Subjects",
-                        onClick = { resetType = ResetType.SUBJECTS }
-                    )
+                    val archives = remember(resetType) { SemesterArchiveManager.getArchives(context) }
+                    if (archives.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = onNavigateToArchives,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.History, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("View Archived Semesters (${archives.size})")
+                        }
+                    }
 
                     // Reset All Data
                     DangerCard(
@@ -526,26 +544,47 @@ fun SettingsScreen(
 
     resetType?.let { type ->
         val title = when (type) {
-            ResetType.SCHEDULE -> "Remove Schedule?"
-            ResetType.SUBJECTS -> "Remove All Subjects?"
+            ResetType.ARCHIVE -> "Archive Current Semester?"
             ResetType.ALL -> stringResource(R.string.reset_data)
         }
         val message = when (type) {
-            ResetType.SCHEDULE -> "Are you sure you want to clear your entire timetable? This cannot be undone."
-            ResetType.SUBJECTS -> "This will delete all subjects and clear your schedule. Are you sure?"
+            ResetType.ARCHIVE -> "This will archive ALL your current data into the app's history. This action will clear your current timetable and subjects."
             ResetType.ALL -> stringResource(R.string.reset_warning)
         }
 
         AlertDialog(
             onDismissRequest = { resetType = null },
             title = { Text(title) },
-            text = { Text(message) },
+            text = {
+                Column {
+                    Text(message)
+                    if (type == ResetType.ARCHIVE) {
+                        Spacer(Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = archiveName,
+                            onValueChange = { archiveName = it },
+                            label = { Text("Archive Name (e.g. Fall 2023)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         when (type) {
-                            ResetType.SCHEDULE -> viewModel.removeFullSchedule()
-                            ResetType.SUBJECTS -> viewModel.removeAllSubjects()
+                            ResetType.ARCHIVE -> {
+                                if (archiveName.isBlank()) {
+                                    Toast.makeText(context, "Please enter a name for the archive", Toast.LENGTH_SHORT).show()
+                                    return@TextButton
+                                }
+                                val success = SemesterArchiveManager.archiveCurrentSemester(context, archiveName)
+                                if (success) {
+                                    Toast.makeText(context, "Semester archived successfully!", Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "Failed to archive semester", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                             ResetType.ALL -> viewModel.resetData()
                         }
                         resetType = null
@@ -560,7 +599,7 @@ fun SettingsScreen(
     }
 }
 
-enum class ResetType { SCHEDULE, SUBJECTS, ALL }
+enum class ResetType { ARCHIVE, ALL }
 
 @Composable
 fun DangerCard(title: String, description: String, buttonText: String, onClick: () -> Unit) {

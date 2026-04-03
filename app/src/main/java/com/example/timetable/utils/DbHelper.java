@@ -307,6 +307,18 @@ public class DbHelper extends SQLiteOpenHelper {
         db.close();
     }
 
+    public void resetSemesterData() {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("DELETE FROM " + TIMETABLE);
+        db.execSQL("DELETE FROM " + HOMEWORKS);
+        db.execSQL("DELETE FROM " + NOTES);
+        db.execSQL("DELETE FROM " + EXAMS);
+        db.execSQL("DELETE FROM " + SUBJECTS);
+        db.execSQL("DELETE FROM " + MATERIALS);
+        db.execSQL("DELETE FROM " + ATTENDANCE);
+        db.close();
+    }
+
     public void removeFullSchedule() {
         SQLiteDatabase db = this.getWritableDatabase();
         db.execSQL("DELETE FROM " + TIMETABLE);
