@@ -22,11 +22,13 @@ import com.example.timetable.model.Week
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.ui.viewmodel.AssignmentsViewModel
 import com.example.timetable.utils.TimeUtils
+import com.example.timetable.shared.getPlatform
 import kotlinx.datetime.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel) {
+    val platform = remember { getPlatform() }
     var showAddDialog by remember { mutableStateOf(false) }
     var assignmentToEdit by remember { mutableStateOf<Homework?>(null) }
     var assignmentToDelete by remember { mutableStateOf<Homework?>(null) }
@@ -124,8 +126,13 @@ fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel) {
         AddAssignmentDialog(
             onDismiss = { showAddDialog = false; assignmentToEdit = null },
             onSave = { assignment -> 
-                if (assignmentToEdit != null) viewModel.updateAssignment(assignment)
-                else viewModel.insertAssignment(assignment)
+                if (assignmentToEdit != null) {
+                    viewModel.updateAssignment(assignment)
+                    platform.showToast("Assignment updated")
+                } else {
+                    viewModel.insertAssignment(assignment)
+                    platform.showToast("Assignment added")
+                }
                 assignmentToEdit = null
             },
             onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
@@ -142,6 +149,7 @@ fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel) {
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteAssignment(assignment)
+                    platform.showToast("Assignment deleted")
                     assignmentToDelete = null
                 }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                     Text("Delete")

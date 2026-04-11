@@ -51,6 +51,7 @@ fun MainScreen(
     onNavigateToNoteInfo: (Int) -> Unit,
     onNavigateToEditTeacher: (Int) -> Unit,
     onExportPdf: (List<String>, Map<String, List<Week>>) -> Unit = { _, _ -> },
+    onReportIssue: () -> Unit = {},
     viewModel: MainViewModel,
     settings: Settings = Settings()
 ) {
@@ -150,6 +151,7 @@ fun MainScreen(
                         val url: String = settings.get("school_website_setting", "")
                         if (url.isNotEmpty()) uriHandler.openUri(url)
                     },
+                    onReportIssueClick = onReportIssue,
                     onItemClick = { scope.launch { drawerState.close() } }
                 )
             }
@@ -468,6 +470,7 @@ fun NavigationDrawerContent(
     personalDetailsEnabled: Boolean,
     onPersonalDetailsClick: () -> Unit,
     onSchoolWebsiteClick: () -> Unit,
+    onReportIssueClick: () -> Unit = {},
     onItemClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxHeight()) {
@@ -532,6 +535,12 @@ fun NavigationDrawerContent(
         // Bottom Section
         Column(modifier = Modifier.padding(bottom = 16.dp)) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            NavigationDrawerItem(
+                label = { Text("Report Issue") },
+                selected = false,
+                onClick = { onReportIssueClick(); onItemClick() },
+                icon = { Icon(Icons.Default.BugReport, contentDescription = null) }
+            )
             NavigationDrawerItem(
                 label = { Text("About") },
                 selected = false,

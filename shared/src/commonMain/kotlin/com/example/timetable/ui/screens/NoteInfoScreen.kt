@@ -3,6 +3,7 @@ package com.example.timetable.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -13,28 +14,38 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.*
 import com.example.timetable.model.Note
 import com.example.timetable.ui.components.ColorPickerRow
 import com.example.timetable.ui.theme.subtleThemedColor
 import com.example.timetable.ui.viewmodel.NoteInfoViewModel
+import com.example.timetable.shared.getPlatform
+import coil3.compose.AsyncImage
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteInfoScreen(
     noteId: Int,
     onBack: () -> Unit,
+    onShareText: (String) -> Unit = {},
+    onSharePdf: (Note) -> Unit = {},
+    onPickImage: (callback: (String) -> Unit) -> Unit = {},
     viewModel: NoteInfoViewModel
 ) {
     LaunchedEffect(noteId) { viewModel.loadNote(noteId) }
@@ -53,6 +64,7 @@ fun NoteInfoScreen(
 
     val titleFocus = remember { FocusRequester() }
     val bodyFocus = remember { FocusRequester() }
+    val platform = remember { getPlatform() }
 
     val bgColor = if (color != 0) Color(color) else MaterialTheme.colorScheme.surface
     val containerColor = subtleThemedColor(bgColor)
@@ -63,9 +75,17 @@ fun NoteInfoScreen(
         isSaved = true
     }
 
+    // Auto-save
+    LaunchedEffect(title, textValue.text, color) {
+        if (title != note.title || textValue.text != note.text || color != note.color) {
+            isSaved = false
+            delay(2000)
+            triggerSave()
+        }
+    }
+
     LaunchedEffect(textValue.text) { 
         viewModel.updateCounts(textValue.text)
-        isSaved = false 
     }
 
     val onFormat: (String, String) -> Unit = { prefix, suffix ->
@@ -83,18 +103,30 @@ fun NoteInfoScreen(
                 title = title, onTitleChange = { title = it; isSaved = false },
                 accentColor = accentColor,
                 onBack = { triggerSave(); onBack() },
-                onSave = { triggerSave() },
+                onSave = { triggerSave(); platform.showToast("Saved") },
                 onColorPicker = { showColorPicker = true },
                 onFindReplace = { showFindReplace = !showFindReplace; showOutline = false },
                 onOutline = { showOutline = !showOutline; showFindReplace = false },
                 onStats = { showStats = true },
+                onShareText = { onShareText("$title\n\n${textValue.text}") },
+                onSharePdf = { onSharePdf(note.copy(title = title, text = textValue.text, color = color)) },
                 titleFocusRequester = titleFocus
             )
         },
         bottomBar = {
-            Column {
+            Column(modifier = Modifier.imePadding()) {
                 AnimatedVisibility(visible = formattingBarExpanded) {
-                    EnhancedFormattingToolbar(onFormat = onFormat)
+                    EnhancedFormattingToolbar(
+                        onFormat = onFormat,
+                        onAddImage = {
+                            onPickImage { path ->
+                                val ins = "\n[img:$path]\n"
+                                val start = textValue.selection.start
+                                val newText = textValue.text.substring(0, start) + ins + textValue.text.substring(textValue.selection.end)
+                                textValue = TextFieldValue(newText, TextRange(start + ins.length))
+                            }
+                        }
+                    )
                 }
                 NoteStatusBar(
                     wordCount = viewModel.wordCount, charCount = viewModel.charCount,
@@ -125,7 +157,10 @@ fun NoteInfoScreen(
             }
             PaperEditor(
                 textValue = textValue,
-                onTextChange = { textValue = it; isSaved = false },
+                onTextChange = { new -> 
+                    textValue = processTextInput(new, textValue)
+                    isSaved = false 
+                },
                 bodyFocusRequester = bodyFocus,
                 accentColor = accentColor
             )
@@ -155,6 +190,42 @@ fun NoteInfoScreen(
     }
 }
 
+private fun processTextInput(newValue: TextFieldValue, oldValue: TextFieldValue): TextFieldValue {
+    if (newValue.text.length <= oldValue.text.length) return newValue
+    val cursorAfter = newValue.selection.start
+    if (newValue.text.getOrNull(cursorAfter - 1) != '\n') return newValue
+
+    val oldCursor = oldValue.selection.start
+    val lineStart = oldValue.text.lastIndexOf('\n', oldCursor - 1) + 1
+    val currentLine = oldValue.text.substring(lineStart, oldCursor)
+
+    val listPrefix: String = when {
+        currentLine.trimStart().startsWith("* ") -> currentLine.substring(0, currentLine.indexOf("* ") + 2)
+        currentLine.trimStart().startsWith("- ") -> currentLine.substring(0, currentLine.indexOf("- ") + 2)
+        currentLine.trimStart().matches(Regex("^\\d+\\. .*")) -> {
+            val m = Regex("^(\\s*)(\\d+)\\. ").find(currentLine)
+            if (m != null) {
+                val indent = m.groupValues[1]
+                val num = m.groupValues[2].toInt()
+                "$indent${num + 1}. "
+            } else ""
+        }
+        else -> ""
+    }
+
+    // If we hit enter on an empty list item, clear it (exit list)
+    if (listPrefix.isNotEmpty() && currentLine.trim() == listPrefix.trim()) {
+        val newText = oldValue.text.substring(0, lineStart) + "\n" + newValue.text.substring(cursorAfter)
+        return TextFieldValue(newText, TextRange(lineStart + 1))
+    }
+
+    val beforeNewline = newValue.text.substring(0, cursorAfter - 1)
+    val afterNewline = newValue.text.substring(cursorAfter)
+    val newText = beforeNewline + "\n" + listPrefix + afterNewline
+    val newCursor = cursorAfter + listPrefix.length
+    return TextFieldValue(newText, TextRange(newCursor))
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NoteTopBar(
@@ -163,6 +234,7 @@ private fun NoteTopBar(
     onBack: () -> Unit, onSave: () -> Unit,
     onColorPicker: () -> Unit, onFindReplace: () -> Unit,
     onOutline: () -> Unit, onStats: () -> Unit,
+    onShareText: () -> Unit, onSharePdf: () -> Unit,
     titleFocusRequester: FocusRequester
 ) {
     var showOverflow by remember { mutableStateOf(false) }
@@ -186,6 +258,8 @@ private fun NoteTopBar(
                     DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
                         DropdownMenuItem(text = { Text("Color") }, onClick = { showOverflow = false; onColorPicker() }, leadingIcon = { Icon(Icons.Default.Palette, null) })
                         DropdownMenuItem(text = { Text("Save") }, onClick = { showOverflow = false; onSave() }, leadingIcon = { Icon(Icons.Default.Done, null) })
+                        DropdownMenuItem(text = { Text("Share as Text") }, onClick = { showOverflow = false; onShareText() }, leadingIcon = { Icon(Icons.Default.Share, null) })
+                        DropdownMenuItem(text = { Text("Share as PDF") }, onClick = { showOverflow = false; onSharePdf() }, leadingIcon = { Icon(Icons.Default.PictureAsPdf, null) })
                         DropdownMenuItem(text = { Text("Statistics") }, onClick = { showOverflow = false; onStats() }, leadingIcon = { Icon(Icons.Default.Analytics, null) })
                     }
                 }
@@ -203,14 +277,17 @@ private fun PaperEditor(
     bodyFocusRequester: FocusRequester,
     accentColor: Color
 ) {
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val density = LocalDensity.current
+
     Box(Modifier.fillMaxSize().padding(16.dp)) {
         Surface(
             modifier = Modifier.fillMaxSize().shadow(4.dp, RoundedCornerShape(12.dp)),
             color = Color.White, shape = RoundedCornerShape(12.dp)
         ) {
             Box(Modifier.fillMaxSize().drawBehind { 
-                val step = 24.dp.toPx()
-                var y = 16.dp.toPx() + step
+                val step = with(this) { 24.dp.toPx() }
+                var y = with(this) { 16.dp.toPx() } + step
                 while (y < size.height) {
                     drawLine(Color(0xFFEEEEEE), Offset(0f, y), Offset(size.width, y), 1f)
                     y += step
@@ -223,8 +300,32 @@ private fun PaperEditor(
                     modifier = Modifier.fillMaxSize().padding(start = 56.dp, end = 16.dp, top = 16.dp).focusRequester(bodyFocusRequester),
                     textStyle = TextStyle(fontSize = 16.sp, color = Color.Black, lineHeight = 24.sp),
                     cursorBrush = SolidColor(accentColor),
+                    onTextLayout = { textLayoutResult = it },
                     visualTransformation = NoteVisualTransformation()
                 )
+
+                // Overlaid images
+                textLayoutResult?.let { layout ->
+                    Regex("\\[img:(.*?)\\]").findAll(textValue.text).forEach { match ->
+                        val uri = match.groupValues[1]
+                        val mStart = match.range.first
+                        if (mStart < layout.layoutInput.text.length) {
+                            val rect = layout.getBoundingBox(mStart)
+                            AsyncImage(
+                                model = uri, contentDescription = null,
+                                modifier = Modifier
+                                    .offset { IntOffset(
+                                        x = (rect.left + with(density) { 56.dp.toPx() }).toInt(),
+                                        y = (rect.top + with(density) { 16.dp.toPx() }).toInt()
+                                    )}
+                                    .size(200.dp)
+                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -232,12 +333,14 @@ private fun PaperEditor(
 
 @Composable
 private fun EnhancedFormattingToolbar(
-    onFormat: (String, String) -> Unit
+    onFormat: (String, String) -> Unit,
+    onAddImage: () -> Unit
 ) {
     Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 4.dp) {
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { onFormat("**", "**") }) { Icon(Icons.Default.FormatBold, "Bold") }
             IconButton(onClick = { onFormat("*", "*") }) { Icon(Icons.Default.FormatItalic, "Italic") }
@@ -247,7 +350,9 @@ private fun EnhancedFormattingToolbar(
             IconButton(onClick = { onFormat("# ", "") }) { Text("H1", fontWeight = FontWeight.Bold) }
             IconButton(onClick = { onFormat("## ", "") }) { Text("H2", fontWeight = FontWeight.Bold) }
             IconButton(onClick = { onFormat("* ", "") }) { Icon(Icons.AutoMirrored.Filled.FormatListBulleted, "Bullet") }
+            IconButton(onClick = { onFormat("1. ", "") }) { Icon(Icons.Default.FormatListNumbered, "Numbered") }
             IconButton(onClick = { onFormat("> ", "") }) { Icon(Icons.Default.FormatQuote, "Quote") }
+            IconButton(onClick = onAddImage) { Icon(Icons.Default.Image, "Image") }
         }
     }
 }
@@ -332,13 +437,24 @@ class NoteVisualTransformation : VisualTransformation {
     private fun AnnotatedString.Builder.renderLine(line: String) {
         when {
             line.startsWith("# ") -> {
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("# ") }
                 withStyle(SpanStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)) { parseInlineSpans(line.substring(2)) }
             }
             line.startsWith("## ") -> {
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("## ") }
                 withStyle(SpanStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold)) { parseInlineSpans(line.substring(3)) }
             }
             line.startsWith("> ") -> {
+                withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("> ") }
                 withStyle(SpanStyle(color = Color.Gray, fontStyle = FontStyle.Italic)) { parseInlineSpans(line.substring(2)) }
+            }
+            line.contains("[img:") -> {
+                val match = Regex("\\[img:(.*?)\\]").find(line)
+                if (match != null) {
+                    parseInlineSpans(line.substring(0, match.range.first))
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append(match.value) }
+                    parseInlineSpans(line.substring(match.range.last + 1))
+                } else parseInlineSpans(line)
             }
             else -> parseInlineSpans(line)
         }
@@ -351,31 +467,39 @@ class NoteVisualTransformation : VisualTransformation {
             when {
                 remaining.startsWith("**") -> {
                     val end = text.indexOf("**", i + 2)
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("**") }
                     if (end != -1) {
                         withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(text.substring(i + 2, end)) }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("**") }
                         i = end + 2
-                    } else { append(text[i]); i++ }
+                    } else { i += 2 }
                 }
                 remaining.startsWith("*") -> {
                     val end = text.indexOf("*", i + 1)
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("*") }
                     if (end != -1) {
                         withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(text.substring(i + 1, end)) }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("*") }
                         i = end + 1
-                    } else { append(text[i]); i++ }
+                    } else { i++ }
                 }
                 remaining.startsWith("<u>") -> {
                     val end = text.indexOf("</u>", i + 3)
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("<u>") }
                     if (end != -1) {
                         withStyle(SpanStyle(textDecoration = TextDecoration.Underline)) { append(text.substring(i + 3, end)) }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("</u>") }
                         i = end + 4
-                    } else { append(text[i]); i++ }
+                    } else { i += 3 }
                 }
                 remaining.startsWith("~~") -> {
                     val end = text.indexOf("~~", i + 2)
+                    withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("~~") }
                     if (end != -1) {
                         withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(text.substring(i + 2, end)) }
+                        withStyle(SpanStyle(color = Color.Transparent, fontSize = 0.1.sp)) { append("~~") }
                         i = end + 2
-                    } else { append(text[i]); i++ }
+                    } else { i += 2 }
                 }
                 else -> { append(text[i]); i++ }
             }

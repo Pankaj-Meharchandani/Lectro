@@ -21,6 +21,7 @@ import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.ui.viewmodel.MainViewModel
 import com.example.timetable.utils.TimeUtils
 import kotlinx.datetime.*
+import kotlinx.coroutines.delay
 
 @Composable
 fun SubjectItem(
@@ -52,22 +53,28 @@ fun SubjectItem(
         else "${TimeUtils.formatTo12Hour(subject.fromTime)} - ${TimeUtils.formatTo12Hour(subject.toTime)}"
     }
 
-    val isAfterStartTime = remember(subject.fromTime) {
+    var currentTime by remember { mutableStateOf(Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())) }
+    LaunchedEffect(Unit) {
+        while(true) {
+            delay(60000) // Update every minute
+            currentTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        }
+    }
+
+    val isAfterStartTime = remember(subject.fromTime, currentTime) {
         if (subject.fromTime.isEmpty()) false
         else {
-            val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
             val timeParts = subject.fromTime.split(":")
             if (timeParts.size >= 2) {
                 val hour = timeParts[0].toInt()
                 val minute = timeParts[1].toInt()
-                now.hour > hour || (now.hour == hour && now.minute >= minute)
+                currentTime.hour > hour || (currentTime.hour == hour && currentTime.minute >= minute)
             } else false
         }
     }
 
-    val isToday = remember(subject.fragment) {
-        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-        val currentDay = now.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
+    val isToday = remember(subject.fragment, currentTime) {
+        val currentDay = currentTime.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
         subject.fragment == currentDay
     }
 

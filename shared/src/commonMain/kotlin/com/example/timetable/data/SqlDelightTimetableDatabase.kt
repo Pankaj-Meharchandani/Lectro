@@ -249,6 +249,33 @@ class SqlDelightTimetableDatabase(driver: SqlDriver) : TimetableDatabase {
         dbQueries.deleteUserFile(id.toLong())
     }
 
+    override fun resetAllData() {
+        dbQueries.transaction {
+            dbQueries.deleteAllTimetable()
+            dbQueries.deleteAllSubjects()
+            dbQueries.deleteAllHomeworks()
+            dbQueries.deleteAllNotes()
+            dbQueries.deleteAllTeachers()
+            dbQueries.deleteAllExams()
+            dbQueries.deleteAllMaterials()
+            dbQueries.deleteAllAttendance()
+            dbQueries.deleteAllUserDetails()
+            dbQueries.deleteAllUserFiles()
+        }
+    }
+
+    override fun resetSemesterData() {
+        dbQueries.transaction {
+            dbQueries.deleteAllTimetable()
+            dbQueries.deleteAllSubjects()
+            dbQueries.deleteAllHomeworks()
+            dbQueries.deleteAllNotes()
+            dbQueries.deleteAllExams()
+            dbQueries.deleteAllMaterials()
+            dbQueries.deleteAllAttendance()
+        }
+    }
+
     override fun getAttendanceStatus(weekId: Int, date: String): String? = dbQueries.getAttendanceStatus(weekId.toLong(), date).executeAsOneOrNull()
 
     override fun updateAttendance(weekId: Int, subjectName: String, type: String, date: String) {

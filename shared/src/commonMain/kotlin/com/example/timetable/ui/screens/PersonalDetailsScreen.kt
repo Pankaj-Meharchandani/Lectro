@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.timetable.model.UserFile
 import com.example.timetable.ui.viewmodel.PersonalDetailsViewModel
+import com.example.timetable.shared.getPlatform
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,6 +31,7 @@ fun PersonalDetailsScreen(
     onOpenFile: (String, String) -> Unit = { _, _ -> }
 ) {
     LaunchedEffect(Unit) { viewModel.loadData() }
+    val platform = remember { getPlatform() }
     var showAddFileDialog by remember { mutableStateOf(false) }
     var tempFilePath by remember { mutableStateOf("") }
     var tempFileName by remember { mutableStateOf("") }
@@ -44,7 +46,10 @@ fun PersonalDetailsScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onBack() }) {
+                    IconButton(onClick = { 
+                        platform.showToast("Saved")
+                        onBack() 
+                    }) {
                         Icon(Icons.Default.Done, contentDescription = "Save")
                     }
                 }

@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.timetable.model.Subject
 import com.example.timetable.model.Week
@@ -232,5 +233,39 @@ fun ColorCircle(color: Color, isSelected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier.size(36.dp).clip(CircleShape).background(color).clickable(onClick = onClick)
             .border(width = if (isSelected) 2.dp else 0.dp, color = if (isSelected) Color.White else Color.Transparent, shape = CircleShape)
+    )
+}
+
+@Composable
+fun ImportConflictDialog(
+    conflicts: List<Pair<Week, Week>>,
+    onDismiss: () -> Unit,
+    onKeepNew: () -> Unit,
+    onKeepExisting: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Schedule Conflicts") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text("The following slots overlap with your current schedule. Choose how to resolve them.")
+                Spacer(Modifier.height(8.dp))
+                conflicts.forEach { (newW, existing) ->
+                    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Text("Current: ${existing.subject} (${existing.fromTime}-${existing.toTime})", style = MaterialTheme.typography.bodySmall)
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            Text("New: ${newW.subject} (${newW.fromTime}-${newW.toTime})", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = onKeepNew) { Text("Keep New") }
+        },
+        dismissButton = {
+            TextButton(onClick = onKeepExisting) { Text("Keep Existing") }
+        }
     )
 }

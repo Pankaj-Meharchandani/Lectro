@@ -22,11 +22,13 @@ import com.example.timetable.model.Week
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.ui.viewmodel.ExamViewModel
 import com.example.timetable.utils.TimeUtils
+import com.example.timetable.shared.getPlatform
 import kotlinx.datetime.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel) {
+    val platform = remember { getPlatform() }
     var showAddDialog by remember { mutableStateOf(false) }
     var examToDelete by remember { mutableStateOf<Exam?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -111,7 +113,10 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel) {
     if (showAddDialog) {
         AddExamDialog(
             onDismiss = { showAddDialog = false },
-            onSave = { exam -> viewModel.insertExam(exam) },
+            onSave = { exam -> 
+                viewModel.insertExam(exam)
+                platform.showToast("Exam added")
+            },
             onGetSubjectDetails = { viewModel.getSubjectDetails(it) },
             subjectSuggestions = viewModel.subjects,
             teacherSuggestions = viewModel.teachers
@@ -126,6 +131,7 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel) {
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteExam(exam)
+                    platform.showToast("Exam deleted")
                     examToDelete = null
                 }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                     Text("Delete")

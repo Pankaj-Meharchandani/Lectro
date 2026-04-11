@@ -277,6 +277,37 @@ INSERT INTO user_files (title, path) VALUES (?, ?);
 deleteUserFile:
 DELETE FROM user_files WHERE id = ?;
 
+-- Maintenance
+deleteAllTimetable:
+DELETE FROM timetable;
+
+deleteAllSubjects:
+DELETE FROM subjects;
+
+deleteAllHomeworks:
+DELETE FROM homeworks;
+
+deleteAllNotes:
+DELETE FROM notes;
+
+deleteAllTeachers:
+DELETE FROM teachers;
+
+deleteAllExams:
+DELETE FROM exams;
+
+deleteAllMaterials:
+DELETE FROM materials;
+
+deleteAllAttendance:
+DELETE FROM attendance_records;
+
+deleteAllUserDetails:
+DELETE FROM user_details;
+
+deleteAllUserFiles:
+DELETE FROM user_files;
+
 -- Queries for attendance
 getAttendanceStatus:
 SELECT status FROM attendance_records WHERE week_id = ? AND date = ?;

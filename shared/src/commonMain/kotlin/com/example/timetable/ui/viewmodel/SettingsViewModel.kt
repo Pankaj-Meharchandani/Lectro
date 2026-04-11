@@ -64,6 +64,6 @@ class SettingsViewModel(
     }
 
     fun resetData() {
-        // db.resetAllData() 
+        db.resetAllData()
     }
 }

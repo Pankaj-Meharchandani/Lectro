@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.example.timetable.model.Teacher
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.ui.viewmodel.TeacherViewModel
+import com.example.timetable.shared.getPlatform
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,6 +26,7 @@ fun TeachersScreen(
     editTeacherId: Int? = null,
     viewModel: TeacherViewModel
 ) {
+    val platform = remember { getPlatform() }
     var showAddDialog by remember { mutableStateOf(false) }
     var teacherToEdit by remember { mutableStateOf<Teacher?>(null) }
     var teacherToDelete by remember { mutableStateOf<Teacher?>(null) }
@@ -110,8 +112,10 @@ fun TeachersScreen(
             onSave = { teacher -> 
                 if (teacherToEdit != null) {
                     viewModel.updateTeacher(teacher)
+                    platform.showToast("Teacher updated")
                 } else {
                     viewModel.insertTeacher(teacher)
+                    platform.showToast("Teacher added")
                 }
                 teacherToEdit = null
             },
@@ -127,6 +131,7 @@ fun TeachersScreen(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteTeacher(teacher)
+                    platform.showToast("Teacher deleted")
                     teacherToDelete = null
                 }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                     Text("Delete")

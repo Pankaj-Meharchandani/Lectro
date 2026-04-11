@@ -7,10 +7,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.timetable.data.TimetableDatabase
+import com.example.timetable.model.Note
 import com.example.timetable.model.Week
 import com.example.timetable.shared.Notifier
 import com.example.timetable.shared.WidgetRefresher
 import com.example.timetable.shared.getFileHandler
+import com.example.timetable.shared.getPlatform
+import com.example.timetable.ui.components.ImportConflictDialog
 import com.example.timetable.ui.screens.*
 import com.example.timetable.ui.viewmodel.*
 import com.example.timetable.utils.ScheduleExporter
@@ -30,13 +33,39 @@ fun TimetableApp(
     onPickImage: (callback: (String) -> Unit) -> Unit = {},
     onPickFile: (callback: (String, String, String) -> Unit) -> Unit = { _ -> },
     onOpenFile: (String, String) -> Unit = { _, _ -> },
-    onExportPdf: (List<String>, Map<String, List<Week>>) -> Unit = { _, _ -> }
+    onExportPdf: (List<String>, Map<String, List<Week>>) -> Unit = { _, _ -> },
+    onShareText: (String) -> Unit = {},
+    onReportIssue: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val onboardingCompleted: Boolean = settings.get("onboarding_completed", false)
     val fileHandler = remember { getFileHandler() }
+    val platform = remember { getPlatform() }
     
     val mainViewModel = remember { MainViewModel(database, notifier, widgetRefresher) }
+
+    var pendingImportWeeks by remember { mutableStateOf<List<Week>?>(null) }
+    var importConflicts by remember { mutableStateOf<List<Pair<Week, Week>>?>(null) }
+
+    if (importConflicts != null && pendingImportWeeks != null) {
+        ImportConflictDialog(
+            conflicts = importConflicts!!,
+            onDismiss = { importConflicts = null; pendingImportWeeks = null },
+            onKeepNew = {
+                importConflicts!!.forEach { (_, existing) -> database.deleteWeekById(existing) }
+                ScheduleExporter.importWeeks(database, pendingImportWeeks!!)
+                importConflicts = null; pendingImportWeeks = null; mainViewModel.loadSuggestions()
+                platform.showToast("Imported successfully (new kept)")
+            },
+            onKeepExisting = {
+                val clashingNew = importConflicts!!.map { it.first }
+                val nonClashing = pendingImportWeeks!!.filter { it !in clashingNew }
+                ScheduleExporter.importWeeks(database, nonClashing)
+                importConflicts = null; pendingImportWeeks = null; mainViewModel.loadSuggestions()
+                platform.showToast("Imported non-clashing slots")
+            }
+        )
+    }
 
     NavHost(
         navController = navController, 
@@ -63,7 +92,8 @@ fun TimetableApp(
                 onNavigateToSubjectDetail = { subjectId -> navController.navigate("subject_detail/$subjectId") },
                 onNavigateToNoteInfo = { noteId -> navController.navigate("note_info/$noteId") },
                 onNavigateToEditTeacher = { teacherId -> navController.navigate("teachers?editTeacherId=$teacherId") },
-                onExportPdf = { days, data -> onExportPdf(days, data) },
+                onExportPdf = onExportPdf,
+                onReportIssue = onReportIssue,
                 viewModel = mainViewModel,
                 settings = settings
             )
@@ -120,7 +150,14 @@ fun TimetableApp(
         ) { backStackEntry ->
             val noteId = backStackEntry.arguments?.getInt("noteId") ?: 0
             val noteInfoViewModel = remember { NoteInfoViewModel(database) }
-            NoteInfoScreen(noteId = noteId, onBack = { navController.popBackStack() }, viewModel = noteInfoViewModel)
+            NoteInfoScreen(
+                noteId = noteId, 
+                onBack = { navController.popBackStack() }, 
+                onShareText = onShareText,
+                onSharePdf = { /* Android PDF callback needed */ },
+                onPickImage = onPickImage,
+                viewModel = noteInfoViewModel
+            )
         }
         composable(
             route = "subject_detail/{subjectId}",
@@ -150,8 +187,14 @@ fun TimetableApp(
                 onImportSchedule = {
                     onImportSchedule { content ->
                         val weeks = ScheduleExporter.parseLecFile(content)
-                        ScheduleExporter.importWeeks(database, weeks)
-                        mainViewModel.loadSuggestions() 
+                        val conflicts = ScheduleExporter.findConflicts(database, weeks)
+                        if (conflicts.isNotEmpty()) {
+                            pendingImportWeeks = weeks
+                            importConflicts = conflicts
+                        } else {
+                            ScheduleExporter.importWeeks(database, weeks)
+                            mainViewModel.loadSuggestions()
+                        }
                     }
                 },
                 onArchiveSemester = { name ->

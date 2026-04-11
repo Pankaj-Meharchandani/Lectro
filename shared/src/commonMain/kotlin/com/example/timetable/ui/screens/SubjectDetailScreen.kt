@@ -24,6 +24,7 @@ import com.example.timetable.ui.components.NoteItem
 import com.example.timetable.ui.theme.getAttendanceColor
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.ui.viewmodel.SubjectDetailViewModel
+import com.example.timetable.shared.getPlatform
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 import kotlinx.datetime.*
@@ -39,6 +40,7 @@ fun SubjectDetailScreen(
     onPickFile: (callback: (String, String, String) -> Unit) -> Unit = {},
     onOpenFile: (String, String) -> Unit = { _, _ -> }
 ) {
+    val platform = remember { getPlatform() }
     var showAddNoteDialog by remember { mutableStateOf(false) }
     var materialToEdit by remember { mutableStateOf<Material?>(null) }
     var noteToDelete by remember { mutableStateOf<Note?>(null) }
@@ -78,6 +80,7 @@ fun SubjectDetailScreen(
                         onClick = { 
                             onPickFile { path, name, type -> 
                                 viewModel.addMaterial(name, path, type)
+                                platform.showToast("Material added")
                             }
                         },
                         containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -181,7 +184,10 @@ fun SubjectDetailScreen(
     }
 
     if (showAddNoteDialog) {
-        SimpleAddNoteDialog(onDismiss = { showAddNoteDialog = false }, onSave = { title, color -> viewModel.addNote(title, "", color) })
+        SimpleAddNoteDialog(onDismiss = { showAddNoteDialog = false }, onSave = { title, color -> 
+            viewModel.addNote(title, "", color)
+            platform.showToast("Note added")
+        })
     }
 
     materialToEdit?.let { material ->
@@ -190,7 +196,11 @@ fun SubjectDetailScreen(
             onDismissRequest = { materialToEdit = null },
             title = { Text("Edit File Name") },
             text = { OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("File Name") }) },
-            confirmButton = { TextButton(onClick = { viewModel.updateMaterialName(material.id, newName); materialToEdit = null }) { Text("Save") } },
+            confirmButton = { TextButton(onClick = { 
+                viewModel.updateMaterialName(material.id, newName)
+                platform.showToast("Renamed")
+                materialToEdit = null 
+            }) { Text("Save") } },
             dismissButton = { TextButton(onClick = { materialToEdit = null }) { Text("Cancel") } }
         )
     }
@@ -200,7 +210,11 @@ fun SubjectDetailScreen(
             onDismissRequest = { noteToDelete = null },
             title = { Text("Delete Note") },
             text = { Text("Are you sure you want to delete this note?") },
-            confirmButton = { TextButton(onClick = { viewModel.deleteNote(note.id); noteToDelete = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete") } },
+            confirmButton = { TextButton(onClick = { 
+                viewModel.deleteNote(note.id)
+                platform.showToast("Note deleted")
+                noteToDelete = null 
+            }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { noteToDelete = null }) { Text("Cancel") } }
         )
     }
@@ -210,7 +224,11 @@ fun SubjectDetailScreen(
             onDismissRequest = { materialToDelete = null },
             title = { Text("Delete Material") },
             text = { Text("Are you sure you want to delete '${material.name}'?") },
-            confirmButton = { TextButton(onClick = { viewModel.deleteMaterial(material.id); materialToDelete = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete") } },
+            confirmButton = { TextButton(onClick = { 
+                viewModel.deleteMaterial(material.id)
+                platform.showToast("Material deleted")
+                materialToDelete = null 
+            }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { materialToDelete = null }) { Text("Cancel") } }
         )
     }

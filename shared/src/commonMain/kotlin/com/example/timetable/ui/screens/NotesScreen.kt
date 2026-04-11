@@ -24,6 +24,7 @@ import com.example.timetable.ui.components.EditSubjectDialog
 import com.example.timetable.ui.components.SubjectItem
 import com.example.timetable.ui.viewmodel.MainViewModel
 import com.example.timetable.ui.viewmodel.NoteViewModel
+import com.example.timetable.shared.getPlatform
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 
@@ -36,6 +37,7 @@ fun NotesScreen(
     mainViewModel: MainViewModel,
     settings: Settings = Settings()
 ) {
+    val platform = remember { getPlatform() }
     val minAttendance: Int = settings.get("min_attendance_setting", 75)
     var showAddDialog by remember { mutableStateOf(false) }
     var subjectToEdit by remember { mutableStateOf<Subject?>(null) }
@@ -117,7 +119,10 @@ fun NotesScreen(
     if (showAddDialog) {
         AddNoteDialog(
             onDismiss = { showAddDialog = false },
-            onSave = { note, subjectName -> viewModel.insertNote(note, subjectName) },
+            onSave = { note, subjectName -> 
+                viewModel.insertNote(note, subjectName)
+                platform.showToast("Note added")
+            },
             subjectSuggestions = viewModel.subjectNames
         )
     }
@@ -128,6 +133,7 @@ fun NotesScreen(
             onDismiss = { subjectToEdit = null },
             onSave = { updated ->
                 viewModel.updateSubject(updated)
+                platform.showToast("Subject updated")
                 subjectToEdit = null
             }
         )
@@ -141,6 +147,7 @@ fun NotesScreen(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteSubject(subject.id)
+                    platform.showToast("Subject deleted")
                     subjectToDelete = null
                 }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
                     Text("Delete")

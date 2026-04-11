@@ -142,6 +142,17 @@ class MainActivity : ComponentActivity() {
                         },
                         onExportPdf = { days, data ->
                             PdfExportUtil.exportScheduleToPdf(this, days, data)
+                        },
+                        onShareText = { text ->
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                putExtra(Intent.EXTRA_TEXT, text)
+                                type = "text/plain"
+                            }
+                            startActivity(Intent.createChooser(shareIntent, "Share"))
+                        },
+                        onReportIssue = {
+                            val intent = Intent(Intent.ACTION_VIEW, "https://github.com/Pankaj-Meharchandani/Lectro/issues/new".toUri())
+                            startActivity(intent)
                         }
                     )
                 }

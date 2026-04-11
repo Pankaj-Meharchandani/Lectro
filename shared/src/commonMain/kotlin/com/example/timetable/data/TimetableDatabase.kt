@@ -58,6 +58,9 @@ interface TimetableDatabase {
     fun insertUserFile(file: UserFile)
     fun deleteUserFile(id: Int)
     
+    fun resetAllData()
+    fun resetSemesterData()
+    
     fun getAttendanceStatus(weekId: Int, date: String): String?
     fun updateAttendance(weekId: Int, subjectName: String, type: String, date: String)
     fun getAttendanceForSubject(subjectName: String): List<AttendanceRecord>
