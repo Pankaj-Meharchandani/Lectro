@@ -15,12 +15,21 @@ interface TimetableDatabase {
     fun getSubjectDetails(name: String): Week?
     
     fun getTeacher(): List<Teacher>
+    fun insertTeacher(teacher: Teacher)
+    fun updateTeacher(teacher: Teacher)
+    fun deleteTeacherById(teacher: Teacher)
+    fun updateTeacherSortOrder(id: Int, sortOrder: Int)
     fun getTeachersList(): List<String>
     
     fun getNote(): List<Note>
     fun insertNote(note: Note): Long
     
     fun getHomework(): List<Homework>
+    
+    fun getExam(): List<Exam>
+    fun insertExam(exam: Exam)
+    fun updateExam(exam: Exam)
+    fun deleteExamById(exam: Exam)
     
     fun getUserDetail(): UserDetail
     

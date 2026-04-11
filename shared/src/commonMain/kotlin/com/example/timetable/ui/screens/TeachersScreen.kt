@@ -1,0 +1,254 @@
+package com.example.timetable.ui.screens
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.example.timetable.model.Teacher
+import com.example.timetable.ui.theme.themedContainerColor
+import com.example.timetable.ui.viewmodel.TeacherViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TeachersScreen(
+    onBack: () -> Unit, 
+    editTeacherId: Int? = null,
+    viewModel: TeacherViewModel
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+    var teacherToEdit by remember { mutableStateOf<Teacher?>(null) }
+    var teacherToDelete by remember { mutableStateOf<Teacher?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadTeachers()
+    }
+
+    LaunchedEffect(editTeacherId) {
+        if (editTeacherId != null) {
+            teacherToEdit = viewModel.teachers.find { it.id == editTeacherId }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Teachers") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { showAddDialog = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Add")
+            }
+        }
+    ) { padding ->
+        if (viewModel.teachers.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.Group,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text("No teachers added yet.", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+                itemsIndexed(viewModel.teachers, key = { _, t -> t.id }) { index, teacher ->
+                    Box {
+                        var showMenu by remember { mutableStateOf(false) }
+                        TeacherItem(
+                            teacher = teacher, 
+                            onDelete = { teacherToDelete = teacher },
+                            onEdit = { teacherToEdit = it }
+                        )
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 60.dp)
+                        ) { Icon(Icons.Default.SwapVert, contentDescription = "Reorder") }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Move Up") },
+                                onClick = { viewModel.moveTeacher(index, true); showMenu = false },
+                                enabled = index > 0
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Move Down") },
+                                onClick = { viewModel.moveTeacher(index, false); showMenu = false },
+                                enabled = index < viewModel.teachers.size - 1
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAddDialog || teacherToEdit != null) {
+        AddTeacherDialog(
+            onDismiss = { 
+                showAddDialog = false
+                teacherToEdit = null
+            },
+            onSave = { teacher -> 
+                if (teacherToEdit != null) {
+                    viewModel.updateTeacher(teacher)
+                } else {
+                    viewModel.insertTeacher(teacher)
+                }
+                teacherToEdit = null
+            },
+            initialTeacher = teacherToEdit ?: Teacher()
+        )
+    }
+
+    teacherToDelete?.let { teacher ->
+        AlertDialog(
+            onDismissRequest = { teacherToDelete = null },
+            title = { Text("Delete Teacher") },
+            text = { Text("Are you sure you want to delete '${teacher.name}' from your contacts?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteTeacher(teacher)
+                    teacherToDelete = null
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { teacherToDelete = null }) { Text("Cancel") }
+            }
+        )
+    }
+}
+
+@Composable
+fun AddTeacherDialog(
+    onDismiss: () -> Unit, 
+    onSave: (Teacher) -> Unit,
+    initialTeacher: Teacher = Teacher()
+) {
+    var name by remember { mutableStateOf(initialTeacher.name) }
+    var post by remember { mutableStateOf(initialTeacher.post) }
+    var phone by remember { mutableStateOf(initialTeacher.phonenumber) }
+    var email by remember { mutableStateOf(initialTeacher.email) }
+    var cabinNumber by remember { mutableStateOf(initialTeacher.cabinNumber) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (initialTeacher.id == 0) "Add Teacher" else "Edit Teacher") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+                OutlinedTextField(value = post, onValueChange = { post = it }, label = { Text("Post") })
+                OutlinedTextField(
+                    value = phone, 
+                    onValueChange = { input ->
+                        if (input.all { it.isDigit() || it == ' ' || it == '+' || it == '-' }) {
+                            phone = input
+                        }
+                    }, 
+                    label = { Text("Phone Number") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                )
+                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
+                OutlinedTextField(value = cabinNumber, onValueChange = { cabinNumber = it }, label = { Text("Cabin Number") })
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (name.isNotBlank()) {
+                    onSave(initialTeacher.apply {
+                        this.name = name
+                        this.post = post
+                        this.phonenumber = phone
+                        this.email = email
+                        this.cabinNumber = cabinNumber
+                    })
+                    onDismiss()
+                }
+            }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
+}
+
+@Composable
+fun TeacherItem(
+    teacher: Teacher, 
+    onDelete: () -> Unit,
+    onEdit: (Teacher) -> Unit
+) {
+    val teacherColor = if (teacher.color != 0) Color(teacher.color) else MaterialTheme.colorScheme.primary
+    val containerColor = themedContainerColor(teacherColor)
+    val contentColor = contentColorFor(containerColor)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        onClick = { onEdit(teacher) },
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = teacher.name, style = MaterialTheme.typography.titleLarge)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.School, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = teacher.post, style = MaterialTheme.typography.bodyMedium)
+                }
+                if (teacher.phonenumber.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = teacher.phonenumber, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (teacher.email.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = teacher.email, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (teacher.cabinNumber.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Room, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Cabin: ${teacher.cabinNumber}", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = "Delete")
+            }
+        }
+    }
+}

@@ -1,0 +1,193 @@
+CREATE TABLE timetable (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject TEXT NOT NULL,
+    fragment TEXT NOT NULL,
+    teacher TEXT,
+    room TEXT,
+    fromtime TEXT,
+    totime TEXT,
+    color INTEGER AS Int NOT NULL
+);
+
+CREATE TABLE subjects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    color INTEGER AS Int NOT NULL,
+    teacher TEXT,
+    room TEXT,
+    sort_order INTEGER AS Int DEFAULT 0 NOT NULL,
+    attended INTEGER AS Int DEFAULT 0 NOT NULL,
+    missed INTEGER AS Int DEFAULT 0 NOT NULL,
+    skipped INTEGER AS Int DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE homeworks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject TEXT NOT NULL,
+    title TEXT,
+    description TEXT,
+    date TEXT,
+    color INTEGER AS Int NOT NULL,
+    completed INTEGER AS Int DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    text TEXT,
+    color INTEGER AS Int NOT NULL,
+    subject_id INTEGER AS Int DEFAULT -1 NOT NULL,
+    sort_order INTEGER AS Int DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE teachers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    post TEXT,
+    phonenumber TEXT,
+    email TEXT,
+    cabinnumber TEXT,
+    color INTEGER AS Int NOT NULL,
+    sort_order INTEGER AS Int DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE exams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject TEXT NOT NULL,
+    teacher TEXT,
+    room TEXT,
+    date TEXT,
+    time TEXT,
+    color INTEGER AS Int NOT NULL
+);
+
+CREATE TABLE materials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_id INTEGER AS Int NOT NULL,
+    path TEXT NOT NULL,
+    type TEXT,
+    name TEXT,
+    sort_order INTEGER AS Int DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE user_details (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT,
+    email TEXT,
+    roll_number TEXT,
+    photo_path TEXT,
+    other TEXT
+);
+
+CREATE TABLE user_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    path TEXT NOT NULL
+);
+
+CREATE TABLE attendance_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    week_id INTEGER AS Int NOT NULL,
+    subject_name TEXT NOT NULL,
+    status TEXT NOT NULL
+);
+
+-- Queries for timetable
+getAllWeeks:
+SELECT * FROM timetable ORDER BY fragment, fromtime ASC;
+
+getWeek:
+SELECT * FROM timetable WHERE fragment = ? ORDER BY fromtime ASC;
+
+insertWeek:
+INSERT INTO timetable (subject, fragment, teacher, room, fromtime, totime, color)
+VALUES (?, ?, ?, ?, ?, ?, ?);
+
+updateWeek:
+UPDATE timetable SET subject = ?, teacher = ?, room = ?, fromtime = ?, totime = ?, color = ? WHERE id = ?;
+
+deleteWeekById:
+DELETE FROM timetable WHERE id = ?;
+
+-- Queries for subjects
+getAllSubjects:
+SELECT * FROM subjects ORDER BY sort_order ASC, name ASC;
+
+getSubjectsList:
+SELECT name FROM subjects ORDER BY name ASC;
+
+getSubjectByName:
+SELECT * FROM subjects WHERE name = ?;
+
+getSubjectDetails:
+SELECT * FROM subjects WHERE name = ?;
+
+insertSubject:
+INSERT INTO subjects (name, color, teacher, room) VALUES (?, ?, ?, ?);
+
+updateSubject:
+UPDATE subjects SET name = ?, color = ?, teacher = ?, room = ? WHERE id = ?;
+
+deleteSubjectById:
+DELETE FROM subjects WHERE id = ?;
+
+updateSubjectSortOrder:
+UPDATE subjects SET sort_order = ? WHERE id = ?;
+
+-- Queries for notes
+getNotes:
+SELECT * FROM notes ORDER BY sort_order ASC, id DESC;
+
+insertNote:
+INSERT INTO notes (title, text, color, subject_id) VALUES (?, ?, ?, ?);
+
+-- Queries for homeworks
+getHomeworks:
+SELECT * FROM homeworks ORDER BY date ASC;
+
+-- Queries for teachers
+getTeachers:
+SELECT * FROM teachers ORDER BY sort_order ASC, name ASC;
+
+getTeachersList:
+SELECT name FROM teachers ORDER BY name ASC;
+
+insertTeacher:
+INSERT INTO teachers (name, post, phonenumber, email, cabinnumber, color) VALUES (?, ?, ?, ?, ?, ?);
+
+updateTeacher:
+UPDATE teachers SET name = ?, post = ?, phonenumber = ?, email = ?, cabinnumber = ?, color = ? WHERE id = ?;
+
+deleteTeacherById:
+DELETE FROM teachers WHERE id = ?;
+
+updateTeacherSortOrder:
+UPDATE teachers SET sort_order = ? WHERE id = ?;
+
+-- Queries for exams
+getExams:
+SELECT * FROM exams ORDER BY date ASC, time ASC;
+
+insertExam:
+INSERT INTO exams (subject, teacher, room, date, time, color) VALUES (?, ?, ?, ?, ?, ?);
+
+deleteExamById:
+DELETE FROM exams WHERE id = ?;
+
+-- Queries for user_details
+getUserDetail:
+SELECT * FROM user_details LIMIT 1;
+
+-- Queries for attendance
+getAttendanceStatus:
+SELECT status FROM attendance_records WHERE week_id = ? AND date = ?;
+
+updateAttendance:
+INSERT OR REPLACE INTO attendance_records (date, week_id, subject_name, status) VALUES (?, ?, ?, ?);
+
+getAttendanceForSubject:
+SELECT * FROM attendance_records WHERE subject_name = ?;
+
+deleteAttendanceRecord:
+DELETE FROM attendance_records WHERE subject_name = ? AND date = ? AND week_id = ?;
