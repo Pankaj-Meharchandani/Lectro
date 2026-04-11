@@ -35,7 +35,9 @@ fun SubjectDetailScreen(
     onBack: () -> Unit, 
     onNoteClick: (Int) -> Unit,
     viewModel: SubjectDetailViewModel,
-    settings: Settings = Settings()
+    settings: Settings = Settings(),
+    onPickFile: (callback: (String, String, String) -> Unit) -> Unit = {},
+    onOpenFile: (String, String) -> Unit = { _, _ -> }
 ) {
     var showAddNoteDialog by remember { mutableStateOf(false) }
     var materialToEdit by remember { mutableStateOf<Material?>(null) }
@@ -71,8 +73,21 @@ fun SubjectDetailScreen(
                 )
             },
             floatingActionButton = {
-                FloatingActionButton(onClick = { showAddNoteDialog = true }) {
-                    Icon(Icons.Default.NoteAdd, contentDescription = "Add Note")
+                Column(horizontalAlignment = Alignment.End) {
+                    SmallFloatingActionButton(
+                        onClick = { 
+                            onPickFile { path, name, type -> 
+                                viewModel.addMaterial(name, path, type)
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Icon(Icons.Default.UploadFile, contentDescription = "Upload Materials")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FloatingActionButton(onClick = { showAddNoteDialog = true }) {
+                        Icon(Icons.Default.NoteAdd, contentDescription = "Add Note")
+                    }
                 }
             }
         ) { padding ->
@@ -153,7 +168,7 @@ fun SubjectDetailScreen(
                     itemsIndexed(viewModel.materials, key = { _, m -> m.id }) { index, material ->
                         Box {
                             var showMenu by remember { mutableStateOf(false) }
-                            MaterialItem(material = material, onClick = { /* open material */ }, onEditName = { materialToEdit = material }, onDelete = { materialToDelete = material }, onReorder = { showMenu = true })
+                            MaterialItem(material = material, onClick = { onOpenFile(material.path, material.type) }, onEditName = { materialToEdit = material }, onDelete = { materialToDelete = material }, onReorder = { showMenu = true })
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(text = { Text("Move Up") }, onClick = { viewModel.moveMaterial(index, true); showMenu = false }, enabled = index > 0)
                                 DropdownMenuItem(text = { Text("Move Down") }, onClick = { viewModel.moveMaterial(index, false); showMenu = false }, enabled = index < viewModel.materials.size - 1)

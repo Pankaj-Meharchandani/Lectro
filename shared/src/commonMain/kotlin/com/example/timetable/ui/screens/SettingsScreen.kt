@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,9 +23,11 @@ fun SettingsScreen(
     onNavigateToArchives: () -> Unit,
     onExportSchedule: () -> Unit,
     onImportSchedule: () -> Unit,
+    onArchiveSemester: (String) -> Unit,
     viewModel: SettingsViewModel
 ) {
     var resetType by remember { mutableStateOf<ResetType?>(null) }
+    var archiveName by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -111,6 +114,20 @@ fun SettingsScreen(
 
             SettingsSection(title = "Danger Zone") {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    OutlinedButton(
+                        onClick = onNavigateToArchives,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.History, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("View Archived Semesters")
+                    }
+                    DangerCard(
+                        title = "Archive Current Semester",
+                        description = "Saves everything to history and starts fresh.",
+                        buttonText = "Archive Semester",
+                        onClick = { resetType = ResetType.ARCHIVE }
+                    )
                     DangerCard(
                         title = "Reset All Data",
                         description = "Wipes everything but keeps your personal details.",
@@ -123,12 +140,25 @@ fun SettingsScreen(
     }
 
     resetType?.let { type ->
+        val title = if (type == ResetType.ARCHIVE) "Archive Semester" else "Reset Data"
         AlertDialog(
             onDismissRequest = { resetType = null },
-            title = { Text("Reset Data") },
-            text = { Text("Are you sure? This action cannot be undone.") },
+            title = { Text(title) },
+            text = {
+                Column {
+                    Text("Are you sure? This action will clear current data.")
+                    if (type == ResetType.ARCHIVE) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(value = archiveName, onValueChange = { archiveName = it }, label = { Text("Archive Name") })
+                    }
+                }
+            },
             confirmButton = {
-                TextButton(onClick = { viewModel.resetData(); resetType = null }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Yes") }
+                TextButton(onClick = { 
+                    if (type == ResetType.ARCHIVE) onArchiveSemester(archiveName)
+                    else viewModel.resetData()
+                    resetType = null 
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Yes") }
             },
             dismissButton = {
                 TextButton(onClick = { resetType = null }) { Text("No") }

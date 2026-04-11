@@ -42,11 +42,13 @@ kotlin {
             implementation("app.cash.sqldelight:runtime:2.3.2")
             api("com.russhwolf:multiplatform-settings:1.1.1")
             implementation("com.russhwolf:multiplatform-settings-no-arg:1.1.1")
+            implementation("io.coil-kt.coil3:coil-compose:3.0.0-alpha06")
         }
         androidMain.dependencies {
             implementation("androidx.appcompat:appcompat:1.7.0")
             implementation("androidx.activity:activity-compose:1.9.3")
             implementation("app.cash.sqldelight:android-driver:2.3.2")
+            implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.0-alpha06")
         }
         iosMain.dependencies {
             implementation("app.cash.sqldelight:native-driver:2.3.2")

@@ -16,6 +16,9 @@ import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.example.timetable.R
 import com.example.timetable.activities.MainActivity
+import com.example.timetable.data.DatabaseDriverFactory
+import com.example.timetable.data.SqlDelightTimetableDatabase
+import com.example.timetable.data.TimetableDatabase
 import com.example.timetable.model.Exam
 import com.example.timetable.model.Homework
 import com.example.timetable.model.Week
@@ -27,6 +30,9 @@ class NotificationHelper(private val context: Context) {
     private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
     private val sharedPref = PreferenceManager.getDefaultSharedPreferences(context)
+    private val database: TimetableDatabase by lazy {
+        SqlDelightTimetableDatabase(DatabaseDriverFactory(context).createDriver())
+    }
 
     companion object {
         const val CHANNEL_ID_SCHEDULE = "schedule_reminders"
@@ -196,13 +202,12 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun scheduleEventsForToday() {
-        val db = DbHelper(context)
         val today = Calendar.getInstance()
         val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(today.time)
 
         // Class Reminders (15 mins before)
         if (sharedPref.getBoolean(AppConstants.KEY_SCHEDULE_REMINDER, true)) {
-            db.getWeek(dayName).forEach { week ->
+            database.getWeek(dayName).forEach { week ->
                 val classTime = parseTimeToday(week.fromTime) ?: return@forEach
                 val alarmTime = classTime.timeInMillis - 15 * 60 * 1000
                 if (alarmTime > System.currentTimeMillis()) {
@@ -215,7 +220,7 @@ class NotificationHelper(private val context: Context) {
 
         // Exam Reminders (1 hr before)
         if (sharedPref.getBoolean(AppConstants.KEY_EXAM_REMINDER, true)) {
-            db.exam.filter { it.date == dateStr }.forEach { exam ->
+            database.getExam().filter { it.date == dateStr }.forEach { exam ->
                 val examTime = parseDateTime(exam.date, exam.time) ?: return@forEach
                 val alarmTime = examTime.timeInMillis - 60 * 60 * 1000
                 if (alarmTime > System.currentTimeMillis()) {
@@ -226,7 +231,7 @@ class NotificationHelper(private val context: Context) {
 
         // Assignment Reminders (8 AM on due date)
         if (sharedPref.getBoolean(AppConstants.KEY_ASSIGNMENT_REMINDER, true)) {
-            db.homework.filter { it.date == dateStr && it.completed == 0 }.forEach { homework ->
+            database.getHomework().filter { it.date == dateStr && it.completed == 0 }.forEach { homework ->
                 val alarmTime = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 8)
                     set(Calendar.MINUTE, 0)
@@ -310,15 +315,12 @@ class NotificationHelper(private val context: Context) {
     }
 
     fun checkAndNotifyUpcomingEvents() {
-        // This was for the daily morning summary, user said "no not every morning"
-        // keeping it empty or removing it.
     }
 
     fun checkAttendanceAndNotify() {
-        val db = DbHelper(context)
         val minAttendanceStr = sharedPref.getString(AppConstants.KEY_MIN_ATTENDANCE_SETTING, "75")
         val minAttendance = minAttendanceStr?.toDoubleOrNull() ?: 75.0
-        val subjects = db.allSubjects
+        val subjects = database.getAllSubjects()
         subjects.forEach { subject ->
             val total = subject.attended + subject.missed
             if (total > 0) {

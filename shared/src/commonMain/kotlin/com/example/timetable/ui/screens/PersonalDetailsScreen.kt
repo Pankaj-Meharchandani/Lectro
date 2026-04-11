@@ -14,14 +14,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.example.timetable.model.UserFile
 import com.example.timetable.ui.viewmodel.PersonalDetailsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewModel) {
+fun PersonalDetailsScreen(
+    onBack: () -> Unit, 
+    viewModel: PersonalDetailsViewModel,
+    onPickImage: (callback: (String) -> Unit) -> Unit = {},
+    onPickFile: (callback: (String, String, String) -> Unit) -> Unit = { _ -> },
+    onOpenFile: (String, String) -> Unit = { _, _ -> }
+) {
     LaunchedEffect(Unit) { viewModel.loadData() }
+    var showAddFileDialog by remember { mutableStateOf(false) }
+    var tempFilePath by remember { mutableStateOf("") }
+    var tempFileName by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -45,12 +56,22 @@ fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewMode
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Profile Photo Placeholder
+            // Profile Photo
             Box(
-                modifier = Modifier.size(120.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.size(120.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onPickImage { viewModel.updateField(newPhoto = it) } },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.AddAPhoto, contentDescription = "Add Photo", modifier = Modifier.size(40.dp))
+                if (viewModel.photoPath != null) {
+                    AsyncImage(
+                        model = viewModel.photoPath,
+                        contentDescription = "Profile Photo",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Default.AddAPhoto, contentDescription = "Add Photo", modifier = Modifier.size(40.dp))
+                }
             }
 
             // Details
@@ -64,7 +85,13 @@ fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewMode
             // Files Section
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("My Files", style = MaterialTheme.typography.titleLarge)
-                Button(onClick = { /* File picker */ }) {
+                Button(onClick = { 
+                    onPickFile { path, name, _ -> 
+                        tempFilePath = path
+                        tempFileName = name
+                        showAddFileDialog = true
+                    }
+                }) {
                     Icon(Icons.Default.UploadFile, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Upload File")
@@ -81,10 +108,27 @@ fun PersonalDetailsScreen(onBack: () -> Unit, viewModel: PersonalDetailsViewMode
                 }
             } else {
                 viewModel.userFiles.forEach { file ->
-                    FileItem(file = file, onDelete = { viewModel.deleteFile(file.id) }, onClick = { /* Open file */ })
+                    FileItem(file = file, onDelete = { viewModel.deleteFile(file.id) }, onClick = { onOpenFile(file.path, "*/*") })
                 }
             }
         }
+    }
+
+    if (showAddFileDialog) {
+        var title by remember { mutableStateOf(tempFileName) }
+        AlertDialog(
+            onDismissRequest = { showAddFileDialog = false },
+            title = { Text("File Title") },
+            text = { OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Enter title") }) },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (title.isNotBlank()) {
+                        viewModel.addFile(title, tempFilePath)
+                        showAddFileDialog = false
+                    }
+                }) { Text("Add") }
+            }
+        )
     }
 }
 

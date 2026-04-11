@@ -50,6 +50,7 @@ fun MainScreen(
     onNavigateToSubjectDetail: (Int) -> Unit,
     onNavigateToNoteInfo: (Int) -> Unit,
     onNavigateToEditTeacher: (Int) -> Unit,
+    onExportPdf: (List<String>, Map<String, List<Week>>) -> Unit = { _, _ -> },
     viewModel: MainViewModel,
     settings: Settings = Settings()
 ) {
@@ -199,6 +200,11 @@ fun MainScreen(
                             } else {
                                 IconButton(onClick = { isSearchActive = true }) {
                                     Icon(Icons.Default.Search, contentDescription = "Search")
+                                }
+                                IconButton(onClick = { 
+                                    onExportPdf(days, viewModel.weekData)
+                                }) {
+                                    Icon(Icons.Default.PictureAsPdf, contentDescription = "Export PDF")
                                 }
                             }
                         }

@@ -42,7 +42,7 @@ object WidgetUtils {
         
         // Fetch Homework
         db.homework.forEach { hw ->
-            if (hw.getCompleted() == 0) {
+            if (hw.completed == 0) {
                 try {
                     val date = sdf.parse(hw.date)
                     if (date != null && date.after(now.time) && date.before(nextWeek.time)) {
