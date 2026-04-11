@@ -86,7 +86,7 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        if (selectedTab == 0) Icons.AutoMirrored.Filled.Assignment else Icons.Default.EventAvailable,
+                        imageVector = if (selectedTab == 0) Icons.AutoMirrored.Filled.Assignment else Icons.Default.EventAvailable,
                         contentDescription = null,
                         modifier = Modifier.size(64.dp),
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -278,14 +278,14 @@ fun AddExamDialog(
         confirmButton = {
             TextButton(onClick = {
                 if (subject.isNotBlank()) {
-                    onSave(Exam().apply {
-                        this.subject = subject
-                        this.teacher = teacher
-                        this.room = room
-                        this.date = date
-                        this.time = time
-                        this.color = color
-                    })
+                    onSave(Exam(
+                        subject = subject,
+                        teacher = teacher,
+                        room = room,
+                        date = date,
+                        time = time,
+                        color = color
+                    ))
                     onDismiss()
                 }
             }) { Text("Save") }

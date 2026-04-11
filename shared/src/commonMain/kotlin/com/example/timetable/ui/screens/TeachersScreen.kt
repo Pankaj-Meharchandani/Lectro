@@ -60,7 +60,7 @@ fun TeachersScreen(
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        Icons.Default.Group,
+                        imageVector = Icons.Default.Group,
                         contentDescription = null,
                         modifier = Modifier.size(64.dp),
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -175,13 +175,13 @@ fun AddTeacherDialog(
         confirmButton = {
             TextButton(onClick = {
                 if (name.isNotBlank()) {
-                    onSave(initialTeacher.apply {
-                        this.name = name
-                        this.post = post
-                        this.phonenumber = phone
-                        this.email = email
-                        this.cabinNumber = cabinNumber
-                    })
+                    onSave(initialTeacher.copy(
+                        name = name,
+                        post = post,
+                        phonenumber = phone,
+                        email = email,
+                        cabinNumber = cabinNumber
+                    ))
                     onDismiss()
                 }
             }) { Text("Save") }

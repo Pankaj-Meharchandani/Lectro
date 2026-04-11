@@ -4,7 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Room
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -182,7 +187,6 @@ fun SubjectItem(
                 val total = details.attended + details.missed
                 val progress = if (total > 0) details.attended.toFloat() / total else 0f
                 val percentage = (progress * 100).toInt()
-                // ... color logic ...
                 val color = if (percentage >= minAttendance) Color(0xFF4CAF50) else Color(0xFFF44336)
 
                 Spacer(modifier = Modifier.height(12.dp))

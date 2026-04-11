@@ -2,12 +2,11 @@ package com.example.timetable.ui.viewmodel
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.timetable.data.TimetableDatabase
+import com.example.timetable.data.AttendanceRecord
 import com.example.timetable.model.*
 import com.example.timetable.shared.Notifier
 import com.example.timetable.shared.WidgetRefresher
-import kotlinx.coroutines.launch
 import kotlinx.datetime.*
 
 class MainViewModel(
@@ -119,6 +118,14 @@ class MainViewModel(
         teachers.addAll(db.getTeachersList())
     }
 
+    fun getSubjectIdByName(name: String): Int {
+        return db.getAllSubjects().find { it.name == name }?.id ?: -1
+    }
+
+    fun getSubjectDetails(name: String): Week? {
+        return db.getSubjectDetails(name)
+    }
+
     fun deleteWeek(week: Week) {
         db.deleteWeekById(week)
         loadWeekData(week.fragment)
@@ -144,21 +151,72 @@ class MainViewModel(
 
     fun updateAttendance(weekId: Int, subjectName: String, type: String) {
         val date = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
+        val oldType = db.getAttendanceStatus(weekId, date)
+        
+        if (oldType == type) return
+
+        if (oldType != null) {
+            when (oldType) {
+                "attended" -> db.updateSubjectAttendance(subjectName, -1, 0, 0)
+                "missed" -> db.updateSubjectAttendance(subjectName, 0, -1, 0)
+                "skipped" -> db.updateSubjectAttendance(subjectName, 0, 0, -1)
+            }
+        }
+
+        when (type) {
+            "attended" -> db.updateSubjectAttendance(subjectName, 1, 0, 0)
+            "missed" -> db.updateSubjectAttendance(subjectName, 0, 1, 0)
+            "skipped" -> db.updateSubjectAttendance(subjectName, 0, 0, 1)
+        }
+
         db.updateAttendance(weekId, subjectName, type, date)
         todayAttendance[weekId] = type
         loadSuggestions()
         widgetRefresher?.refreshAllWidgets()
     }
 
+    fun getAttendanceForSubject(subjectName: String): List<AttendanceRecord> = db.getAttendanceForSubject(subjectName)
+
+    fun updateAttendanceByDate(weekId: Int, subjectName: String, type: String, date: String) {
+        val oldType = db.getAttendanceStatus(weekId, date)
+        if (oldType == type) return
+
+        if (oldType != null) {
+            when (oldType) {
+                "attended" -> db.updateSubjectAttendance(subjectName, -1, 0, 0)
+                "missed" -> db.updateSubjectAttendance(subjectName, 0, -1, 0)
+                "skipped" -> db.updateSubjectAttendance(subjectName, 0, 0, -1)
+            }
+        }
+
+        when (type) {
+            "attended" -> db.updateSubjectAttendance(subjectName, 1, 0, 0)
+            "missed" -> db.updateSubjectAttendance(subjectName, 0, 1, 0)
+            "skipped" -> db.updateSubjectAttendance(subjectName, 0, 0, 1)
+        }
+
+        db.updateAttendanceByDate(weekId, subjectName, type, date)
+        loadSuggestions()
+        loadAttendance()
+    }
+
+    fun deleteAttendanceRecord(weekId: Int, subjectName: String, date: String) {
+        val status = db.getAttendanceStatus(weekId, date)
+        if (status != null) {
+            when (status) {
+                "attended" -> db.updateSubjectAttendance(subjectName, -1, 0, 0)
+                "missed" -> db.updateSubjectAttendance(subjectName, 0, -1, 0)
+                "skipped" -> db.updateSubjectAttendance(subjectName, 0, 0, -1)
+            }
+        }
+        db.deleteAttendanceRecord(weekId, subjectName, date)
+        loadSuggestions()
+        loadAttendance()
+    }
+
     fun getOngoingClass(): Week? {
         val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-        val dayNames = listOf("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
-        val today = dayNames[now.dayOfWeek.ordinal] // ordinal is 0 for Monday, 6 for Sunday?
-        // Wait, Sunday is often 0 in many systems. In kotlinx.datetime, DayOfWeek is an enum.
-        // DayOfWeek.MONDAY.ordinal is 0, ... SUNDAY is 6.
-        // Let's use now.dayOfWeek.name and capitalize it.
         val todayName = now.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
-        
         val nowMinutes = now.hour * 60 + now.minute
         
         return db.getWeek(todayName).find { slot ->
@@ -167,7 +225,6 @@ class MainViewModel(
             if (partsFrom.size >= 2 && partsTo.size >= 2) {
                 val start = partsFrom[0].toInt() * 60 + partsFrom[1].toInt()
                 var end = partsTo[0].toInt() * 60 + partsTo[1].toInt()
-                
                 if (end <= start) end += 24 * 60
                 nowMinutes in start until end
             } else false

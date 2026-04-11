@@ -6,15 +6,29 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.timetable.data.TimetableDatabase
+import com.example.timetable.shared.Notifier
+import com.example.timetable.shared.WidgetRefresher
 import com.example.timetable.ui.screens.*
+import com.example.timetable.ui.viewmodel.*
+import com.example.timetable.utils.ScheduleExporter
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.get
 
 @Composable
-fun TimetableApp(settings: Settings = Settings()) {
+fun TimetableApp(
+    database: TimetableDatabase,
+    settings: Settings = Settings(),
+    notifier: Notifier? = null,
+    widgetRefresher: WidgetRefresher? = null,
+    onExportSchedule: (String) -> Unit = {},
+    onImportSchedule: ((String) -> Unit) -> Unit = {}
+) {
     val navController = rememberNavController()
     val onboardingCompleted: Boolean = settings.get("onboarding_completed", false)
     
+    val mainViewModel = remember { MainViewModel(database, notifier, widgetRefresher) }
+
     NavHost(
         navController = navController, 
         startDestination = if (onboardingCompleted) "main" else "onboarding"
@@ -39,17 +53,21 @@ fun TimetableApp(settings: Settings = Settings()) {
                 onNavigateToAbout = { navController.navigate("about") },
                 onNavigateToSubjectDetail = { subjectId -> navController.navigate("subject_detail/$subjectId") },
                 onNavigateToNoteInfo = { noteId -> navController.navigate("note_info/$noteId") },
-                onNavigateToEditTeacher = { teacherId -> navController.navigate("teachers?editTeacherId=$teacherId") }
+                onNavigateToEditTeacher = { teacherId -> navController.navigate("teachers?editTeacherId=$teacherId") },
+                viewModel = mainViewModel,
+                settings = settings
             )
         }
         composable("attendance") {
-            AttendanceScreen(onBack = { navController.popBackStack() })
+            AttendanceScreen(onBack = { navController.popBackStack() }, viewModel = mainViewModel, settings = settings)
         }
         composable("personal_details") {
-            PersonalDetailsScreen(onBack = { navController.popBackStack() })
+            val personalViewModel = remember { PersonalDetailsViewModel(database) }
+            PersonalDetailsScreen(onBack = { navController.popBackStack() }, viewModel = personalViewModel)
         }
         composable("exams") {
-            ExamsScreen(onBack = { navController.popBackStack() })
+            val examViewModel = remember { ExamViewModel(database) }
+            ExamsScreen(onBack = { navController.popBackStack() }, viewModel = examViewModel)
         }
         composable(
             route = "teachers?editTeacherId={teacherId}",
@@ -59,18 +77,25 @@ fun TimetableApp(settings: Settings = Settings()) {
             })
         ) { backStackEntry ->
             val teacherId = backStackEntry.arguments?.getInt("teacherId") ?: -1
+            val teacherViewModel = remember { TeacherViewModel(database) }
             TeachersScreen(
                 onBack = { navController.popBackStack() },
-                editTeacherId = if (teacherId != -1) teacherId else null
+                editTeacherId = if (teacherId != -1) teacherId else null,
+                viewModel = teacherViewModel
             )
         }
         composable("assignments") {
-            AssignmentsScreen(onBack = { navController.popBackStack() })
+            val assignmentsViewModel = remember { AssignmentsViewModel(database, notifier, widgetRefresher) }
+            AssignmentsScreen(onBack = { navController.popBackStack() }, viewModel = assignmentsViewModel)
         }
         composable("notes") {
+            val noteViewModel = remember { NoteViewModel(database) }
             NotesScreen(
                 onBack = { navController.popBackStack() },
-                onSubjectClick = { subjectId -> navController.navigate("subject_detail/$subjectId") }
+                onSubjectClick = { subjectId -> navController.navigate("subject_detail/$subjectId") },
+                viewModel = noteViewModel,
+                mainViewModel = mainViewModel,
+                settings = settings
             )
         }
         composable(
@@ -78,37 +103,41 @@ fun TimetableApp(settings: Settings = Settings()) {
             arguments = listOf(navArgument("noteId") { type = NavType.IntType })
         ) { backStackEntry ->
             val noteId = backStackEntry.arguments?.getInt("noteId") ?: 0
-            NoteInfoScreen(noteId = noteId, onBack = { navController.popBackStack() })
+            val noteInfoViewModel = remember { NoteInfoViewModel(database) }
+            NoteInfoScreen(noteId = noteId, onBack = { navController.popBackStack() }, viewModel = noteInfoViewModel)
         }
         composable(
             route = "subject_detail/{subjectId}",
             arguments = listOf(navArgument("subjectId") { type = NavType.IntType })
         ) { backStackEntry ->
             val subjectId = backStackEntry.arguments?.getInt("subjectId") ?: 0
+            val subjectDetailViewModel = remember { SubjectDetailViewModel(database) }
             SubjectDetailScreen(
                 subjectId = subjectId, 
                 onBack = { navController.popBackStack() },
-                onNoteClick = { noteId -> navController.navigate("note_info/$noteId") }
+                onNoteClick = { noteId -> navController.navigate("note_info/$noteId") },
+                viewModel = subjectDetailViewModel,
+                settings = settings
             )
         }
         composable("settings") {
+            val settingsViewModel = remember { SettingsViewModel(database, settings) }
             SettingsScreen(
                 onBack = { navController.popBackStack() },
-                onNavigateToArchives = { navController.navigate("archives") }
+                onNavigateToArchives = { navController.navigate("archives") },
+                onExportSchedule = {
+                    val content = ScheduleExporter.exportSchedule(database)
+                    onExportSchedule(content)
+                },
+                onImportSchedule = {
+                    onImportSchedule { content ->
+                        val weeks = ScheduleExporter.parseLecFile(content)
+                        ScheduleExporter.importWeeks(database, weeks)
+                        mainViewModel.loadSuggestions() 
+                    }
+                },
+                viewModel = settingsViewModel
             )
-        }
-        composable("archives") {
-            ArchivesScreen(
-                onBack = { navController.popBackStack() },
-                onNavigateToArchiveDetail = { fileName -> navController.navigate("archive_detail/$fileName") }
-            )
-        }
-        composable(
-            route = "archive_detail/{fileName}",
-            arguments = listOf(navArgument("fileName") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val fileName = backStackEntry.arguments?.getString("fileName") ?: ""
-            ArchiveDetailScreen(fileName = fileName, onBack = { navController.popBackStack() })
         }
         composable("about") {
             AboutScreen(onBack = { navController.popBackStack() })
