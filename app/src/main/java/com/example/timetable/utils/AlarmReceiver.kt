@@ -30,6 +30,15 @@ class AlarmReceiver : BroadcastReceiver() {
                 notificationHelper.checkAttendanceAndNotify()
                 notificationHelper.scheduleAllReminders() // Reschedule for next week
             }
+            NotificationHelper.TYPE_SILENT_ON -> {
+                val sharedPref = androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                if (sharedPref.getBoolean(AppConstants.KEY_AUTO_SILENT_ENABLED, false)) {
+                    notificationHelper.setSilentMode(true)
+                }
+            }
+            NotificationHelper.TYPE_SILENT_OFF -> {
+                notificationHelper.setSilentMode(false)
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.media.AudioManager
 import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -50,6 +51,8 @@ class NotificationHelper(private val context: Context) {
         const val TYPE_ASSIGNMENT = "assignment"
         const val TYPE_ATTENDANCE = "attendance"
         const val TYPE_SCHEDULER = "scheduler"
+        const val TYPE_SILENT_ON = "silent_on"
+        const val TYPE_SILENT_OFF = "silent_off"
     }
 
     init {
@@ -238,6 +241,21 @@ class NotificationHelper(private val context: Context) {
                 }
             }
         }
+
+        // Auto Silent
+        if (sharedPref.getBoolean(AppConstants.KEY_AUTO_SILENT_ENABLED, false)) {
+            db.getWeek(dayName).forEach { week ->
+                val startTime = parseTimeToday(week.fromTime) ?: return@forEach
+                val endTime = parseTimeToday(week.toTime) ?: return@forEach
+
+                if (startTime.timeInMillis > System.currentTimeMillis()) {
+                    scheduleAlarm(startTime.timeInMillis, TYPE_SILENT_ON, week.id, "Silent On", "Silencing for ${week.subject}")
+                }
+                if (endTime.timeInMillis > System.currentTimeMillis()) {
+                    scheduleAlarm(endTime.timeInMillis, TYPE_SILENT_OFF, week.id, "Silent Off", "Restoring volume after ${week.subject}")
+                }
+            }
+        }
     }
 
     private fun scheduleAlarm(timeInMillis: Long, type: String, id: Int, title: String, message: String) {
@@ -326,6 +344,37 @@ class NotificationHelper(private val context: Context) {
                 if (percentage < minAttendance) {
                     showAttendanceAlert(subject.name, percentage)
                 }
+            }
+        }
+    }
+
+    fun setSilentMode(enabled: Boolean) {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val silentMedia = sharedPref.getBoolean(AppConstants.KEY_SILENT_MEDIA_VOLUME, true)
+        val silentRing = sharedPref.getBoolean(AppConstants.KEY_SILENT_RING_NOTIFICATION_VOLUME, true)
+
+        if (enabled) {
+            if (silentRing) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && notificationManager.isNotificationPolicyAccessGranted) {
+                    notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+                } else {
+                    audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
+                }
+            }
+            if (silentMedia) {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
+            }
+        } else {
+            if (silentRing) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && notificationManager.isNotificationPolicyAccessGranted) {
+                    notificationManager.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+                } else {
+                    audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
+                }
+            }
+            if (silentMedia) {
+                val maxMusic = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, maxMusic / 2, 0)
             }
         }
     }

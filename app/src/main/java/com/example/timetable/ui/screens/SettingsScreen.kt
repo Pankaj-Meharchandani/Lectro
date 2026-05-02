@@ -3,6 +3,7 @@ package com.example.timetable.ui.screens
 import android.Manifest
 import android.app.AlarmManager
 import android.app.Application
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -64,6 +65,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     var assignmentReminder by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_ASSIGNMENT_REMINDER, true))
     var examReminder by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_EXAM_REMINDER, true))
     var attendanceAlert by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_ATTENDANCE_ALERT, true))
+    var autoSilentEnabled by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_AUTO_SILENT_ENABLED, false))
+    var silentMediaVolume by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_SILENT_MEDIA_VOLUME, true))
+    var silentRingNotificationVolume by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_SILENT_RING_NOTIFICATION_VOLUME, true))
 
     fun canScheduleExactAlarms(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -106,6 +110,28 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun updateAttendanceAlert(enabled: Boolean) {
         sharedPref.edit().putBoolean(AppConstants.KEY_ATTENDANCE_ALERT, enabled).apply()
         attendanceAlert = enabled
+    }
+
+    fun updateAutoSilentEnabled(enabled: Boolean) {
+        sharedPref.edit().putBoolean(AppConstants.KEY_AUTO_SILENT_ENABLED, enabled).apply()
+        autoSilentEnabled = enabled
+        if (enabled) {
+            WakeUpAlarmReceiver.scheduleAlarm(getApplication())
+        } else {
+            // Restore volume immediately if disabled
+            val notificationHelper = com.example.timetable.utils.NotificationHelper(getApplication())
+            notificationHelper.setSilentMode(false)
+        }
+    }
+
+    fun updateSilentMediaVolume(enabled: Boolean) {
+        sharedPref.edit().putBoolean(AppConstants.KEY_SILENT_MEDIA_VOLUME, enabled).apply()
+        silentMediaVolume = enabled
+    }
+
+    fun updateSilentRingNotificationVolume(enabled: Boolean) {
+        sharedPref.edit().putBoolean(AppConstants.KEY_SILENT_RING_NOTIFICATION_VOLUME, enabled).apply()
+        silentRingNotificationVolume = enabled
     }
 
     fun updatePersonalDetails(enabled: Boolean) {
@@ -461,6 +487,70 @@ fun SettingsScreen(
                                         Switch(
                                             checked = viewModel.attendanceAlert,
                                             onCheckedChange = { viewModel.updateAttendanceAlert(it) }
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            SettingsSection(title = "Auto Silent") {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SettingsItem(
+                            title = "Auto silent during class",
+                            control = {
+                                Switch(
+                                    checked = viewModel.autoSilentEnabled,
+                                    onCheckedChange = { checked ->
+                                        if (checked) {
+                                            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !nm.isNotificationPolicyAccessGranted) {
+                                                val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                                                context.startActivity(intent)
+                                                Toast.makeText(context, "Please grant Notification Policy Access to use this feature", Toast.LENGTH_LONG).show()
+                                                return@Switch
+                                            }
+                                        }
+                                        viewModel.updateAutoSilentEnabled(checked)
+                                    }
+                                )
+                            }
+                        )
+
+                        AnimatedVisibility(
+                            visible = viewModel.autoSilentEnabled,
+                            enter = expandVertically(),
+                            exit = shrinkVertically()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(top = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                SettingsItem(
+                                    title = "Media volume",
+                                    control = {
+                                        Switch(
+                                            checked = viewModel.silentMediaVolume,
+                                            onCheckedChange = { viewModel.updateSilentMediaVolume(it) }
+                                        )
+                                    }
+                                )
+                                SettingsItem(
+                                    title = "Ring & notification volume",
+                                    control = {
+                                        Switch(
+                                            checked = viewModel.silentRingNotificationVolume,
+                                            onCheckedChange = { viewModel.updateSilentRingNotificationVolume(it) }
                                         )
                                     }
                                 )
