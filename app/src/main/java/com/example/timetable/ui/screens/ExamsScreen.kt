@@ -99,7 +99,7 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
 
     LaunchedEffect(Unit) {
         while (true) {
-            delay(60000)
+            delay(3600000) // Refresh every hour
             tick = System.currentTimeMillis()
         }
     }
