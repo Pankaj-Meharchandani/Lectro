@@ -35,6 +35,7 @@ import com.example.timetable.utils.NotificationHelper
 import com.example.timetable.utils.TimeUtils
 import com.example.timetable.utils.WidgetUtils
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -94,7 +95,15 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Upcoming", "Completed")
 
-    val currentDateTime = remember { Date() }
+    var tick by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60000)
+            tick = System.currentTimeMillis()
+        }
+    }
+
     val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -111,12 +120,13 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
         }
     }
 
-    val filteredExams by remember(selectedTab) {
+    val filteredExams by remember(selectedTab, tick) {
         derivedStateOf {
+            val now = Date(tick)
             viewModel.exams.filter { exam ->
-                val examDateTimeStr = "${exam.date} ${exam.time}"
+                val examDateTimeStr = "${exam.date} ${if (exam.time.isNullOrBlank()) "23:59" else exam.time}"
                 val examDate = try { sdf.parse(examDateTimeStr) } catch (e: Exception) { null }
-                val isPast = examDate?.before(currentDateTime) ?: false
+                val isPast = examDate?.before(now) ?: false
                 if (selectedTab == 0) !isPast else isPast
             }
         }
@@ -186,7 +196,11 @@ fun ExamsScreen(onBack: () -> Unit, viewModel: ExamViewModel = viewModel()) {
                     .padding(padding)
             ) {
                 items(filteredExams) { exam ->
-                    ExamItem(exam = exam, onDelete = { examToDelete = exam })
+                    ExamItem(
+                        exam = exam, 
+                        onDelete = { examToDelete = exam },
+                        countdownText = getExamCountdown(exam)
+                    )
                 }
             }
         }
@@ -363,7 +377,7 @@ fun AddExamDialog(
 }
 
 @Composable
-fun ExamItem(exam: Exam, onDelete: () -> Unit) {
+fun ExamItem(exam: Exam, onDelete: () -> Unit, countdownText: String?) {
     val examColor = if (exam.color != 0) Color(exam.color) else MaterialTheme.colorScheme.primary
     val containerColor = themedContainerColor(examColor)
     val contentColor = contentColorFor(containerColor)
@@ -388,11 +402,86 @@ fun ExamItem(exam: Exam, onDelete: () -> Unit) {
                 Text(text = exam.subject, style = MaterialTheme.typography.titleLarge)
                 val dateTimeText = if (exam.time.isNullOrBlank()) exam.date else "${exam.date} at ${TimeUtils.formatTo12Hour(exam.time)}"
                 Text(text = dateTimeText, style = MaterialTheme.typography.bodyMedium)
+                
+                if (!countdownText.isNullOrBlank()) {
+                    Text(
+                        text = countdownText,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(text = "Room: ${exam.room}", style = MaterialTheme.typography.bodySmall)
                 Text(text = "Teacher: ${exam.teacher}", style = MaterialTheme.typography.bodySmall)
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete")
+            }
+        }
+    }
+}
+
+private fun getExamCountdown(exam: Exam): String? {
+    val now = Calendar.getInstance()
+    val sdfDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val examDate = try { sdfDate.parse(exam.date) } catch (e: Exception) { null } ?: return null
+
+    val hasTime = !exam.time.isNullOrBlank()
+    val examCalendar = Calendar.getInstance().apply {
+        time = examDate
+        if (hasTime) {
+            val parts = exam.time.split(":")
+            if (parts.size == 2) {
+                set(Calendar.HOUR_OF_DAY, parts[0].toInt())
+                set(Calendar.MINUTE, parts[1].toInt())
+            }
+        } else {
+            // End of day if no time specified, but for countdown "Today" we check date
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+        }
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+
+    if (!hasTime) {
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val examDay = Calendar.getInstance().apply {
+            time = examDate
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val dayDiff = ((examDay.timeInMillis - today.timeInMillis) / (1000 * 60 * 60 * 24)).toInt()
+        return when {
+            dayDiff == 0 -> "Today"
+            dayDiff > 0 -> "$dayDiff days"
+            else -> null
+        }
+    } else {
+        val diffMillis = examCalendar.timeInMillis - now.timeInMillis
+        if (diffMillis < 0) return null
+        
+        val diffMinutes = diffMillis / (1000 * 60)
+        val diffHours = diffMillis / (1000 * 60 * 60)
+        val diffDays = diffMillis / (1000 * 60 * 60 * 24)
+
+        return when {
+            diffMinutes < 30 -> "<30min"
+            diffMinutes < 60 -> "<1hr"
+            diffHours < 24 -> "${diffHours}hr"
+            else -> {
+                val remainingHours = diffHours % 24
+                if (remainingHours > 0) "$diffDays days $remainingHours hr" else "$diffDays days"
             }
         }
     }
