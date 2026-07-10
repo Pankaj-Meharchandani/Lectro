@@ -53,7 +53,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadSubjects() {
         viewModelScope.launch(Dispatchers.IO) {
-            val subs = db.allSubjects
+            val subs = db.getAllSubjects()
             for (sub in subs) {
                 val combinedTeachers = db.getTeachersForSubject(sub.name)
                 if (!combinedTeachers.isNullOrBlank()) {
@@ -99,7 +99,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateSubject(subject: Subject) {
         viewModelScope.launch(Dispatchers.IO) {
-            db.updateSubject(subject.id, subject.name, subject.color, subject.teacher, subject.room)
+            db.updateSubject(subject)
             loadSubjects()
         }
     }
@@ -198,8 +198,8 @@ fun NotesScreen(
                                 this.subject = subject.name
                                 this.color = subject.color
                                 this.id = subject.id
-                                this.teacher = subject.teacher
-                                this.room = subject.room
+                                this.teacher = subject.teacher ?: ""
+                                this.room = subject.room ?: ""
                             },
                             attendanceEnabled = false,
                             minAttendance = minAttendance,

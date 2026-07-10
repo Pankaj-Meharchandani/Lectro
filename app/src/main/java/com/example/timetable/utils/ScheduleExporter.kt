@@ -124,8 +124,8 @@ object ScheduleExporter {
                             fragment = day
                             teacher = teacherName
                             room = slot.optString("r")
-                            setFromTime(slot.optString("f"))
-                            setToTime(slot.optString("t"))
+                            fromTime = slot.optString("f")
+                            toTime = slot.optString("t")
                         })
                     }
                 }

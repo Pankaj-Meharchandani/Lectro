@@ -198,7 +198,7 @@ class SubjectDetailViewModel(application: Application) : AndroidViewModel(applic
 
     fun updateSubject(updated: Subject) {
         viewModelScope.launch(Dispatchers.IO) {
-            db.updateSubject(updated.id, updated.name, updated.color, updated.teacher, updated.room)
+            db.updateSubject(updated)
             loadSubjectData(updated.id)
         }
     }
@@ -513,12 +513,16 @@ fun SubjectDetailScreen(
     }
 
     materialToEdit?.let { material ->
-        var newName by remember { mutableStateOf(material.name) }
+        var newName by remember(material.id) { mutableStateOf(material.name) }
         AlertDialog(
             onDismissRequest = { materialToEdit = null },
             title = { Text("Edit File Name") },
             text = {
-                OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("File Name") })
+                OutlinedTextField(
+                    value = newName, 
+                    onValueChange = { name -> newName = name }, 
+                    label = { Text("File Name") }
+                )
             },
             confirmButton = {
                 TextButton(onClick = {

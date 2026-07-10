@@ -80,7 +80,7 @@ class PersonalDetailsViewModel(application: Application) : AndroidViewModel(appl
             this.email = this@PersonalDetailsViewModel.email
             this.rollNumber = this@PersonalDetailsViewModel.roll
             this.other = this@PersonalDetailsViewModel.other
-            this.photoPath = this@PersonalDetailsViewModel.photoPath
+            this.photoPath = this@PersonalDetailsViewModel.photoPath ?: ""
         }
         db.saveUserDetail(userDetail)
     }

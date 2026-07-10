@@ -104,9 +104,9 @@ fun ArchiveTimetable(json: JSONObject) {
     } else {
         val dayOrder = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
         val groupedByDay = (0 until timetable.length())
-            .map { timetable.getJSONObject(it) }
-            .groupBy { it.optString("f") }
-            .toSortedMap(compareBy { dayOrder.indexOf(it) })
+            .map { index -> timetable.getJSONObject(index) }
+            .groupBy { obj -> obj.optString("f") }
+            .toSortedMap(compareBy { day -> dayOrder.indexOf(day) })
 
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             groupedByDay.forEach { (day, slots) ->
@@ -137,7 +137,7 @@ fun ArchiveSubjects(json: JSONObject) {
         EmptyArchiveSection("No subjects archived")
     } else {
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items((0 until subjects.length()).map { subjects.getJSONObject(it) }) { sub ->
+            items((0 until subjects.length()).map { index -> subjects.getJSONObject(index) }) { sub ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(sub.optString("n"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -159,7 +159,7 @@ fun ArchiveExams(json: JSONObject) {
         EmptyArchiveSection("No exams archived")
     } else {
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items((0 until exams.length()).map { exams.getJSONObject(it) }) { e ->
+            items((0 until exams.length()).map { index -> exams.getJSONObject(index) }) { e ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(e.optString("s"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -179,7 +179,7 @@ fun ArchiveAssignments(json: JSONObject) {
         EmptyArchiveSection("No assignments archived")
     } else {
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items((0 until homeworks.length()).map { homeworks.getJSONObject(it) }) { h ->
+            items((0 until homeworks.length()).map { index -> homeworks.getJSONObject(index) }) { h ->
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(h.optString("t"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -200,7 +200,7 @@ fun ArchiveNotes(json: JSONObject) {
         EmptyArchiveSection("No notes archived")
     } else {
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items((0 until notes.length()).map { notes.getJSONObject(it) }) { n ->
+            items((0 until notes.length()).map { index -> notes.getJSONObject(index) }) { n ->
                 var expanded by remember { mutableStateOf(false) }
                 Card(
                     modifier = Modifier
@@ -255,7 +255,7 @@ fun ArchiveMaterials(json: JSONObject) {
         EmptyArchiveSection("No materials archived")
     } else {
         val existingMaterials = remember(materials) {
-            (0 until materials.length()).map { materials.getJSONObject(it) }.filter { mat ->
+            (0 until materials.length()).map { index -> materials.getJSONObject(index) }.filter { mat ->
                 val path = mat.optString("p")
                 if (path.isEmpty()) return@filter false
                 try {

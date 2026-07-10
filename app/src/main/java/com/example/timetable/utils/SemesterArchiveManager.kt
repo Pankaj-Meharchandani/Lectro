@@ -1,6 +1,9 @@
 package com.example.timetable.utils
 
 import android.content.Context
+import com.example.timetable.model.SemesterResult
+import com.example.timetable.model.Subject
+import com.example.timetable.model.SubjectGrade
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -115,6 +118,34 @@ object SemesterArchiveManager {
                 }
             }
             root.put("materials", materialsArray)
+
+            // 9. Save to Grade History before clearing
+            val currentSubjects = db.getAllSubjects()
+            if (currentSubjects.isNotEmpty()) {
+                val gradePoints = currentSubjects.map { s ->
+                    SubjectGrade(
+                        subjectName = s.name,
+                        gradePoint = s.gradePoint,
+                        credits = s.credits
+                    )
+                }
+                var totalCredits = 0
+                var totalGP = 0.0
+                for (gp in gradePoints) {
+                    totalCredits += gp.credits
+                    totalGP += gp.gradePoint * gp.credits
+                }
+                val gpa = if (totalCredits > 0) totalGP / totalCredits else 0.0
+
+                db.insertSemesterResult(
+                    SemesterResult(
+                        semesterName = semesterName,
+                        gpa = gpa,
+                        date = System.currentTimeMillis(),
+                        subjectGrades = gradePoints
+                    )
+                )
+            }
 
             val fileName = "archive_${System.currentTimeMillis()}.json"
             val dir = File(context.filesDir, ARCHIVE_DIR)

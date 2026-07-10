@@ -41,19 +41,19 @@ object WidgetUtils {
         val nextWeek = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 7) }
         
         // Fetch Homework
-        db.homework.forEach { hw ->
-            if (hw.getCompleted() == 0) {
+        db.getHomework().forEach { hw ->
+            if (hw.completed == 0) {
                 try {
                     val date = sdf.parse(hw.date)
                     if (date != null && date.after(now.time) && date.before(nextWeek.time)) {
-                        deadlines.add(DeadlineItem(hw.title ?: "Assignment", hw.subject, hw.date, true, hw.color))
+                        deadlines.add(DeadlineItem(hw.title, hw.subject, hw.date, true, hw.color))
                     }
                 } catch (e: Exception) {}
             }
         }
         
         // Fetch Exams
-        db.exam.forEach { exam ->
+        db.getExam().forEach { exam ->
             try {
                 val date = sdf.parse(exam.date)
                 if (date != null && date.after(now.time) && date.before(nextWeek.time)) {

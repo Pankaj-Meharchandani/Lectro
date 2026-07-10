@@ -218,7 +218,7 @@ class NotificationHelper(private val context: Context) {
 
         // Exam Reminders (1 hr before)
         if (sharedPref.getBoolean(AppConstants.KEY_EXAM_REMINDER, true)) {
-            db.exam.filter { it.date == dateStr }.forEach { exam ->
+            db.getExam().filter { it.date == dateStr }.forEach { exam ->
                 val examTime = parseDateTime(exam.date, exam.time) ?: return@forEach
                 val alarmTime = examTime.timeInMillis - 60 * 60 * 1000
                 if (alarmTime > System.currentTimeMillis()) {
@@ -229,7 +229,7 @@ class NotificationHelper(private val context: Context) {
 
         // Assignment Reminders (8 AM on due date)
         if (sharedPref.getBoolean(AppConstants.KEY_ASSIGNMENT_REMINDER, true)) {
-            db.homework.filter { it.date == dateStr && it.completed == 0 }.forEach { homework ->
+            db.getHomework().filter { it.date == dateStr && it.completed == 0 }.forEach { homework ->
                 val alarmTime = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 8)
                     set(Calendar.MINUTE, 0)
@@ -336,7 +336,7 @@ class NotificationHelper(private val context: Context) {
         val db = DbHelper(context)
         val minAttendanceStr = sharedPref.getString(AppConstants.KEY_MIN_ATTENDANCE_SETTING, "75")
         val minAttendance = minAttendanceStr?.toDoubleOrNull() ?: 75.0
-        val subjects = db.allSubjects
+        val subjects = db.getAllSubjects()
         subjects.forEach { subject ->
             val total = subject.attended + subject.missed
             if (total > 0) {

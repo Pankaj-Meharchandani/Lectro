@@ -16,27 +16,21 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
 import com.example.timetable.model.Subject
 import com.example.timetable.ui.viewmodel.MainViewModel
-import com.example.timetable.utils.AppConstants
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.AppConstants
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.compose.ui.res.stringResource
+import androidx.core.content.edit
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import kotlin.math.roundToInt
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextAlign
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceScreen(
     onBack: () -> Unit,
-    viewModel: MainViewModel = viewModel()
+    viewModel: MainViewModel = viewModel(),
 ) {
     val context = LocalContext.current
     val sharedPref = remember { PreferenceManager.getDefaultSharedPreferences(context) }
@@ -60,7 +54,7 @@ fun AttendanceScreen(
                 title = { Text("Attendance") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -78,7 +72,7 @@ fun AttendanceScreen(
                         checked = attendanceEnabled,
                         onCheckedChange = {
                             attendanceEnabled = it
-                            sharedPref.edit().putBoolean(AppConstants.KEY_ATTENDANCE_SETTING, it).apply()
+                            sharedPref.edit { putBoolean(AppConstants.KEY_ATTENDANCE_SETTING, it) }
                         }
                     )
                 }
@@ -91,7 +85,7 @@ fun AttendanceScreen(
                     onValueChange = {
                         val newValue = (it / 5f).roundToInt() * 5
                         minAttendance = newValue
-                        sharedPref.edit().putInt(AppConstants.KEY_MIN_ATTENDANCE_SETTING, minAttendance).apply()
+                        sharedPref.edit { putInt(AppConstants.KEY_MIN_ATTENDANCE_SETTING, minAttendance) }
                     },
                     valueRange = 0f..100f,
                     steps = 19
@@ -149,7 +143,7 @@ fun AttendanceScreen(
 @Composable
 fun AttendanceSubjectItem(subject: Subject, goal: Int, onClick: (Subject) -> Unit) {
     val total = subject.attended + subject.missed
-    val percentage = if (total > 0) (subject.attended.toFloat() / total * 100).toInt() else 0
+    val percentage = if (total > 0) ((subject.attended.toFloat() / total) * 100).toInt() else 0
     val color = getAttendanceColor(percentage, goal)
 
     // Advanced Attendance Logic
@@ -202,7 +196,7 @@ fun AttendanceSubjectItem(subject: Subject, goal: Int, onClick: (Subject) -> Uni
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = subject.name ?: "",
+                    text = subject.name,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -262,12 +256,12 @@ fun HistoricalAttendanceDialog(
     
     LaunchedEffect(subject.name, refreshTrigger) {
         records.clear()
-        records.addAll(viewModel.getAttendanceForSubject(subject.name ?: ""))
+        records.addAll(viewModel.getAttendanceForSubject(subject.name))
     }
 
-    var showDatePicker by remember { mutableStateOf(false) }
-    var selectedDate by remember { mutableStateOf("") }
-    var showTypePicker by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(value = false) }
+    var selectedDate by remember { mutableStateOf(value = "") }
+    var showTypePicker by remember { mutableStateOf(value = false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -290,19 +284,22 @@ fun HistoricalAttendanceDialog(
                     }
                 } else {
                     LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(records.sortedByDescending { it.date }, key = { it.date + it.weekId }) { record ->
+                        items(records.sortedByDescending { it.date ?: "" }, key = { (it.date ?: "") + it.weekId }) { record ->
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(record.date, style = MaterialTheme.typography.bodyMedium)
+                                Text(record.date ?: "", style = MaterialTheme.typography.bodyMedium)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    StatusIcon(record.status)
-                                    IconButton(onClick = {
-                                        viewModel.deleteAttendanceRecord(record.weekId, subject.name ?: "", record.date)
-                                        refreshTrigger++
-                                    }, modifier = Modifier.size(24.dp)) {
+                                    StatusIcon(record.status ?: "unknown")
+                                    IconButton(
+                                        onClick = {
+                                            viewModel.deleteAttendanceRecord(record.weekId, subject.name, record.date ?: "")
+                                            refreshTrigger++
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
                                         Icon(Icons.Default.Delete, contentDescription = "Delete", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                                     }
                                 }
@@ -384,8 +381,8 @@ fun HistoricalAttendanceDialog(
 fun AttendanceCalendar(records: List<DbHelper.AttendanceRecord>) {
     var calendar by remember { mutableStateOf(Calendar.getInstance()) }
     val daysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val currentMonth = calendar.get(Calendar.MONTH)
-    val currentYear = calendar.get(Calendar.YEAR)
+    val currentMonth = calendar[Calendar.MONTH]
+    val currentYear = calendar[Calendar.YEAR]
     
     val monthStartDay = remember(currentMonth, currentYear) {
         val cal = Calendar.getInstance()
@@ -452,9 +449,7 @@ fun AttendanceCalendar(records: List<DbHelper.AttendanceRecord>) {
                             
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(text = dayNum.toString(), style = MaterialTheme.typography.bodySmall)
-                                if (record != null) {
-                                    StatusDot(record.status)
-                                }
+                                if (record != null) StatusDot(record.status ?: "unknown")
                             }
                         }
                     }
@@ -501,9 +496,8 @@ fun HistoricalTypeButton(text: String, color: Color, onClick: () -> Unit) {
 }
 
 private fun markAttendance(viewModel: MainViewModel, subject: Subject, date: String, type: String) {
-    val slots = viewModel.getSubjectDetails(subject.name ?: "") 
-    val weekId = slots?.id ?: -1
-    viewModel.updateAttendanceByDate(weekId, subject.name ?: "", type, date)
+    // We use 0 as weekId for general subject attendance records not tied to a specific timetable slot
+    viewModel.updateAttendanceByDate(0, subject.name, type, date)
 }
 
 fun getAttendanceColor(percentage: Int, goal: Int): Color {

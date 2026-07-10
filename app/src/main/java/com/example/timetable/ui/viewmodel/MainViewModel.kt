@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import com.example.timetable.model.Homework
 import com.example.timetable.model.Note
+import com.example.timetable.model.SemesterResult
 import com.example.timetable.model.Subject
 import com.example.timetable.model.UserDetail
 import com.example.timetable.model.Week
@@ -32,6 +33,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var teachers = mutableStateListOf<String>()
     var userDetail by mutableStateOf(UserDetail())
     val todayAttendance = mutableStateMapOf<Int, String?>()
+    var latestGrade by mutableStateOf<SemesterResult?>(null)
 
     // Search related
     var searchQuery by mutableStateOf("")
@@ -125,9 +127,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             
+            val grades = db.getAllSemesterResults()
+            
             withContext(Dispatchers.Main) {
                 weekData.putAll(allData)
                 todayAttendance.putAll(attendance)
+                if (grades.isNotEmpty()) {
+                    latestGrade = grades.first()
+                } else {
+                    latestGrade = null
+                }
             }
         }
     }
@@ -164,7 +173,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val details = db.getUserDetail()
             val subList = db.getSubjectsList()
-            val allSub = db.allSubjects
+            val allSub = db.getAllSubjects()
             val teacherList = db.getTeachersList()
             withContext(Dispatchers.Main) {
                 userDetail = details
@@ -191,7 +200,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             db.deleteWeekById(week)
             loadWeekData(week.fragment)
             notificationHelper.scheduleEventsForToday()
-            WidgetUtils.refreshAllWidgets(getApplication())
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
         }
     }
     
@@ -201,7 +210,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             loadWeekData(week.fragment)
             loadSuggestions()
             notificationHelper.scheduleEventsForToday()
-            WidgetUtils.refreshAllWidgets(getApplication())
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
         }
     }
 
@@ -211,7 +220,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             loadWeekData(week.fragment)
             loadSuggestions()
             notificationHelper.scheduleEventsForToday()
-            WidgetUtils.refreshAllWidgets(getApplication())
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
         }
     }
 
@@ -223,7 +232,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 todayAttendance[weekId] = type
             }
             loadSuggestions()
-            WidgetUtils.refreshAllWidgets(getApplication())
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
         }
     }
 
@@ -255,7 +264,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getSubjectByName(name: String) = db.getSubjectByName(name)
 
-    fun getAllSubjects() = db.allSubjects
+    fun getAllSubjects() = db.getAllSubjects()
 
     fun getOngoingClass(): Week? {
         val now = Calendar.getInstance()

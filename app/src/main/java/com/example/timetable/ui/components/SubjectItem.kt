@@ -65,15 +65,18 @@ fun SubjectItem(
     val attendanceStatus = if (attendanceEnabled) viewModel.todayAttendance[subject.id] else null
 
     val formattedTime = remember(subject.fromTime, subject.toTime) {
-        if (subject.fromTime.isNullOrBlank()) "" 
-        else "${TimeUtils.formatTo12Hour(subject.fromTime)} - ${TimeUtils.formatTo12Hour(subject.toTime)}"
+        val from = subject.fromTime
+        val to = subject.toTime
+        if (from.isBlank()) "" 
+        else "${TimeUtils.formatTo12Hour(from)} - ${TimeUtils.formatTo12Hour(to)}"
     }
 
     val isAfterStartTime = remember(subject.fromTime) {
-        if (subject.fromTime.isNullOrBlank()) false
+        val from = subject.fromTime
+        if (from.isBlank()) false
         else {
             val now = Calendar.getInstance()
-            val timeParts = subject.fromTime.split(":")
+            val timeParts = from.split(":")
             if (timeParts.size == 2) {
                 val target = Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, timeParts[0].toInt())
@@ -124,11 +127,11 @@ fun SubjectItem(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = subject.subject ?: "",
+                            text = subject.subject,
                             style = MaterialTheme.typography.titleLarge,
                             color = contentColor
                         )
-                        if (showTeacher && !subject.teacher.isNullOrBlank()) {
+                        if (showTeacher && subject.teacher.isNotBlank()) {
                             Text(
                                 text = subject.teacher,
                                 style = MaterialTheme.typography.bodySmall,
@@ -183,8 +186,8 @@ fun SubjectItem(
                     }
                 }
             }
-            if (!subject.fromTime.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(if (showTeacher && !subject.teacher.isNullOrBlank()) 4.dp else 8.dp))
+            if (subject.fromTime.isNotBlank()) {
+                Spacer(modifier = Modifier.height(if (showTeacher && subject.teacher.isNotBlank()) 4.dp else 8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.AccessTime,
@@ -200,8 +203,8 @@ fun SubjectItem(
                     )
                 }
             }
-            if (showRoom && !subject.room.isNullOrBlank()) {
-                if (subject.fromTime.isNullOrBlank()) Spacer(modifier = Modifier.height(8.dp))
+            if (showRoom && subject.room.isNotBlank()) {
+                if (subject.fromTime.isNotBlank()) Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.Room,

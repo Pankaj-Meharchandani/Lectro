@@ -81,7 +81,7 @@ class AssignmentsViewModel(application: Application) : AndroidViewModel(applicat
             db.deleteHomeworkById(assignment)
             loadAssignments()
             notificationHelper.scheduleEventsForToday()
-            WidgetUtils.refreshAllWidgets(getApplication())
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
         }
     }
 
@@ -91,7 +91,7 @@ class AssignmentsViewModel(application: Application) : AndroidViewModel(applicat
             loadAssignments()
             loadSuggestions()
             notificationHelper.scheduleEventsForToday()
-            WidgetUtils.refreshAllWidgets(getApplication())
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
         }
     }
 
@@ -100,17 +100,17 @@ class AssignmentsViewModel(application: Application) : AndroidViewModel(applicat
             db.updateHomework(assignment)
             loadAssignments()
             notificationHelper.scheduleEventsForToday()
-            WidgetUtils.refreshAllWidgets(getApplication())
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
         }
     }
 
     fun toggleComplete(assignment: Homework) {
         viewModelScope.launch(Dispatchers.IO) {
-            assignment.setCompleted(if (assignment.getCompleted() == 1) 0 else 1)
+            assignment.completed = if (assignment.completed == 1) 0 else 1
             db.updateHomework(assignment)
             loadAssignments()
             notificationHelper.scheduleEventsForToday()
-            WidgetUtils.refreshAllWidgets(getApplication())
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
         }
     }
 }
@@ -144,9 +144,9 @@ fun AssignmentsScreen(onBack: () -> Unit, viewModel: AssignmentsViewModel = view
         derivedStateOf {
             viewModel.assignments.filter { assignment ->
                 when (selectedTab) {
-                    0 -> assignment.getCompleted() == 0 && (assignment.date ?: "") >= currentDate
-                    1 -> assignment.getCompleted() == 0 && (assignment.date ?: "") < currentDate
-                    2 -> assignment.getCompleted() == 1
+                    0 -> assignment.completed == 0 && (assignment.date) >= currentDate
+                    1 -> assignment.completed == 0 && (assignment.date) < currentDate
+                    2 -> assignment.completed == 1
                     else -> true
                 }
             }
@@ -406,7 +406,7 @@ fun AssignmentItem(
                     Icon(
                         imageVector = Icons.Default.Check, 
                         contentDescription = "Mark Complete",
-                        tint = if (assignment.getCompleted() == 1) Color.Green else contentColor
+                        tint = if (assignment.completed == 1) Color.Green else contentColor
                     )
                 }
                 IconButton(onClick = onDelete) {

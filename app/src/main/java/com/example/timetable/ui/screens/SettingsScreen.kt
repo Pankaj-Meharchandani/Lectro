@@ -287,8 +287,8 @@ fun SettingsScreen(
                 Button(onClick = {
                     // Keep New: Replace existing clashing slots
                     val db = DbHelper(context)
-                    val existingToReplace: List<Week> = showConflictDialog!!.map { it.second }
-                    existingToReplace.forEach { db.deleteWeekById(it) }
+                    val existingToReplace: List<Week> = showConflictDialog!!.map { pair -> pair.second }
+                    existingToReplace.forEach { week -> db.deleteWeekById(week) }
                     ScheduleExporter.importWeeks(context, pendingImportWeeks!!)
                     Toast.makeText(context, "Imported new schedule (replaced clashing slots)", Toast.LENGTH_SHORT).show()
                     showConflictDialog = null
@@ -300,8 +300,8 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(onClick = {
                     // Keep Existing: Import only non-clashing slots
-                    val clashingNew: List<Week> = showConflictDialog!!.map { it.first }
-                    val nonClashing = pendingImportWeeks!!.filter { it !in clashingNew }
+                    val clashingNew: List<Week> = showConflictDialog!!.map { pair -> pair.first }
+                    val nonClashing = pendingImportWeeks!!.filter { week -> week !in clashingNew }
                     if (nonClashing.isNotEmpty()) {
                         ScheduleExporter.importWeeks(context, nonClashing)
                         Toast.makeText(context, "Imported non-clashing slots", Toast.LENGTH_SHORT).show()

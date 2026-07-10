@@ -218,10 +218,10 @@ fun AddSubjectDialog(
                         this.subject = subject
                         this.teacher = teacher
                         this.room = room
-                        this.setFromTime(fromTime)
-                        this.setToTime(toTime)
+                        this.fromTime = fromTime
+                        this.toTime = toTime
                         this.color = color
-                        this.setFragment(initialWeek.getFragment())
+                        this.fragment = initialWeek.fragment
                     })
                     onDismiss()
                 } else {

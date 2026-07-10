@@ -224,11 +224,11 @@ fun AddTeacherDialog(
     onSave: (Teacher) -> Unit,
     initialTeacher: Teacher = Teacher()
 ) {
-    var name by remember { mutableStateOf(initialTeacher.name ?: "") }
-    var post by remember { mutableStateOf(initialTeacher.post ?: "") }
-    var phone by remember { mutableStateOf(initialTeacher.phonenumber ?: "") }
-    var email by remember { mutableStateOf(initialTeacher.email ?: "") }
-    var cabinNumber by remember { mutableStateOf(initialTeacher.getCabinNumber() ?: "") }
+    var name by remember { mutableStateOf(initialTeacher.name) }
+    var post by remember { mutableStateOf(initialTeacher.post) }
+    var phone by remember { mutableStateOf(initialTeacher.phonenumber) }
+    var email by remember { mutableStateOf(initialTeacher.email) }
+    var cabinNumber by remember { mutableStateOf(initialTeacher.cabinNumber) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -260,7 +260,7 @@ fun AddTeacherDialog(
                         this.post = post
                         this.phonenumber = phone
                         this.email = email
-                        this.setCabinNumber(cabinNumber)
+                        this.cabinNumber = cabinNumber
                     })
                     onDismiss()
                 }
@@ -320,11 +320,11 @@ fun TeacherItem(
                         Text(text = teacher.email, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                if (teacher.getCabinNumber()?.isNotBlank() == true) {
+                if (teacher.cabinNumber.isNotBlank()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Room, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "Cabin: ${teacher.getCabinNumber()}", style = MaterialTheme.typography.bodySmall)
+                        Text(text = "Cabin: ${teacher.cabinNumber}", style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
