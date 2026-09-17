@@ -142,7 +142,8 @@ fun TimetableApp() {
             SubjectDetailScreen(
                 subjectId = subjectId, 
                 onBack = navigateBack,
-                onNoteClick = { noteId -> navigateTo("note_info/$noteId") }
+                onNoteClick = { noteId -> navigateTo("note_info/$noteId") },
+                onAssignmentClick = { navigateTo("assignments") }
             )
         }
         composable("settings") {

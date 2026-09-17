@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
 import com.example.timetable.R
+import com.example.timetable.model.Homework
 import com.example.timetable.model.Material
 import com.example.timetable.model.Note
 import com.example.timetable.model.Subject
@@ -44,8 +45,10 @@ import com.example.timetable.ui.components.EditSubjectDialog
 import com.example.timetable.ui.theme.themedContainerColor
 import com.example.timetable.utils.AppConstants
 import com.example.timetable.utils.DbHelper
+import com.example.timetable.utils.NotificationHelper
 import com.example.timetable.utils.PdfGenerator
 import com.example.timetable.utils.ScheduleExporter
+import com.example.timetable.utils.WidgetUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,10 +58,12 @@ import com.example.timetable.ui.screens.getAttendanceColor
 
 class SubjectDetailViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)
+    private val notificationHelper = NotificationHelper(application)
     var subject by mutableStateOf<Subject?>(null)
     var notes = mutableStateListOf<Note>()
     var materials = mutableStateListOf<Material>()
     var slots = mutableStateListOf<Week>()
+    var assignments = mutableStateListOf<Homework>()
 
     fun loadSubjectData(id: Int) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -67,6 +72,7 @@ class SubjectDetailViewModel(application: Application) : AndroidViewModel(applic
             val currentSlots = currentSubject?.name?.let { db.getSlotsBySubject(it) } ?: emptyList()
             val currentNotes = db.getNotesBySubject(id)
             val currentMaterials = db.getMaterialsBySubject(id)
+            val currentAssignments = currentSubject?.name?.let { db.getHomeworkBySubject(it) } ?: emptyList()
             
             withContext(Dispatchers.Main) {
                 subject = currentSubject
@@ -76,6 +82,8 @@ class SubjectDetailViewModel(application: Application) : AndroidViewModel(applic
                 notes.addAll(currentNotes)
                 materials.clear()
                 materials.addAll(currentMaterials)
+                assignments.clear()
+                assignments.addAll(currentAssignments)
             }
         }
     }
@@ -202,6 +210,31 @@ class SubjectDetailViewModel(application: Application) : AndroidViewModel(applic
             loadSubjectData(updated.id)
         }
     }
+
+    fun toggleAssignmentComplete(assignment: Homework) {
+        viewModelScope.launch(Dispatchers.IO) {
+            assignment.completed = if (assignment.completed == 1) 0 else 1
+            db.updateHomework(assignment)
+            val currentSubjectId = subject?.id
+            if (currentSubjectId != null) {
+                loadSubjectData(currentSubjectId)
+            }
+            notificationHelper.scheduleEventsForToday()
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
+        }
+    }
+
+    fun deleteAssignment(assignment: Homework) {
+        viewModelScope.launch(Dispatchers.IO) {
+            db.deleteHomeworkById(assignment)
+            val currentSubjectId = subject?.id
+            if (currentSubjectId != null) {
+                loadSubjectData(currentSubjectId)
+            }
+            notificationHelper.scheduleEventsForToday()
+            WidgetUtils.refreshAllWidgets(getApplication<Application>())
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -210,6 +243,7 @@ fun SubjectDetailScreen(
     subjectId: Int, 
     onBack: () -> Unit, 
     onNoteClick: (Int) -> Unit,
+    onAssignmentClick: (Homework) -> Unit,
     viewModel: SubjectDetailViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -217,6 +251,7 @@ fun SubjectDetailScreen(
     var materialToEdit by remember { mutableStateOf<Material?>(null) }
     var noteToDelete by remember { mutableStateOf<Note?>(null) }
     var materialToDelete by remember { mutableStateOf<Material?>(null) }
+    var assignmentToDelete by remember { mutableStateOf<Homework?>(null) }
     var showEditSubjectDialog by remember { mutableStateOf(false) }
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -442,6 +477,22 @@ fun SubjectDetailScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
+                val pendingAssignments = viewModel.assignments.filter { it.completed == 0 }
+                if (pendingAssignments.isNotEmpty()) {
+                    item {
+                        Text(text = "Pending Assignments", style = MaterialTheme.typography.titleMedium)
+                    }
+                    itemsIndexed(pendingAssignments) { _, assignment ->
+                        AssignmentItem(
+                            assignment = assignment,
+                            onDelete = { assignmentToDelete = assignment },
+                            onToggleComplete = { viewModel.toggleAssignmentComplete(assignment) },
+                            onEdit = { onAssignmentClick(it) }
+                        )
+                    }
+                    item { Spacer(modifier = Modifier.height(8.dp)) }
+                }
+
                 if (viewModel.notes.isNotEmpty()) {
                     item { Text(text = "Notes", style = MaterialTheme.typography.titleMedium) }
                     itemsIndexed(viewModel.notes) { index, note ->
@@ -570,6 +621,25 @@ fun SubjectDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { materialToDelete = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    assignmentToDelete?.let { assignment ->
+        AlertDialog(
+            onDismissRequest = { assignmentToDelete = null },
+            title = { Text("Delete Assignment") },
+            text = { Text("Are you sure you want to delete '${assignment.title}'?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteAssignment(assignment)
+                    assignmentToDelete = null
+                }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { assignmentToDelete = null }) { Text("Cancel") }
             }
         )
     }

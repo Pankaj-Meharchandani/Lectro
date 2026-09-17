@@ -472,6 +472,27 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
         return homeworklist
     }
 
+    fun getHomeworkBySubject(subjectName: String): ArrayList<Homework> {
+        val homeworklist = ArrayList<Homework>()
+        readableDatabase.rawQuery(
+            "SELECT * FROM $HOMEWORKS WHERE $HOMEWORKS_SUBJECT = ? ORDER BY $HOMEWORKS_DATE ASC",
+            arrayOf(subjectName)
+        ).use { cursor ->
+            while (cursor.moveToNext()) {
+                val h = Homework()
+                h.id = getIntChecked(cursor, HOMEWORKS_ID)
+                h.subject = getStringChecked(cursor, HOMEWORKS_SUBJECT)
+                h.title = getStringChecked(cursor, HOMEWORKS_TITLE)
+                h.description = getStringChecked(cursor, HOMEWORKS_DESCRIPTION)
+                h.date = getStringChecked(cursor, HOMEWORKS_DATE)
+                h.color = getIntChecked(cursor, HOMEWORKS_COLOR)
+                h.completed = getIntChecked(cursor, HOMEWORKS_COMPLETED)
+                homeworklist.add(h)
+            }
+        }
+        return homeworklist
+    }
+
     /**
      * Methods for Notes activity
      */
