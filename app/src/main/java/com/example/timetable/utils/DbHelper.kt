@@ -10,9 +10,7 @@ import com.example.timetable.model.Exam
 import com.example.timetable.model.Homework
 import com.example.timetable.model.Material
 import com.example.timetable.model.Note
-import com.example.timetable.model.SemesterResult
 import com.example.timetable.model.Subject
-import com.example.timetable.model.SubjectGrade
 import com.example.timetable.model.Teacher
 import com.example.timetable.model.UserDetail
 import com.example.timetable.model.UserFile
@@ -83,9 +81,7 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
                 + SUBJECTS_SORT_ORDER + " INTEGER DEFAULT 0,"
                 + SUBJECTS_ATTENDED + " INTEGER DEFAULT 0,"
                 + SUBJECTS_MISSED + " INTEGER DEFAULT 0,"
-                + SUBJECTS_SKIPPED + " INTEGER DEFAULT 0,"
-                + SUBJECTS_CREDITS + " INTEGER DEFAULT 0,"
-                + SUBJECTS_GRADE_POINT + " REAL DEFAULT 0.0" + ")")
+                + SUBJECTS_SKIPPED + " INTEGER DEFAULT 0" + ")")
 
         val createMaterials = ("CREATE TABLE " + MATERIALS + "("
                 + MATERIALS_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -108,20 +104,6 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
                 + USER_FILES_TITLE + " TEXT,"
                 + USER_FILES_PATH + " TEXT" + ")")
 
-        val createSemesterResults = ("CREATE TABLE " + SEMESTER_RESULTS + "("
-                + SEM_RES_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + SEM_RES_NAME + " TEXT,"
-                + SEM_RES_GPA + " REAL,"
-                + SEM_RES_DATE + " INTEGER" + ")")
-
-        val createSubjectGrades = ("CREATE TABLE " + SUBJECT_GRADES + "("
-                + SUB_GRADES_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + SUB_GRADES_SEM_ID + " INTEGER,"
-                + SUB_GRADES_NAME + " TEXT,"
-                + SUB_GRADES_GP + " REAL,"
-                + SUB_GRADES_CREDITS + " INTEGER,"
-                + "FOREIGN KEY(" + SUB_GRADES_SEM_ID + ") REFERENCES " + SEMESTER_RESULTS + "(" + SEM_RES_ID + ") ON DELETE CASCADE" + ")")
-
         val createAttendance = ("CREATE TABLE " + ATTENDANCE + "("
                 + ATTENDANCE_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + ATTENDANCE_DATE + " TEXT,"
@@ -139,8 +121,6 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
         db.execSQL(createUserDetails)
         db.execSQL(createUserFiles)
         db.execSQL(createAttendance)
-        db.execSQL(createSemesterResults)
-        db.execSQL(createSubjectGrades)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -222,28 +202,6 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
             db.execSQL("ALTER TABLE $ATTENDANCE ADD COLUMN $ATTENDANCE_SUBJECT_NAME TEXT")
             // Populate subject_name for existing records if any
             db.execSQL("UPDATE $ATTENDANCE SET $ATTENDANCE_SUBJECT_NAME = (SELECT $WEEK_SUBJECT FROM $TIMETABLE WHERE $TIMETABLE.$WEEK_ID = $ATTENDANCE.$ATTENDANCE_WEEK_ID) WHERE $ATTENDANCE_WEEK_ID > 0")
-            onUpgrade(db, 16, newVersion)
-        } else if (oldVersion == 16) {
-            db.execSQL("ALTER TABLE $SUBJECTS ADD COLUMN $SUBJECTS_CREDITS INTEGER DEFAULT 0")
-            db.execSQL("ALTER TABLE $SUBJECTS ADD COLUMN $SUBJECTS_GRADE_POINT REAL DEFAULT 0.0")
-
-            db.execSQL(
-                "CREATE TABLE " + SEMESTER_RESULTS + "("
-                        + SEM_RES_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                        + SEM_RES_NAME + " TEXT,"
-                        + SEM_RES_GPA + " REAL,"
-                        + SEM_RES_DATE + " INTEGER" + ")"
-            )
-
-            db.execSQL(
-                "CREATE TABLE " + SUBJECT_GRADES + "("
-                        + SUB_GRADES_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                        + SUB_GRADES_SEM_ID + " INTEGER,"
-                        + SUB_GRADES_NAME + " TEXT,"
-                        + SUB_GRADES_GP + " REAL,"
-                        + SUB_GRADES_CREDITS + " INTEGER,"
-                        + "FOREIGN KEY(" + SUB_GRADES_SEM_ID + ") REFERENCES " + SEMESTER_RESULTS + "(" + SEM_RES_ID + ") ON DELETE CASCADE" + ")"
-            )
         }
     }
 
@@ -737,8 +695,6 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
                 s.attended = getIntChecked(cursor, SUBJECTS_ATTENDED)
                 s.missed = getIntChecked(cursor, SUBJECTS_MISSED)
                 s.skipped = getIntChecked(cursor, SUBJECTS_SKIPPED)
-                s.credits = getIntChecked(cursor, SUBJECTS_CREDITS)
-                s.gradePoint = getDoubleChecked(cursor, SUBJECTS_GRADE_POINT)
                 subjects.add(s)
             }
         }
@@ -834,8 +790,6 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
             put(SUBJECTS_COLOR, color)
             put(SUBJECTS_TEACHER, teacher)
             put(SUBJECTS_ROOM, room)
-            put(SUBJECTS_CREDITS, subject.credits)
-            put(SUBJECTS_GRADE_POINT, subject.gradePoint)
         }
 
         db.update(SUBJECTS, values, "$SUBJECTS_ID=?", arrayOf(id.toString()))
@@ -1320,8 +1274,6 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
                 s.attended = getIntChecked(cursor, SUBJECTS_ATTENDED)
                 s.missed = getIntChecked(cursor, SUBJECTS_MISSED)
                 s.skipped = getIntChecked(cursor, SUBJECTS_SKIPPED)
-                s.credits = getIntChecked(cursor, SUBJECTS_CREDITS)
-                s.gradePoint = getDoubleChecked(cursor, SUBJECTS_GRADE_POINT)
                 return s
             }
         }
@@ -1427,72 +1379,6 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
         return list
     }
 
-    /**
-     * Methods for Grade History
-     */
-    fun insertSemesterResult(result: SemesterResult): Long {
-        val db = writableDatabase
-        val values = ContentValues().apply {
-            put(SEM_RES_NAME, result.semesterName)
-            put(SEM_RES_GPA, result.gpa)
-            put(SEM_RES_DATE, result.date)
-        }
-        val semId = db.insert(SEMESTER_RESULTS, null, values)
-
-        for (grade in result.subjectGrades) {
-            val gValues = ContentValues().apply {
-                put(SUB_GRADES_SEM_ID, semId)
-                put(SUB_GRADES_NAME, grade.subjectName)
-                put(SUB_GRADES_GP, grade.gradePoint)
-                put(SUB_GRADES_CREDITS, grade.credits)
-            }
-            db.insert(SUBJECT_GRADES, null, gValues)
-        }
-        return semId
-    }
-
-    fun getAllSemesterResults(): ArrayList<SemesterResult> {
-        val results = ArrayList<SemesterResult>()
-        readableDatabase.query(SEMESTER_RESULTS, null, null, null, null, null, "$SEM_RES_DATE DESC").use { cursor ->
-            while (cursor.moveToNext()) {
-                val id = getIntChecked(cursor, SEM_RES_ID)
-                val name = getStringChecked(cursor, SEM_RES_NAME)
-                val gpa = getDoubleChecked(cursor, SEM_RES_GPA)
-                val date = getLongChecked(cursor, SEM_RES_DATE)
-
-                val grades = getSubjectGradesBySemId(id)
-                results.add(SemesterResult(id, name, gpa, date, grades))
-            }
-        }
-        return results
-    }
-
-    private fun getSubjectGradesBySemId(semId: Int): ArrayList<SubjectGrade> {
-        val grades = ArrayList<SubjectGrade>()
-        readableDatabase.query(
-            SUBJECT_GRADES,
-            null,
-            "$SUB_GRADES_SEM_ID=?",
-            arrayOf(semId.toString()),
-            null,
-            null,
-            null
-        ).use { cursor ->
-            while (cursor.moveToNext()) {
-                val id = getIntChecked(cursor, SUB_GRADES_ID)
-                val name = getStringChecked(cursor, SUB_GRADES_NAME)
-                val gp = getDoubleChecked(cursor, SUB_GRADES_GP)
-                val credits = getIntChecked(cursor, SUB_GRADES_CREDITS)
-                grades.add(SubjectGrade(id, semId, name, gp, credits))
-            }
-        }
-        return grades
-    }
-
-    fun deleteSemesterResult(id: Int) {
-        writableDatabase.delete(SEMESTER_RESULTS, "$SEM_RES_ID=?", arrayOf(id.toString()))
-        // Subject grades will be deleted by cascade
-    }
 
     companion object {
         private const val DB_VERSION = 17
@@ -1518,21 +1404,6 @@ class DbHelper(context: Context?) : SQLiteOpenHelper(context, DB_NAME, null, DB_
         const val SUBJECTS_ATTENDED = "attended"
         const val SUBJECTS_MISSED = "missed"
         const val SUBJECTS_SKIPPED = "skipped"
-        const val SUBJECTS_CREDITS = "credits"
-        const val SUBJECTS_GRADE_POINT = "grade_point"
-
-        private const val SEMESTER_RESULTS = "semester_results"
-        private const val SEM_RES_ID = "id"
-        private const val SEM_RES_NAME = "semester_name"
-        private const val SEM_RES_GPA = "gpa"
-        private const val SEM_RES_DATE = "date"
-
-        private const val SUBJECT_GRADES = "subject_grades"
-        private const val SUB_GRADES_ID = "id"
-        private const val SUB_GRADES_SEM_ID = "semester_id"
-        private const val SUB_GRADES_NAME = "subject_name"
-        private const val SUB_GRADES_GP = "grade_point"
-        private const val SUB_GRADES_CREDITS = "credits"
 
         private const val HOMEWORKS = "homeworks"
         private const val HOMEWORKS_ID = "id"

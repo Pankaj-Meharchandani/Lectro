@@ -86,7 +86,6 @@ fun TimetableApp() {
                 onNavigateToSettings = { navigateTo("settings") },
                 onNavigateToPersonalDetails = { navigateTo("personal_details") },
                 onNavigateToAttendance = { navigateTo("attendance") },
-                onNavigateToGradeHistory = { navigateTo("grade_history") },
                 onNavigateToAbout = { navigateTo("about") },
                 onNavigateToSubjectDetail = { subjectId -> navigateTo("subject_detail/$subjectId") },
                 onNavigateToNoteInfo = { noteId -> navigateTo("note_info/$noteId") },
@@ -98,12 +97,6 @@ fun TimetableApp() {
         }
         composable("personal_details") {
             PersonalDetailsScreen(onBack = navigateBack)
-        }
-        composable("grade_history") {
-            GradeHistoryScreen(onBack = navigateBack)
-        }
-        composable("exams") {
-            ExamsScreen(onBack = navigateBack)
         }
         composable(
             route = "teachers?editTeacherId={teacherId}",

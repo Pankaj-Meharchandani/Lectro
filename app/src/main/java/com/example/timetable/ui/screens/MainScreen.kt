@@ -80,7 +80,6 @@ fun MainScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPersonalDetails: () -> Unit,
     onNavigateToAttendance: () -> Unit,
-    onNavigateToGradeHistory: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToSubjectDetail: (Int) -> Unit,
     onNavigateToNoteInfo: (Int) -> Unit,
@@ -303,7 +302,6 @@ fun MainScreen(
                     onAssignmentsClick = onNavigateToAssignments,
                     onNotesClick = onNavigateToNotes,
                     onAttendanceClick = onNavigateToAttendance,
-                    onGradeHistoryClick = onNavigateToGradeHistory,
                     onSettingsClick = onNavigateToSettings,
                     onAboutClick = onNavigateToAbout,
                     personalDetailsEnabled = personalDetailsEnabled,
@@ -414,37 +412,6 @@ fun MainScreen(
                         }
                     }
                     
-                    // Grade Tracker Chip
-                    viewModel.latestGrade?.let { grade ->
-                        var showDetail by remember { mutableStateOf(false) }
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showDetail = true },
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${grade.semesterName} Grade",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "GPA: ${"%.2f".format(grade.gpa)}",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                            }
-                        }
-                        if (showDetail) {
-                            GradeDetailDialog(result = grade, onDismiss = { showDetail = false })
-                        }
-                    }
                 }
             },
             floatingActionButton = {
@@ -926,7 +893,6 @@ fun NavigationDrawerContent(
     onAssignmentsClick: () -> Unit,
     onNotesClick: () -> Unit,
     onAttendanceClick: () -> Unit,
-    onGradeHistoryClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     personalDetailsEnabled: Boolean,
@@ -957,13 +923,6 @@ fun NavigationDrawerContent(
                 selected = false,
                 onClick = { onAttendanceClick(); onItemClick() },
                 icon = { Icon(Icons.Default.DoneAll, contentDescription = null) },
-                modifier = itemModifier
-            )
-            NavigationDrawerItem(
-                label = { Text("Grade History") },
-                selected = false,
-                onClick = { onGradeHistoryClick(); onItemClick() },
-                icon = { Icon(Icons.Default.Grade, contentDescription = null) },
                 modifier = itemModifier
             )
             NavigationDrawerItem(

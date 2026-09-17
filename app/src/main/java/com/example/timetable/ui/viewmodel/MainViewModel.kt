@@ -9,7 +9,6 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import com.example.timetable.model.Homework
 import com.example.timetable.model.Note
-import com.example.timetable.model.SemesterResult
 import com.example.timetable.model.Subject
 import com.example.timetable.model.UserDetail
 import com.example.timetable.model.Week
@@ -33,7 +32,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var teachers = mutableStateListOf<String>()
     var userDetail by mutableStateOf(UserDetail())
     val todayAttendance = mutableStateMapOf<Int, String?>()
-    var latestGrade by mutableStateOf<SemesterResult?>(null)
 
     // Search related
     var searchQuery by mutableStateOf("")
@@ -127,16 +125,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             
-            val grades = db.getAllSemesterResults()
-            
             withContext(Dispatchers.Main) {
                 weekData.putAll(allData)
                 todayAttendance.putAll(attendance)
-                if (grades.isNotEmpty()) {
-                    latestGrade = grades.first()
-                } else {
-                    latestGrade = null
-                }
             }
         }
     }
