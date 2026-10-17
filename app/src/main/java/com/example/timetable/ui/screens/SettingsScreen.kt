@@ -50,6 +50,7 @@ import com.example.timetable.utils.TimeUtils
 import com.example.timetable.utils.WakeUpAlarmReceiver
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.roundToInt
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val db = DbHelper(application)
@@ -62,6 +63,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     var notificationsEnabled by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_NOTIFICATIONS_ENABLED, false))
     var scheduleReminder by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_SCHEDULE_REMINDER, true))
+    var scheduleReminderOffsetMinutes by mutableStateOf(
+        sharedPref.getInt(AppConstants.KEY_SCHEDULE_REMINDER_OFFSET_MINUTES, 15).coerceIn(0, 60)
+    )
     var assignmentReminder by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_ASSIGNMENT_REMINDER, true))
     var examReminder by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_EXAM_REMINDER, true))
     var attendanceAlert by mutableStateOf(sharedPref.getBoolean(AppConstants.KEY_ATTENDANCE_ALERT, true))
@@ -95,6 +99,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun updateScheduleReminder(enabled: Boolean) {
         sharedPref.edit().putBoolean(AppConstants.KEY_SCHEDULE_REMINDER, enabled).apply()
         scheduleReminder = enabled
+        if (notificationsEnabled) {
+            WakeUpAlarmReceiver.scheduleAlarm(getApplication())
+        }
+    }
+
+    fun updateScheduleReminderOffset(minutes: Int) {
+        val safeMinutes = minutes.coerceIn(0, 60)
+        sharedPref.edit().putInt(AppConstants.KEY_SCHEDULE_REMINDER_OFFSET_MINUTES, safeMinutes).apply()
+        scheduleReminderOffsetMinutes = safeMinutes
+        if (notificationsEnabled && scheduleReminder) {
+            WakeUpAlarmReceiver.scheduleAlarm(getApplication())
+        }
     }
 
     fun updateAssignmentReminder(enabled: Boolean) {
@@ -463,6 +479,21 @@ fun SettingsScreen(
                                         )
                                     }
                                 )
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text = "Remind me ${viewModel.scheduleReminderOffsetMinutes} minutes before class",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Slider(
+                                        value = viewModel.scheduleReminderOffsetMinutes.toFloat(),
+                                        onValueChange = {
+                                            viewModel.updateScheduleReminderOffset(it.roundToInt())
+                                        },
+                                        valueRange = 0f..60f,
+                                        steps = 11,
+                                        enabled = viewModel.scheduleReminder
+                                    )
+                                }
                                 SettingsItem(
                                     title = "Assignment Reminder",
                                     control = {

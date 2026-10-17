@@ -10,6 +10,7 @@ class AppConstants {
 
         const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         const val KEY_SCHEDULE_REMINDER = "schedule_reminder"
+        const val KEY_SCHEDULE_REMINDER_OFFSET_MINUTES = "schedule_reminder_offset_minutes"
         const val KEY_ASSIGNMENT_REMINDER = "assignment_reminder"
         const val KEY_EXAM_REMINDER = "exam_reminder"
         const val KEY_ATTENDANCE_ALERT = "attendance_alert"

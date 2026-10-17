@@ -203,13 +203,22 @@ class NotificationHelper(private val context: Context) {
         val today = Calendar.getInstance()
         val dayName = SimpleDateFormat("EEEE", Locale.ENGLISH).format(today.time)
 
-        // Class Reminders (15 mins before)
         if (sharedPref.getBoolean(AppConstants.KEY_SCHEDULE_REMINDER, true)) {
+            val reminderOffsetMinutes = sharedPref.getInt(
+                AppConstants.KEY_SCHEDULE_REMINDER_OFFSET_MINUTES,
+                15
+            ).coerceIn(0, 60)
             db.getWeek(dayName).forEach { week ->
                 val classTime = parseTimeToday(week.fromTime) ?: return@forEach
-                val alarmTime = classTime.timeInMillis - 15 * 60 * 1000
+                val alarmTime = classTime.timeInMillis - reminderOffsetMinutes * 60 * 1000L
                 if (alarmTime > System.currentTimeMillis()) {
-                    scheduleAlarm(alarmTime, TYPE_CLASS, week.id, "Class Reminder", "${week.subject} starts in 15 mins at ${week.room}")
+                    scheduleAlarm(
+                        alarmTime,
+                        TYPE_CLASS,
+                        week.id,
+                        "Class Reminder",
+                        "${week.subject} starts in $reminderOffsetMinutes mins at ${week.room}"
+                    )
                 }
             }
         }
