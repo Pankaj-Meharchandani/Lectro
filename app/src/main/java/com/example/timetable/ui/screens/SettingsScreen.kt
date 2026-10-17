@@ -479,20 +479,25 @@ fun SettingsScreen(
                                         )
                                     }
                                 )
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Text(
-                                        text = "Remind me ${viewModel.scheduleReminderOffsetMinutes} minutes before class",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Slider(
-                                        value = viewModel.scheduleReminderOffsetMinutes.toFloat(),
-                                        onValueChange = {
-                                            viewModel.updateScheduleReminderOffset(it.roundToInt())
-                                        },
-                                        valueRange = 0f..60f,
-                                        steps = 11,
-                                        enabled = viewModel.scheduleReminder
-                                    )
+                                AnimatedVisibility(
+                                    visible = viewModel.scheduleReminder,
+                                    enter = expandVertically(),
+                                    exit = shrinkVertically()
+                                ) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        Text(
+                                            text = "Remind me ${viewModel.scheduleReminderOffsetMinutes} minutes before class",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Slider(
+                                            value = viewModel.scheduleReminderOffsetMinutes.toFloat(),
+                                            onValueChange = {
+                                                viewModel.updateScheduleReminderOffset(it.roundToInt())
+                                            },
+                                            valueRange = 0f..60f,
+                                            steps = 11
+                                        )
+                                    }
                                 }
                                 SettingsItem(
                                     title = "Assignment Reminder",
