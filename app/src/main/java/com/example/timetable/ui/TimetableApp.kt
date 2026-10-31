@@ -114,6 +114,9 @@ fun TimetableApp() {
         composable("assignments") {
             AssignmentsScreen(onBack = navigateBack)
         }
+        composable("exams") {
+            ExamsScreen(onBack = navigateBack)
+        }
         composable("notes") {
             NotesScreen(
                 onBack = navigateBack,
